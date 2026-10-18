@@ -16,6 +16,7 @@ import AiInsightsPage from './pages/AiInsightsPage';
 import MockInterviewPage from './pages/MockInterviewPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminPage from './pages/AdminPage';
+import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 
 import { 
   isOnboardingCompleted, 
@@ -124,6 +125,13 @@ export default function App() {
           <HomePage
             onNavigate={setCurrentRoute}
             onSelectCompany={handleSelectCompany}
+            onSelectQuestion={handleSelectQuestion}
+          />
+        )}
+
+        {currentRoute === 'workflow' && (
+          <SelectionWorkflowPage
+            onNavigate={setCurrentRoute}
             onSelectQuestion={handleSelectQuestion}
           />
         )}

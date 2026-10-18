@@ -77,14 +77,14 @@ export default function Footer({ onNavigate }) {
               All question frequencies and company patterns are statistically synthesized from historical candidate submissions and public placement reports.
             </p>
             <p className="text-[11px] text-slate-500">
-              PlacePrep AI does not guarantee specific exam outcomes and encourages comprehensive conceptual learning.
+              PlacePrep does not guarantee specific exam outcomes and encourages comprehensive conceptual learning.
             </p>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© {new Date().getFullYear()} PlacePrep AI Platform. Built for engineering & degree students.</p>
+          <p>© {new Date().getFullYear()} PlacePrep Platform. Built for engineering & degree students.</p>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1 text-slate-400">
               Engineered with <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> for campus placement aspirants

@@ -52,6 +52,10 @@ export default function AdminPage() {
   const [driveCtc, setDriveCtc] = useState('₹5.5 LPA');
   const [driveDate, setDriveDate] = useState('December 20, 2026');
   const [driveDeadline, setDriveDeadline] = useState('December 10, 2026');
+  const [driveVenue, setDriveVenue] = useState('Auditorium Hall B & Labs');
+  const [driveReportingTime, setDriveReportingTime] = useState('08:30 AM');
+  const [driveInstructions, setDriveInstructions] = useState('Carry printed resume, college ID, and laptop.');
+  const [driveMinCgpa, setDriveMinCgpa] = useState(6.5);
 
   // New Question Form State
   const [qCompany, setQCompany] = useState('hcltech');
@@ -114,11 +118,24 @@ export default function AdminPage() {
       role: driveRole,
       ctc: driveCtc,
       driveDate: driveDate,
+      driveTime: '09:00 AM',
       deadline: driveDeadline,
+      venue: driveVenue,
+      reportingTime: driveReportingTime,
+      instructions: driveInstructions,
+      minCgpa: parseFloat(driveMinCgpa) || 6.5,
+      minTenthPercentage: 60.0,
+      minTwelfthPercentage: 60.0,
+      maxBacklogs: 0,
       eligibleBatches: ['2026', '2027', '2028'],
       status: 'Verified Upcoming Drive',
-      locations: ['Pan-India Virtual'],
-      rounds: ['Online Assessment', 'Technical Round', 'HR Round'],
+      locations: ['Pan-India Virtual & On-Campus'],
+      rounds: ['Online Assessment', 'Technical Round 1', 'HR Round'],
+      roundConfigs: [
+        { roundNumber: 1, roundName: 'Online Assessment', roundType: 'Aptitude Assessment', durationMinutes: 60, cutoffScore: 70, mode: 'Online Proctored', venueOrLink: driveVenue },
+        { roundNumber: 2, roundName: 'Technical Round 1', roundType: 'Technical Interview', durationMinutes: 45, cutoffScore: 75, mode: 'In-Person Panel', venueOrLink: driveVenue },
+        { roundNumber: 3, roundName: 'HR Round', roundType: 'HR Round', durationMinutes: 30, cutoffScore: 80, mode: 'In-Person', venueOrLink: 'Placement Office' }
+      ],
       verifiedBadge: true
     };
 
@@ -427,6 +444,51 @@ export default function AdminPage() {
                     className="w-full p-2 border border-slate-300 rounded-xl"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Venue / Room</label>
+                  <input
+                    type="text"
+                    value={driveVenue}
+                    onChange={(e) => setDriveVenue(e.target.value)}
+                    placeholder="e.g. Auditorium Hall B"
+                    className="w-full p-2 border border-slate-300 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Reporting Time</label>
+                  <input
+                    type="text"
+                    value={driveReportingTime}
+                    onChange={(e) => setDriveReportingTime(e.target.value)}
+                    placeholder="e.g. 08:30 AM"
+                    className="w-full p-2 border border-slate-300 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Min CGPA Cutoff</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={driveMinCgpa}
+                  onChange={(e) => setDriveMinCgpa(parseFloat(e.target.value) || 6.0)}
+                  className="w-full p-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Candidate Instructions</label>
+                <textarea
+                  rows={2}
+                  value={driveInstructions}
+                  onChange={(e) => setDriveInstructions(e.target.value)}
+                  placeholder="Dress code, items to carry..."
+                  className="w-full p-2 border border-slate-300 rounded-xl"
+                />
               </div>
 
               <button

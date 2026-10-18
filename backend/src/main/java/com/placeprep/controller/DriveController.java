@@ -7,13 +7,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/drives")
@@ -35,9 +39,67 @@ public class DriveController {
         return ResponseEntity.ok(driveService.getAll(batch));
     }
 
+    @GetMapping("/calendar")
+    public ResponseEntity<List<Map<String, Object>>> getCalendar() {
+        return ResponseEntity.ok(driveService.getCalendarEvents());
+    }
+
+    @GetMapping("/{driveId}")
+    public ResponseEntity<?> getDriveById(@PathVariable String driveId) {
+        PlacementDrive drive = driveService.getByDriveId(driveId);
+        if (drive == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", "Drive not found for id: " + driveId));
+        }
+        return ResponseEntity.ok(drive);
+    }
+
     @PostMapping
     public ResponseEntity<PlacementDrive> createDrive(@RequestBody PlacementDrive drive) {
         PlacementDrive created = driveService.create(drive);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{driveId}/rounds")
+    public ResponseEntity<?> updateDriveRounds(
+            @PathVariable String driveId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> rounds = (List<String>) payload.get("rounds");
+            String roundConfigsJson = (String) payload.get("roundConfigsJson");
+
+            PlacementDrive updated = driveService.updateRounds(driveId, rounds, roundConfigsJson);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{driveId}/instructions")
+    public ResponseEntity<?> updateDriveInstructions(
+            @PathVariable String driveId,
+            @RequestBody Map<String, String> payload
+    ) {
+        try {
+            PlacementDrive updated = driveService.updateInstructions(
+                    driveId,
+                    payload.get("venue"),
+                    payload.get("reportingTime"),
+                    payload.get("instructions")
+            );
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
     }
 }

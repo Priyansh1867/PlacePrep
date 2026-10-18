@@ -88,6 +88,18 @@ export const CompanyApi = {
   },
   async getById(id) {
     return await fetchJson(`/companies/${id}`);
+  },
+  async create(companyData) {
+    return await fetchJson(`/companies`, {
+      method: 'POST',
+      body: JSON.stringify(companyData)
+    });
+  },
+  async update(id, updatedData) {
+    return await fetchJson(`/companies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedData)
+    });
   }
 };
 
@@ -102,8 +114,80 @@ export const QuestionApi = {
 };
 
 export const DriveApi = {
+  async getAll(batch = null) {
+    const qs = batch && batch !== 'all' ? `?batch=${batch}` : '';
+    return await fetchJson(`/drives${qs}`);
+  },
+  async getById(id) {
+    return await fetchJson(`/drives/${id}`);
+  },
+  async getCalendar() {
+    return await fetchJson(`/drives/calendar`);
+  },
+  async updateRounds(driveId, rounds, roundConfigsJson) {
+    return await fetchJson(`/drives/${driveId}/rounds`, {
+      method: 'PUT',
+      body: JSON.stringify({ rounds, roundConfigsJson })
+    });
+  },
+  async updateInstructions(driveId, venue, reportingTime, instructions) {
+    return await fetchJson(`/drives/${driveId}/instructions`, {
+      method: 'PUT',
+      body: JSON.stringify({ venue, reportingTime, instructions })
+    });
+  }
+};
+
+export const EligibilityApi = {
+  async check(metrics) {
+    return await fetchJson(`/eligibility/check`, {
+      method: 'POST',
+      body: JSON.stringify(metrics)
+    });
+  },
+  async checkDriveForStudent(driveId, studentId = 'user-demo-01') {
+    return await fetchJson(`/eligibility/check-drive/${driveId}?studentId=${studentId}`);
+  }
+};
+
+export const ApplicationApi = {
+  async register(application) {
+    return await fetchJson(`/applications/register`, {
+      method: 'POST',
+      body: JSON.stringify(application)
+    });
+  },
+  async getByStudent(studentId) {
+    return await fetchJson(`/applications/student/${studentId}`);
+  },
+  async getByDrive(driveId) {
+    return await fetchJson(`/applications/drive/${driveId}`);
+  },
   async getAll() {
-    return await fetchJson(`/drives`);
+    return await fetchJson(`/applications`);
+  },
+  async updateStatus(applicationId, updatePayload) {
+    return await fetchJson(`/applications/${applicationId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(updatePayload)
+    });
+  }
+};
+
+export const ScheduleConflictApi = {
+  async checkConflict(payload) {
+    return await fetchJson(`/schedules/check-conflict`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  async getStudentConflicts(studentId, targetDate = null, startTime = '10:00 AM', endTime = '11:30 AM') {
+    const params = new URLSearchParams({ studentId, startTime, endTime });
+    if (targetDate) params.append('targetDate', targetDate);
+    return await fetchJson(`/schedules/conflicts/student?${params.toString()}`);
+  },
+  async getDriveConflicts() {
+    return await fetchJson(`/schedules/conflicts/drives`);
   }
 };
 
@@ -112,3 +196,4 @@ export const InsightsApi = {
     return await fetchJson(`/insights/overview`);
   }
 };
+

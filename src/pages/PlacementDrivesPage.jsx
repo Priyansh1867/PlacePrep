@@ -1,132 +1,453 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Briefcase, 
   Search, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   CheckCircle2, 
   MapPin, 
   Layers, 
   ArrowRight, 
-  GraduationCap, 
   Clock, 
   Building2, 
   Filter,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  Sliders,
+  Check,
+  X,
+  Plus,
+  Send,
+  FileText,
+  CalendarDays,
+  ShieldAlert,
+  ArrowUpRight
 } from 'lucide-react';
-import { getUpcomingDrives, getCompanies, getGraduationBatch } from '../services/storage';
+import { 
+  getUpcomingDrives, 
+  getCompanies, 
+  getGraduationBatch, 
+  getCurrentUser,
+  getStudentApplications,
+  saveStudentApplication,
+  evaluateStudentEligibility,
+  detectScheduleConflicts,
+  detectDriveLevelClashes,
+  updateDriveRoundsConfig,
+  getDriveRoundsConfig
+} from '../services/storage';
+import { DriveApi, ApplicationApi } from '../services/api';
 
 export default function PlacementDrivesPage({ onSelectCompany }) {
+  const currentUser = getCurrentUser();
   const currentBatch = getGraduationBatch();
+
+  // Navigation tabs
+  const [activeTab, setActiveTab] = useState('drives'); // 'drives', 'calendar', 'eligibility', 'applications', 'conflicts', 'team-controls'
+  
+  // Drives list and filter states
   const [selectedBatchFilter, setSelectedBatchFilter] = useState(currentBatch);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'verified', 'open'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [drivesList, setDrivesList] = useState(getUpcomingDrives());
+  const [applications, setApplications] = useState(getStudentApplications());
 
-  const allDrives = getUpcomingDrives();
+  // Logistics / Instructions Modal
+  const [selectedDriveForInstructions, setSelectedDriveForInstructions] = useState(null);
+
+  // Application Registration Modal
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [driveToApply, setDriveToApply] = useState(null);
+  const [applyStudentProfile, setApplyStudentProfile] = useState({
+    studentName: currentUser?.name || 'Priyansh Jain',
+    studentEmail: currentUser?.email || 'priyansh.jain@example.edu',
+    college: currentUser?.college || 'Delhi Technological University (DTU)',
+    branch: currentUser?.branch || 'Computer Science and Engineering',
+    graduationBatch: currentBatch,
+    cgpa: 8.85,
+    tenthPercentage: 92.4,
+    twelfthPercentage: 89.6,
+    activeBacklogs: 0
+  });
+  const [applyFeedbackMsg, setApplyFeedbackMsg] = useState(null);
+
+  // Eligibility Engine Live Checker Form State
+  const [eligibilityForm, setEligibilityForm] = useState({
+    cgpa: 8.5,
+    tenthPercentage: 90.0,
+    twelfthPercentage: 88.0,
+    activeBacklogs: 0,
+    branch: 'Computer Science and Engineering',
+    graduationBatch: currentBatch,
+    targetDriveId: drivesList[0]?.id || 'drv-hcl-2026'
+  });
+
+  // Schedule Conflict Interactive Checker State
+  const [conflictCheckerForm, setConflictCheckerForm] = useState({
+    targetDate: '2026-11-18',
+    startTime: '10:30 AM',
+    endTime: '11:45 AM',
+    companyName: 'Accenture (Virtual Assessment)'
+  });
+  const [conflictResult, setConflictResult] = useState(null);
+
+  // Placement-Team Round Controls State
+  const [selectedDriveForConfig, setSelectedDriveForConfig] = useState(drivesList[0]?.id || 'drv-hcl-2026');
+  const [roundsConfigState, setRoundsConfigState] = useState(() => {
+    const d = drivesList[0];
+    return d?.roundConfigs || [
+      { roundNumber: 1, roundName: 'Online Screening', roundType: 'Aptitude Assessment', durationMinutes: 60, cutoffScore: 70, mode: 'Online Proctored', scheduledTime: '09:00 AM - 10:00 AM', venueOrLink: 'Lab 1' },
+      { roundNumber: 2, roundName: 'Technical Interview', roundType: 'Technical Interview', durationMinutes: 45, cutoffScore: 75, mode: 'In-Person', scheduledTime: '11:00 AM - 12:00 PM', venueOrLink: 'Auditorium Panel 1' },
+      { roundNumber: 3, roundName: 'HR & Final Fit', roundType: 'HR Round', durationMinutes: 30, cutoffScore: 80, mode: 'In-Person', scheduledTime: '02:00 PM - 03:00 PM', venueOrLink: 'TPO Room' }
+    ];
+  });
+  const [newRoundName, setNewRoundName] = useState('');
+  const [newRoundType, setNewRoundType] = useState('Technical Interview');
+  const [newRoundDuration, setNewRoundDuration] = useState(45);
+  const [newRoundCutoff, setNewRoundCutoff] = useState(75);
+  const [teamSaveSuccess, setTeamSaveSuccess] = useState('');
+
+  // Toast / notification
+  const [toastMessage, setToastMessage] = useState('');
+
   const companies = getCompanies();
 
+  // Refresh data on mount or backend sync
+  useEffect(() => {
+    const handleAppsChanged = () => setApplications(getStudentApplications());
+    window.addEventListener('applications-changed', handleAppsChanged);
+    return () => window.removeEventListener('applications-changed', handleAppsChanged);
+  }, []);
+
+  // Sync configured rounds when selectedDriveForConfig changes
+  useEffect(() => {
+    const targetDrive = drivesList.find(d => d.id === selectedDriveForConfig);
+    const customConfig = getDriveRoundsConfig(selectedDriveForConfig);
+    if (customConfig && customConfig.roundConfigs) {
+      setRoundsConfigState(customConfig.roundConfigs);
+    } else if (targetDrive && targetDrive.roundConfigs) {
+      setRoundsConfigState(targetDrive.roundConfigs);
+    }
+  }, [selectedDriveForConfig, drivesList]);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  // Filtered drives
   const filteredDrives = useMemo(() => {
-    return allDrives.filter(d => {
-      const matchBatch = selectedBatchFilter === 'all' || d.eligibleBatches.includes(selectedBatchFilter);
+    return drivesList.filter(d => {
+      const matchBatch = selectedBatchFilter === 'all' || (d.eligibleBatches && d.eligibleBatches.includes(selectedBatchFilter));
       const matchSearch = d.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.role.toLowerCase().includes(searchQuery.toLowerCase());
+                          d.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (d.venue && d.venue.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchStatus = statusFilter === 'all' ? true : d.status.toLowerCase().includes(statusFilter);
       return matchBatch && matchSearch && matchStatus;
     });
-  }, [allDrives, selectedBatchFilter, searchQuery, statusFilter]);
+  }, [drivesList, selectedBatchFilter, searchQuery, statusFilter]);
+
+  // Handle Application Submit
+  const handleApplySubmit = async (e) => {
+    e.preventDefault();
+    if (!driveToApply) return;
+
+    // Check Eligibility first
+    const eligCheck = evaluateStudentEligibility(applyStudentProfile, driveToApply);
+    
+    // Check Conflict
+    const conflictCheck = detectScheduleConflicts(
+      currentUser?.id || 'user-demo-01',
+      driveToApply.driveDate,
+      driveToApply.driveTime || '09:00 AM',
+      '05:00 PM',
+      driveToApply.id
+    );
+
+    const newApp = {
+      applicationId: `APP-${Date.now().toString(36).toUpperCase()}`,
+      studentId: currentUser?.id || 'user-demo-01',
+      studentName: applyStudentProfile.studentName,
+      studentEmail: applyStudentProfile.studentEmail,
+      college: applyStudentProfile.college,
+      branch: applyStudentProfile.branch,
+      graduationBatch: applyStudentProfile.graduationBatch,
+      cgpa: applyStudentProfile.cgpa,
+      tenthPercentage: applyStudentProfile.tenthPercentage,
+      twelfthPercentage: applyStudentProfile.twelfthPercentage,
+      activeBacklogs: applyStudentProfile.activeBacklogs,
+      driveId: driveToApply.id,
+      companyId: driveToApply.companyId,
+      companyName: driveToApply.companyName,
+      role: driveToApply.role,
+      appliedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      status: eligCheck.isEligible ? 'ELIGIBILITY_PASSED' : 'INELIGIBLE_REJECTED',
+      eligibilityStatus: eligCheck.status,
+      eligibilityRemarks: eligCheck.summary,
+      currentRound: driveToApply.rounds ? driveToApply.rounds[0] : 'Round 1: Screening',
+      scheduledDate: driveToApply.driveDate,
+      scheduledTime: driveToApply.driveTime || '09:00 AM',
+      scheduledEndTime: '11:00 AM',
+      venue: driveToApply.venue || 'Campus Auditorium',
+      reportingTime: driveToApply.reportingTime || '08:30 AM',
+      candidateInstructions: driveToApply.instructions || 'Carry printed resume and college ID card.',
+      conflictFlagged: conflictCheck.hasConflict,
+      conflictReason: conflictCheck.hasConflict ? conflictCheck.conflicts[0]?.description : null
+    };
+
+    saveStudentApplication(newApp);
+    setApplications(getStudentApplications());
+
+    // Also sync to backend API if available
+    ApplicationApi.register(newApp).catch(() => {});
+
+    setApplyFeedbackMsg({
+      isEligible: eligCheck.isEligible,
+      hasConflict: conflictCheck.hasConflict,
+      summary: eligCheck.summary,
+      conflictDesc: conflictCheck.hasConflict ? conflictCheck.conflicts[0]?.description : null
+    });
+
+    showToast(`Application for ${driveToApply.companyName} submitted successfully!`);
+  };
+
+  // Run interactive conflict detector
+  const handleRunConflictCheck = () => {
+    const res = detectScheduleConflicts(
+      currentUser?.id || 'user-demo-01',
+      conflictCheckerForm.targetDate,
+      conflictCheckerForm.startTime,
+      conflictCheckerForm.endTime
+    );
+    setConflictResult(res);
+  };
+
+  // Save Placement-Team Round Configuration
+  const handleSaveTeamRounds = () => {
+    const roundsList = roundsConfigState.map(r => r.roundName);
+    updateDriveRoundsConfig(selectedDriveForConfig, roundsList, roundsConfigState);
+    
+    // Also update current drive in state
+    setDrivesList(prev => prev.map(d => {
+      if (d.id === selectedDriveForConfig) {
+        return { ...d, rounds: roundsList, roundConfigs: roundsConfigState };
+      }
+      return d;
+    }));
+
+    // Sync to backend API
+    DriveApi.updateRounds(selectedDriveForConfig, roundsList, JSON.stringify(roundsConfigState)).catch(() => {});
+
+    setTeamSaveSuccess('Interview rounds configuration updated and published across platform!');
+    setTimeout(() => setTeamSaveSuccess(''), 4000);
+  };
+
+  const handleAddRound = () => {
+    if (!newRoundName.trim()) return;
+    const nextNum = roundsConfigState.length + 1;
+    const newRound = {
+      roundNumber: nextNum,
+      roundName: newRoundName.trim(),
+      roundType: newRoundType,
+      durationMinutes: parseInt(newRoundDuration, 10) || 45,
+      cutoffScore: parseInt(newRoundCutoff, 10) || 75,
+      mode: 'In-Person Panel',
+      scheduledTime: `Round ${nextNum} Slot`,
+      venueOrLink: 'Campus Placement Complex'
+    };
+    setRoundsConfigState([...roundsConfigState, newRound]);
+    setNewRoundName('');
+  };
+
+  const handleRemoveRound = (idx) => {
+    const updated = roundsConfigState.filter((_, i) => i !== idx).map((r, i) => ({ ...r, roundNumber: i + 1 }));
+    setRoundsConfigState(updated);
+  };
+
+  // All drive clashes across campus
+  const campusClashes = useMemo(() => detectDriveLevelClashes(), [drivesList]);
+
+  // Selected drive for eligibility interactive engine
+  const targetDriveForEligibility = useMemo(() => {
+    return drivesList.find(d => d.id === eligibilityForm.targetDriveId) || drivesList[0];
+  }, [drivesList, eligibilityForm.targetDriveId]);
+
+  const liveEligibilityEvaluation = useMemo(() => {
+    return evaluateStudentEligibility(eligibilityForm, targetDriveForEligibility);
+  }, [eligibilityForm, targetDriveForEligibility]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <span className="text-sm font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-8 sm:p-10 shadow-xl relative overflow-hidden">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-indigo-200 mb-3">
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>Campus Hiring Schedule</span>
+            <Briefcase className="w-3.5 h-3.5 text-indigo-300" />
+            <span>Placement Support & Drive Suite</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            Placement Drives Dashboard
+            Company & Placement Management
           </h1>
 
           <p className="mt-2 text-sm sm:text-base text-indigo-100 leading-relaxed">
-            Stay updated with confirmed on-campus and national qualifier placement drives. Check batch-specific eligibility criteria and recruitment rounds.
+            Upcoming recruitment calendar, venue reporting instructions, eligibility engine checks, student application workflow, schedule conflict prevention, and placement team controls.
           </p>
-        </div>
 
-        {/* Batch Notice Box */}
-        <div className="mt-6 inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/10 border border-white/15 text-xs text-indigo-100 backdrop-blur-xs">
-          <GraduationCap className="w-4 h-4 text-indigo-300" />
-          <span>Currently viewing drives prioritized for <b>Batch {selectedBatchFilter}</b> students.</span>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-          
-          {/* Search Input */}
-          <div className="relative w-full md:w-96">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search drives by company or role..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
-
-          {/* Batch Selector Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto text-xs">
-            <span className="text-slate-400 text-xs mr-1 font-semibold flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5" /> Batch:
+          <div className="mt-5 flex flex-wrap gap-3 text-xs">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-indigo-200">
+              <CalendarIcon className="w-3.5 h-3.5 text-indigo-300" /> Confirmed Calendar
             </span>
-            {['all', '2026', '2027', '2028', '2029'].map(b => (
-              <button
-                key={b}
-                onClick={() => setSelectedBatchFilter(b)}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
-                  selectedBatchFilter === b
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {b === 'all' ? 'All Batches' : `${b} Batch`}
-              </button>
-            ))}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-indigo-200">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" /> Automated Eligibility Checks
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-indigo-200">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-300" /> Schedule Conflict Radar
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-indigo-200">
+              <Sliders className="w-3.5 h-3.5 text-purple-300" /> Placement Team Round Controls
+            </span>
           </div>
         </div>
+
+        {/* Ambient background decoration */}
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-indigo-500/20 to-transparent pointer-events-none" />
       </div>
 
-      {/* Drives Grid */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-          <span>Found {filteredDrives.length} placement drives</span>
-          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-            <ShieldCheck className="w-4 h-4" /> Verified College Drives Only
-          </span>
-        </div>
+      {/* Main Suite Navigation Tabs */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-xs flex flex-wrap gap-2">
+        {[
+          { id: 'drives', label: 'Recruitment Drives', icon: Briefcase, count: filteredDrives.length },
+          { id: 'calendar', label: 'Drive Calendar & Logistics', icon: CalendarDays },
+          { id: 'eligibility', label: 'Eligibility Engine', icon: ShieldCheck, isBadge: 'Live Check' },
+          { id: 'applications', label: 'My Applications', icon: FileText, count: applications.length },
+          { id: 'conflicts', label: 'Schedule Conflict Radar', icon: AlertTriangle, hasAlert: applications.some(a => a.conflictFlagged) || campusClashes.length > 0 },
+          { id: 'team-controls', label: 'Placement-Team Controls', icon: Sliders, isBadge: 'Admin/TPO' },
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+              <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                  isActive ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+              {tab.isBadge && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] uppercase font-black ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                }`}>
+                  {tab.isBadge}
+                </span>
+              )}
+              {tab.hasAlert && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-        {filteredDrives.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
-            <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="font-bold text-slate-800 text-base">No placement drives found</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              No active drives match your current filters. Try selecting "All Batches" or resetting the search query.
-            </p>
+      {/* ======================================================== */}
+      {/* TAB 1: RECRUITMENT DRIVES DIRECTORY                     */}
+      {/* ======================================================== */}
+      {activeTab === 'drives' && (
+        <div className="space-y-6">
+          
+          {/* Filters Bar */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+              
+              {/* Search */}
+              <div className="relative w-full md:w-96">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by company, role, or campus venue..."
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Batch Selector */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto text-xs">
+                <span className="text-slate-400 text-xs mr-1 font-semibold flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5" /> Batch:
+                </span>
+                {['all', '2026', '2027', '2028', '2029'].map(b => (
+                  <button
+                    key={b}
+                    onClick={() => setSelectedBatchFilter(b)}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                      selectedBatchFilter === b
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {b === 'all' ? 'All Batches' : `${b} Batch`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        ) : (
+
+          {/* Conflict Alert Banner if clashing drives exist */}
+          {campusClashes.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-amber-900">
+                  Campus Schedule Conflict Detected: {campusClashes.length} drive clash(es) flagged!
+                </p>
+                <p className="text-amber-700">
+                  Multiple drives (e.g., HCLTech and Accenture on Nov 18, 2026) are scheduled on the same date for overlapping batches.
+                </p>
+                <button
+                  onClick={() => setActiveTab('conflicts')}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 mt-1"
+                >
+                  <span>Open Schedule Conflict Radar to review & resolve</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Drives Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredDrives.map((drive) => {
               const matchedCompany = companies.find(c => c.id === drive.companyId);
               const isEligible = drive.eligibleBatches.includes(currentBatch);
+              const hasApplied = applications.some(a => a.driveId === drive.id && a.studentId === (currentUser?.id || 'user-demo-01'));
+              const applicationObj = applications.find(a => a.driveId === drive.id && a.studentId === (currentUser?.id || 'user-demo-01'));
 
               return (
                 <div
                   key={drive.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
+                  className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between"
                 >
                   <div>
                     {/* Header */}
@@ -148,46 +469,66 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                       </div>
                     </div>
 
-                    {/* Meta stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 my-4 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    {/* Date, Reporting Time & Logistics */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 my-4 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[11px]">Drive Date</span>
+                        <span className="text-slate-400 block text-[11px] font-semibold">Drive Date & Time</span>
                         <span className="font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                          <Calendar className="w-3.5 h-3.5 text-indigo-600" /> {drive.driveDate}
+                          <CalendarIcon className="w-3.5 h-3.5 text-indigo-600" /> {drive.driveDate}
+                        </span>
+                        <span className="text-[11px] text-slate-500 block">{drive.driveTime || '09:00 AM'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px] font-semibold">Reporting Time</span>
+                        <span className="font-bold text-amber-700 flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" /> {drive.reportingTime || '08:30 AM'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[11px]">Registration Deadline</span>
+                        <span className="text-slate-400 block text-[11px] font-semibold">Reg. Deadline</span>
                         <span className="font-bold text-rose-600 flex items-center gap-1 mt-0.5">
                           <Clock className="w-3.5 h-3.5 text-rose-500" /> {drive.deadline}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Venue */}
+                    <div className="flex items-start gap-2 text-xs text-slate-600 mb-3 bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100/60">
+                      <MapPin className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                       <div>
-                        <span className="text-slate-400 block text-[11px]">Eligible Batches</span>
-                        <span className="font-bold text-slate-800 mt-0.5 block">
-                          {drive.eligibleBatches.join(', ')}
-                        </span>
+                        <span className="font-bold text-indigo-950">Venue: </span>
+                        <span>{drive.venue || 'Campus Placement Auditorium & Online Computing Labs'}</span>
                       </div>
                     </div>
 
-                    {/* Locations */}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>Locations: {drive.locations.join(', ')}</span>
+                    {/* Eligibility thresholds summary */}
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] mb-4">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
+                        Min CGPA: <b>{drive.minCgpa || 6.5}</b>
+                      </span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
+                        Max Backlogs: <b>{drive.maxBacklogs ?? 0}</b>
+                      </span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
+                        10th/12th: <b>{drive.minTenthPercentage || 60}%</b>
+                      </span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
+                        Batches: <b>{drive.eligibleBatches.join(', ')}</b>
+                      </span>
                     </div>
 
                     {/* Rounds Sequence */}
                     <div className="mb-4">
                       <p className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-indigo-600" /> Recruitment Stages:
+                        <Layers className="w-3.5 h-3.5 text-indigo-600" /> Interview Rounds ({drive.rounds?.length || 4}):
                       </p>
                       <div className="flex flex-wrap gap-1.5">
-                        {drive.rounds.map((r, i) => (
+                        {drive.rounds?.map((r, i) => (
                           <span
                             key={i}
-                            className="px-2.5 py-1 rounded-lg bg-indigo-50/70 border border-indigo-100 text-indigo-900 text-xs font-medium"
+                            className="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-900 text-xs font-medium"
                           >
-                            Round {i + 1}: {r}
+                            R{i + 1}: {r}
                           </span>
                         ))}
                       </div>
@@ -195,36 +536,1090 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                   </div>
 
                   {/* Actions & Eligibility Status */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      {isEligible ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          Batch {currentBatch} Eligible
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-400">
-                          Batches: {drive.eligibleBatches.join(', ')}
-                        </span>
-                      )}
+                  <div className="pt-4 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {hasApplied ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
+                            <CheckCircle2 className="w-3 h-3 text-indigo-600" />
+                            Registered: {applicationObj?.status}
+                          </span>
+                        ) : isEligible ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            Batch {currentBatch} Eligible
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
+                            Batch Ineligible
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedDriveForInstructions(drive)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                        <span>Venue & Instructions</span>
+                      </button>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        if (matchedCompany) onSelectCompany(matchedCompany);
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm shadow-indigo-600/25 transition-all"
-                    >
-                      <span>Prepare for {drive.companyName}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setDriveToApply(drive);
+                          setIsApplyModalOpen(true);
+                          setApplyFeedbackMsg(null);
+                        }}
+                        className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all ${
+                          hasApplied
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/25'
+                        }`}
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>{hasApplied ? 'View Registration Pass' : 'Apply / Register Now'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (matchedCompany) onSelectCompany(matchedCompany);
+                        }}
+                        className="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 font-bold text-xs text-slate-700 flex items-center gap-1"
+                        title="Company Profile & Hub"
+                      >
+                        <span>Profile</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 2: DRIVE CALENDAR & TIMELINE VIEW                   */}
+      {/* ======================================================== */}
+      {activeTab === 'calendar' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-indigo-600" />
+                  Upcoming Recruitment Calendar & Timeline
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Chronological schedule of confirmed campus placement drives, reporting venues, and round timelines.
+                </p>
+              </div>
+
+              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                November - December 2026
+              </span>
+            </div>
+
+            {/* Calendar Events List */}
+            <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-indigo-200">
+              {drivesList.map((drive, idx) => {
+                const isNov18Clash = drive.driveDate && drive.driveDate.includes('18');
+                return (
+                  <div key={drive.id} className="relative group">
+                    {/* Circle Node */}
+                    <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 bg-white ${
+                      isNov18Clash ? 'border-amber-500 ring-2 ring-amber-200' : 'border-indigo-600'
+                    }`} />
+
+                    <div className="bg-slate-50/80 group-hover:bg-indigo-50/40 rounded-2xl p-5 border border-slate-200/80 transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-slate-900 text-base">{drive.companyName}</span>
+                          <span className="text-xs text-slate-600 font-semibold">• {drive.role}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">
+                            {drive.ctc}
+                          </span>
+                          {isNov18Clash && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center gap-1 border border-amber-300">
+                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Overlapping Slot
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs font-bold text-indigo-700 bg-white px-3 py-1 rounded-xl border border-indigo-200 shrink-0">
+                          {drive.driveDate} • {drive.driveTime || '09:00 AM'}
+                        </div>
+                      </div>
+
+                      {/* Venue & Reporting */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mt-3 bg-white p-3 rounded-xl border border-slate-200/60">
+                        <div>
+                          <span className="text-slate-400 font-bold block text-[11px]">VENUE</span>
+                          <span className="text-slate-800 font-semibold">{drive.venue || 'Campus Auditorium Hall A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold block text-[11px]">REPORTING TIME & INSTRUCTIONS</span>
+                          <span className="text-amber-700 font-semibold">{drive.reportingTime || '08:30 AM'}</span>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{drive.instructions?.substring(0, 110)}...</p>
+                        </div>
+                      </div>
+
+                      {/* Configured Rounds */}
+                      {drive.roundConfigs && drive.roundConfigs.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-200/60">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                            Scheduled Rounds Timeline
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                            {drive.roundConfigs.map((rc, rIdx) => (
+                              <div key={rIdx} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                                <span className="font-bold text-slate-900 block truncate">R{rc.roundNumber}: {rc.roundName}</span>
+                                <span className="text-[11px] text-indigo-600 font-semibold block">{rc.scheduledTime || `${rc.durationMinutes} mins`}</span>
+                                <span className="text-[10px] text-slate-400 block truncate">{rc.venueOrLink}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => setSelectedDriveForInstructions(drive)}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                        >
+                          <span>Full Venue & Reporting Pass Details</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 3: ELIGIBILITY ENGINE (INTERACTIVE AUDIT)            */}
+      {/* ======================================================== */}
+      {activeTab === 'eligibility' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+            <div className="mb-6 pb-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                  Dynamic Eligibility Engine
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Real-time academic criteria evaluation against company hiring guidelines. Test your profile metrics against any confirmed recruitment drive.
+                </p>
+              </div>
+
+              {/* Target Drive Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">Evaluating for:</span>
+                <select
+                  value={eligibilityForm.targetDriveId}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, targetDriveId: e.target.value })}
+                  className="text-xs font-bold bg-indigo-50 text-indigo-900 border border-indigo-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  {drivesList.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.companyName} - {d.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Profile Inputs Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">CGPA (0 - 10)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="10"
+                  value={eligibilityForm.cgpa}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, cgpa: parseFloat(e.target.value) || 0 })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">10th Score (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={eligibilityForm.tenthPercentage}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, tenthPercentage: parseFloat(e.target.value) || 0 })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">12th Score (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={eligibilityForm.twelfthPercentage}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, twelfthPercentage: parseFloat(e.target.value) || 0 })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">Active Backlogs</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={eligibilityForm.activeBacklogs}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, activeBacklogs: parseInt(e.target.value, 10) || 0 })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">Graduation Batch</label>
+                <select
+                  value={eligibilityForm.graduationBatch}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, graduationBatch: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  {['2026', '2027', '2028', '2029'].map(b => (
+                    <option key={b} value={b}>{b} Batch</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 block mb-1">Academic Branch</label>
+                <select
+                  value={eligibilityForm.branch}
+                  onChange={(e) => setEligibilityForm({ ...eligibilityForm, branch: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="Computer Science and Engineering">CSE / IT</option>
+                  <option value="Electronics and Communication">ECE</option>
+                  <option value="Electrical Engineering">EEE</option>
+                  <option value="Mechanical Engineering">Mechanical</option>
+                  <option value="Civil Engineering">Civil</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Verdict Card */}
+            <div className={`p-5 rounded-2xl border mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+              liveEligibilityEvaluation.isEligible
+                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50/80 border-rose-200 text-rose-900'
+            }`}>
+              <div className="flex items-center gap-3">
+                {liveEligibilityEvaluation.isEligible ? (
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600 shrink-0" />
+                ) : (
+                  <ShieldAlert className="w-8 h-8 text-rose-600 shrink-0" />
+                )}
+                <div>
+                  <h4 className="font-extrabold text-lg">
+                    {liveEligibilityEvaluation.isEligible ? 'ELIGIBLE TO REGISTER' : 'INELIGIBLE FOR CURRENT CRITERIA'}
+                  </h4>
+                  <p className="text-xs opacity-90 mt-0.5">{liveEligibilityEvaluation.summary}</p>
+                </div>
+              </div>
+
+              {liveEligibilityEvaluation.isEligible && (
+                <button
+                  onClick={() => {
+                    setDriveToApply(targetDriveForEligibility);
+                    setIsApplyModalOpen(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-md shadow-emerald-600/25 shrink-0 flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Register for {targetDriveForEligibility.companyName}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Breakdown Table */}
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Evaluation Rule</th>
+                    <th className="py-3 px-4">Your Profile Value</th>
+                    <th className="py-3 px-4">Company Cutoff</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {liveEligibilityEvaluation.checks.map((chk, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-3 px-4 font-bold text-slate-800">{chk.criteria}</td>
+                      <td className="py-3 px-4 font-bold text-slate-700">{chk.studentValue}</td>
+                      <td className="py-3 px-4 text-slate-600">{chk.requiredValue}</td>
+                      <td className="py-3 px-4 text-center">
+                        {chk.passed ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                            <Check className="w-3 h-3 text-emerald-600" /> Passed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">
+                            <X className="w-3 h-3 text-rose-600" /> Failed
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 4: MY APPLICATIONS & INTERVIEW PASS                  */}
+      {/* ======================================================== */}
+      {activeTab === 'applications' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                  Student Applications & Registration Tracker
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Track your drive registrations, current interview stage, venue details, and download reporting hall passes.
+                </p>
+              </div>
+
+              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                {applications.length} Application(s) on File
+              </span>
+            </div>
+
+            {applications.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h4 className="font-bold text-slate-700 text-sm">No applications submitted yet</h4>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Browse upcoming placement drives and click "Apply / Register Now" to initiate your registration.
+                </p>
+                <button
+                  onClick={() => setActiveTab('drives')}
+                  className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+                >
+                  Explore Upcoming Drives
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {applications.map((app) => (
+                  <div
+                    key={app.applicationId}
+                    className="bg-slate-50/80 rounded-2xl border border-slate-200 p-5 hover:border-indigo-300 transition-all space-y-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-extrabold text-slate-900 text-base">{app.companyName}</h4>
+                          <span className="text-xs font-semibold text-slate-600">• {app.role}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px]">
+                            ID: {app.applicationId}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">Applied: {app.appliedAt}</p>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex items-center gap-2">
+                        {app.conflictFlagged && (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1 border border-amber-300 animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Conflict Flagged
+                          </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-full text-xs font-black ${
+                          app.status === 'INTERVIEW_SCHEDULED'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                            : app.status === 'ELIGIBILITY_PASSED'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : app.status === 'OFFERED'
+                            ? 'bg-green-600 text-white shadow-xs'
+                            : 'bg-slate-200 text-slate-800'
+                        }`}>
+                          {app.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Conflict Callout if flagged */}
+                    {app.conflictFlagged && (
+                      <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-bold block">Interview Overlap Warning:</span>
+                          <span>{app.conflictReason || 'This round collides with another scheduled campus interview on the same date.'}</span>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              onClick={() => {
+                                setActiveTab('conflicts');
+                              }}
+                              className="px-2.5 py-1 bg-amber-600 text-white font-bold rounded-lg text-[11px]"
+                            >
+                              Resolve in Conflict Radar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interview Logistics Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs bg-white p-3.5 rounded-xl border border-slate-200/80">
+                      <div>
+                        <span className="text-slate-400 font-bold block text-[10px] uppercase">Current Round</span>
+                        <span className="font-bold text-slate-800">{app.currentRound || 'Round 1: Online Screening'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold block text-[10px] uppercase">Interview Slot</span>
+                        <span className="font-bold text-indigo-700">
+                          {app.scheduledDate || 'Nov 18, 2026'} ({app.scheduledTime || '10:00 AM'})
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold block text-[10px] uppercase">Venue & Desk</span>
+                        <span className="font-bold text-slate-800">{app.venue || 'Auditorium Hall A, Panel 4'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold block text-[10px] uppercase">Reporting Time</span>
+                        <span className="font-bold text-amber-700">{app.reportingTime || '08:15 AM (Strict)'}</span>
+                      </div>
+                    </div>
+
+                    {/* Reporting instructions */}
+                    <div className="text-xs text-slate-600 flex items-start gap-2 bg-slate-100/70 p-3 rounded-xl">
+                      <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-slate-800">Candidate Instructions: </span>
+                        <span>{app.candidateInstructions || 'Wear formal business attire. Carry 3 copies of resume, government ID, and college registration slip.'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 5: SCHEDULE CONFLICT DETECTION RADAR                */}
+      {/* ======================================================== */}
+      {activeTab === 'conflicts' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+            <div className="mb-6 pb-4 border-b border-slate-100">
+              <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                Cross-Company Schedule Conflict Detection Radar
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Monitors date and time overlaps between multiple recruitment drives, preventing candidates from double-booking simultaneous interview rounds.
+              </p>
+            </div>
+
+            {/* Campus Clashes Summary */}
+            <div className="space-y-4 mb-8">
+              <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-indigo-600" />
+                Active Campus Schedule Collisions ({campusClashes.length})
+              </h4>
+
+              {campusClashes.length === 0 ? (
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  All placement drives are cleanly decoupled across campus with zero date collisions.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {campusClashes.map((clash) => (
+                    <div key={clash.id} className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 text-xs font-black">
+                          DATE COLLISION: {clash.date}
+                        </span>
+                        <span className="text-xs font-bold text-rose-600">High Risk of Double Booking</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="bg-white p-3.5 rounded-xl border border-amber-200">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Drive A</span>
+                          <span className="font-extrabold text-slate-900 text-sm">{clash.drive1.companyName}</span>
+                          <span className="block text-slate-600 mt-0.5">{clash.drive1.role}</span>
+                          <span className="block text-indigo-600 font-semibold mt-1">Venue: {clash.drive1.venue}</span>
+                        </div>
+
+                        <div className="bg-white p-3.5 rounded-xl border border-amber-200">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Drive B</span>
+                          <span className="font-extrabold text-slate-900 text-sm">{clash.drive2.companyName}</span>
+                          <span className="block text-slate-600 mt-0.5">{clash.drive2.role}</span>
+                          <span className="block text-indigo-600 font-semibold mt-1">Venue: {clash.drive2.venue}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                        {clash.warning}
+                      </p>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-amber-200/60">
+                        <span className="text-xs font-bold text-slate-700">Recommended Resolution:</span>
+                        <span className="text-xs text-slate-600">
+                          Shift {clash.drive2.companyName} virtual screening slot to Nov 19, or stagger interview rounds into morning (09:00 - 12:00) and afternoon (14:00 - 18:00) cohorts.
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Candidate Slot Conflict Tester */}
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
+              <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-indigo-600" />
+                Test Specific Interview Slot for Schedule Conflicts
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Company / Round</label>
+                  <input
+                    type="text"
+                    value={conflictCheckerForm.companyName}
+                    onChange={(e) => setConflictCheckerForm({ ...conflictCheckerForm, companyName: e.target.value })}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Target Date</label>
+                  <input
+                    type="text"
+                    value={conflictCheckerForm.targetDate}
+                    onChange={(e) => setConflictCheckerForm({ ...conflictCheckerForm, targetDate: e.target.value })}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Start Time</label>
+                  <input
+                    type="text"
+                    value={conflictCheckerForm.startTime}
+                    onChange={(e) => setConflictCheckerForm({ ...conflictCheckerForm, startTime: e.target.value })}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">End Time</label>
+                  <input
+                    type="text"
+                    value={conflictCheckerForm.endTime}
+                    onChange={(e) => setConflictCheckerForm({ ...conflictCheckerForm, endTime: e.target.value })}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleRunConflictCheck}
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 flex items-center gap-1.5"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Check for Candidate Conflicts</span>
+              </button>
+
+              {/* Result display */}
+              {conflictResult && (
+                <div className={`p-4 rounded-xl border text-xs space-y-2 animate-in fade-in ${
+                  conflictResult.hasConflict
+                    ? 'bg-rose-50 border-rose-200 text-rose-950'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    {conflictResult.hasConflict ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-rose-600" />
+                        <span>Conflict Detected: {conflictResult.conflictCount} clash(es) found!</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Schedule is 100% Clear - No Overlapping Interviews</span>
+                      </>
+                    )}
+                  </div>
+
+                  {conflictResult.hasConflict && (
+                    <div className="space-y-2 mt-2">
+                      {conflictResult.conflicts.map((c, i) => (
+                        <div key={i} className="bg-white p-3 rounded-xl border border-rose-200 space-y-1">
+                          <span className="font-bold text-rose-900 block">{c.description}</span>
+                          <span className="text-slate-500 text-[11px] block">
+                            Colliding Company: <b>{c.conflictingCompany}</b> ({c.conflictingRound}) at <b>{c.conflictingTime}</b>
+                          </span>
+                        </div>
+                      ))}
+
+                      <div className="pt-2 border-t border-rose-200">
+                        <span className="font-bold text-rose-900 block mb-1">Next Steps / Action Items:</span>
+                        <ul className="list-disc list-inside space-y-0.5 text-slate-700">
+                          {conflictResult.recommendations.map((rec, i) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 6: PLACEMENT-TEAM ROUND & LOGISTICS CONTROLS         */}
+      {/* ======================================================== */}
+      {activeTab === 'team-controls' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-purple-600" />
+                  Placement-Team Controls: Interview Rounds & Workflow
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Configure the number, sequence, types, durations, and qualifying cutoffs of interview rounds for any recruitment drive.
+                </p>
+              </div>
+
+              {/* Target Drive Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">Configure for:</span>
+                <select
+                  value={selectedDriveForConfig}
+                  onChange={(e) => setSelectedDriveForConfig(e.target.value)}
+                  className="text-xs font-bold bg-purple-50 text-purple-900 border border-purple-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                >
+                  {drivesList.map(d => (
+                    <option key={d.id} value={d.id}>{d.companyName} - {d.role}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {teamSaveSuccess && (
+              <div className="p-3 mb-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                {teamSaveSuccess}
+              </div>
+            )}
+
+            {/* Rounds List Configurator */}
+            <div className="space-y-3 mb-6">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Current Configured Rounds ({roundsConfigState.length})
+              </span>
+
+              {roundsConfigState.map((r, idx) => (
+                <div
+                  key={idx}
+                  className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-xl bg-purple-600 text-white font-extrabold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <span className="font-extrabold text-slate-900 text-sm block">{r.roundName}</span>
+                      <span className="text-slate-500 text-[11px] font-semibold">{r.roundType} • {r.mode || 'In-Person'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">DURATION</span>
+                      <span className="font-bold text-slate-800">{r.durationMinutes} mins</span>
+                    </div>
+
+                    <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">CUTOFF</span>
+                      <span className="font-bold text-purple-700">{r.cutoffScore}%</span>
+                    </div>
+
+                    <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-left">
+                      <span className="text-[10px] text-slate-400 block font-bold">VENUE / LINK</span>
+                      <span className="font-bold text-slate-700">{r.venueOrLink || 'Campus Hall'}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleRemoveRound(idx)}
+                      className="text-xs text-rose-600 hover:text-rose-800 font-bold p-1"
+                      title="Remove Round"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add New Round Form */}
+            <div className="bg-purple-50/50 p-5 rounded-2xl border border-purple-200 space-y-4 mb-6">
+              <h4 className="text-xs font-extrabold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-purple-600" />
+                Add Interview Round to Recruitment Pipeline
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Round Name</label>
+                  <input
+                    type="text"
+                    value={newRoundName}
+                    onChange={(e) => setNewRoundName(e.target.value)}
+                    placeholder="e.g. System Design Interview"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Round Type</label>
+                  <select
+                    value={newRoundType}
+                    onChange={(e) => setNewRoundType(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  >
+                    <option value="Aptitude Assessment">Aptitude Assessment</option>
+                    <option value="Coding Assessment">Coding Assessment</option>
+                    <option value="Technical Interview">Technical Interview</option>
+                    <option value="System Design">System Design</option>
+                    <option value="Group Discussion">Group Discussion</option>
+                    <option value="Managerial Round">Managerial Round</option>
+                    <option value="HR Round">HR Round</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Duration (Mins)</label>
+                  <input
+                    type="number"
+                    value={newRoundDuration}
+                    onChange={(e) => setNewRoundDuration(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Cutoff Score (%)</label>
+                  <input
+                    type="number"
+                    value={newRoundCutoff}
+                    onChange={(e) => setNewRoundCutoff(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddRound}
+                className="px-4 py-2 rounded-xl bg-purple-700 text-white font-bold text-xs hover:bg-purple-800 flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add This Round</span>
+              </button>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <button
+                onClick={handleSaveTeamRounds}
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/25 flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                <span>Save & Deploy Interview Pipeline</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: VENUE, REPORTING TIME & INSTRUCTIONS PASS         */}
+      {/* ======================================================== */}
+      {selectedDriveForInstructions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
+                  Logistics & Candidate Instructions
+                </span>
+                <h3 className="text-2xl font-extrabold text-slate-900 mt-2">
+                  {selectedDriveForInstructions.companyName}
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold">{selectedDriveForInstructions.role}</p>
+              </div>
+
+              <button
+                onClick={() => setSelectedDriveForInstructions(null)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Key timings */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+              <div>
+                <span className="text-slate-400 font-bold block text-[10px] uppercase">Drive Date</span>
+                <span className="font-extrabold text-slate-800 text-sm">{selectedDriveForInstructions.driveDate}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold block text-[10px] uppercase">Reporting Time</span>
+                <span className="font-extrabold text-amber-700 text-sm">{selectedDriveForInstructions.reportingTime || '08:15 AM'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold block text-[10px] uppercase">Start Time</span>
+                <span className="font-extrabold text-indigo-700 text-sm">{selectedDriveForInstructions.driveTime || '09:00 AM'}</span>
+              </div>
+            </div>
+
+            {/* Venue & Location */}
+            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-1">
+              <span className="text-[11px] font-bold text-indigo-900 uppercase flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-indigo-600" /> Confirmed Venue / Location
+              </span>
+              <p className="text-xs text-indigo-950 font-bold">
+                {selectedDriveForInstructions.venue || 'Auditorium Hall A & Online Computing Labs'}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Placement Cell Gate 2 Entrance • Parking permitted at Student Quad
+              </p>
+            </div>
+
+            {/* Detailed Instructions */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Instructions & Documents to Carry:
+              </span>
+              <div className="text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-200 leading-relaxed space-y-2">
+                <p>{selectedDriveForInstructions.instructions}</p>
+                <ul className="list-disc list-inside space-y-1 text-slate-700 mt-2">
+                  <li>3 hard copies of updated resume with color photograph.</li>
+                  <li>Original College ID card and Government Photo ID (Aadhaar / Voter ID).</li>
+                  <li>Laptop with webcam and stable Wi-Fi configuration for coding rounds.</li>
+                  <li>Dress Code: Formal business attire (Blazer / Formal shirt and trousers).</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setSelectedDriveForInstructions(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  const drive = selectedDriveForInstructions;
+                  setSelectedDriveForInstructions(null);
+                  setDriveToApply(drive);
+                  setIsApplyModalOpen(true);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white shadow-md shadow-indigo-600/20"
+              >
+                Register for Drive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: APPLICATION REGISTRATION & ELIGIBILITY CHECK     */}
+      {/* ======================================================== */}
+      {isApplyModalOpen && driveToApply && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
+                  Drive Registration & Eligibility Verification
+                </span>
+                <h3 className="text-2xl font-extrabold text-slate-900 mt-2">
+                  Apply for {driveToApply.companyName}
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold">{driveToApply.role} • {driveToApply.ctc}</p>
+              </div>
+
+              <button
+                onClick={() => setIsApplyModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {applyFeedbackMsg ? (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-2xl border text-xs space-y-2 ${
+                  applyFeedbackMsg.isEligible
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                    : 'bg-rose-50 border-rose-200 text-rose-950'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    {applyFeedbackMsg.isEligible ? (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        <span>Registration Successful: Eligibility Verified!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldAlert className="w-5 h-5 text-rose-600" />
+                        <span>Eligibility Check Incomplete</span>
+                      </>
+                    )}
+                  </div>
+                  <p>{applyFeedbackMsg.summary}</p>
+                </div>
+
+                {applyFeedbackMsg.hasConflict && (
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1">
+                    <span className="font-bold flex items-center gap-1.5 text-amber-800">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" /> Schedule Conflict Alert
+                    </span>
+                    <p>{applyFeedbackMsg.conflictDesc}</p>
+                    <p className="text-[11px] text-amber-700">
+                      Your registration is logged. Please access the Schedule Conflict Radar to review reschedule options.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-3">
+                  <button
+                    onClick={() => {
+                      setIsApplyModalOpen(false);
+                      setActiveTab('applications');
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+                  >
+                    View My Applications & Pass
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleApplySubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={applyStudentProfile.studentName}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, studentName: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Student Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={applyStudentProfile.studentEmail}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, studentEmail: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Branch</label>
+                    <input
+                      type="text"
+                      required
+                      value={applyStudentProfile.branch}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, branch: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Graduation Batch</label>
+                    <input
+                      type="text"
+                      required
+                      value={applyStudentProfile.graduationBatch}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, graduationBatch: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Current CGPA</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={applyStudentProfile.cgpa}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, cgpa: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Active Backlogs</label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={applyStudentProfile.activeBacklogs}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, activeBacklogs: parseInt(e.target.value, 10) || 0 })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-100 text-xs text-indigo-900">
+                  <span className="font-bold block">Eligibility Threshold for {driveToApply.companyName}:</span>
+                  <span>Min CGPA: {driveToApply.minCgpa || 6.5} • Max Backlogs: {driveToApply.maxBacklogs ?? 0} • Date: {driveToApply.driveDate}</span>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsApplyModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Run Verification & Submit</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

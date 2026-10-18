@@ -34,6 +34,8 @@ public class PlacementDrive {
 
     private String driveDate;
 
+    private String driveTime;
+
     private String deadline;
 
     private String status;
@@ -41,6 +43,24 @@ public class PlacementDrive {
     private boolean verifiedBadge;
 
     private String registrationLink;
+
+    private String venue;
+
+    private String reportingTime;
+
+    @Column(columnDefinition = "TEXT")
+    private String instructions;
+
+    private Double minCgpa;
+
+    private Double minTenthPercentage;
+
+    private Double minTwelfthPercentage;
+
+    private Integer maxBacklogs;
+
+    @Column(columnDefinition = "TEXT")
+    private String roundConfigsJson;
 
     @ElementCollection
     @CollectionTable(name = "drive_eligible_batches", joinColumns = @JoinColumn(name = "drive_id"))
@@ -53,6 +73,11 @@ public class PlacementDrive {
     private List<String> locations = new ArrayList<>();
 
     @ElementCollection
+    @CollectionTable(name = "drive_allowed_branches", joinColumns = @JoinColumn(name = "drive_id"))
+    @Column(name = "branch_name")
+    private List<String> allowedBranches = new ArrayList<>();
+
+    @ElementCollection
     @CollectionTable(name = "drive_rounds", joinColumns = @JoinColumn(name = "drive_id"))
     @Column(name = "round_name")
     private List<String> rounds = new ArrayList<>();
@@ -61,9 +86,13 @@ public class PlacementDrive {
     }
 
     public PlacementDrive(Long id, String driveId, String companyId, String companyName,
-                          String role, String ctc, String driveDate, String deadline,
-                          String status, boolean verifiedBadge, String registrationLink,
-                          List<String> eligibleBatches, List<String> locations, List<String> rounds) {
+                          String role, String ctc, String driveDate, String driveTime,
+                          String deadline, String status, boolean verifiedBadge,
+                          String registrationLink, String venue, String reportingTime,
+                          String instructions, Double minCgpa, Double minTenthPercentage,
+                          Double minTwelfthPercentage, Integer maxBacklogs, String roundConfigsJson,
+                          List<String> eligibleBatches, List<String> locations,
+                          List<String> allowedBranches, List<String> rounds) {
         this.id = id;
         this.driveId = driveId;
         this.companyId = companyId;
@@ -71,12 +100,22 @@ public class PlacementDrive {
         this.role = role;
         this.ctc = ctc;
         this.driveDate = driveDate;
+        this.driveTime = driveTime;
         this.deadline = deadline;
         this.status = status;
         this.verifiedBadge = verifiedBadge;
         this.registrationLink = registrationLink;
+        this.venue = venue;
+        this.reportingTime = reportingTime;
+        this.instructions = instructions;
+        this.minCgpa = minCgpa != null ? minCgpa : 6.0;
+        this.minTenthPercentage = minTenthPercentage != null ? minTenthPercentage : 60.0;
+        this.minTwelfthPercentage = minTwelfthPercentage != null ? minTwelfthPercentage : 60.0;
+        this.maxBacklogs = maxBacklogs != null ? maxBacklogs : 0;
+        this.roundConfigsJson = roundConfigsJson;
         this.eligibleBatches = eligibleBatches != null ? eligibleBatches : new ArrayList<>();
         this.locations = locations != null ? locations : new ArrayList<>();
+        this.allowedBranches = allowedBranches != null ? allowedBranches : new ArrayList<>();
         this.rounds = rounds != null ? rounds : new ArrayList<>();
     }
 
@@ -136,6 +175,14 @@ public class PlacementDrive {
         this.driveDate = driveDate;
     }
 
+    public String getDriveTime() {
+        return driveTime;
+    }
+
+    public void setDriveTime(String driveTime) {
+        this.driveTime = driveTime;
+    }
+
     public String getDeadline() {
         return deadline;
     }
@@ -168,6 +215,70 @@ public class PlacementDrive {
         this.registrationLink = registrationLink;
     }
 
+    public String getVenue() {
+        return venue;
+    }
+
+    public void setVenue(String venue) {
+        this.venue = venue;
+    }
+
+    public String getReportingTime() {
+        return reportingTime;
+    }
+
+    public void setReportingTime(String reportingTime) {
+        this.reportingTime = reportingTime;
+    }
+
+    public String getInstructions() {
+        return instructions;
+    }
+
+    public void setInstructions(String instructions) {
+        this.instructions = instructions;
+    }
+
+    public Double getMinCgpa() {
+        return minCgpa;
+    }
+
+    public void setMinCgpa(Double minCgpa) {
+        this.minCgpa = minCgpa;
+    }
+
+    public Double getMinTenthPercentage() {
+        return minTenthPercentage;
+    }
+
+    public void setMinTenthPercentage(Double minTenthPercentage) {
+        this.minTenthPercentage = minTenthPercentage;
+    }
+
+    public Double getMinTwelfthPercentage() {
+        return minTwelfthPercentage;
+    }
+
+    public void setMinTwelfthPercentage(Double minTwelfthPercentage) {
+        this.minTwelfthPercentage = minTwelfthPercentage;
+    }
+
+    public Integer getMaxBacklogs() {
+        return maxBacklogs;
+    }
+
+    public void setMaxBacklogs(Integer maxBacklogs) {
+        this.maxBacklogs = maxBacklogs;
+    }
+
+    public String getRoundConfigsJson() {
+        return roundConfigsJson;
+    }
+
+    public void setRoundConfigsJson(String roundConfigsJson) {
+        this.roundConfigsJson = roundConfigsJson;
+    }
+
     public List<String> getEligibleBatches() {
         return eligibleBatches;
     }
@@ -182,6 +293,14 @@ public class PlacementDrive {
 
     public void setLocations(List<String> locations) {
         this.locations = locations;
+    }
+
+    public List<String> getAllowedBranches() {
+        return allowedBranches;
+    }
+
+    public void setAllowedBranches(List<String> allowedBranches) {
+        this.allowedBranches = allowedBranches;
     }
 
     public List<String> getRounds() {

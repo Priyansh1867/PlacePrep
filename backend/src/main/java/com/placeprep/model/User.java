@@ -60,6 +60,14 @@ public class User {
 
     private boolean onboardingCompleted;
 
+    private Double cgpa = 8.5;
+
+    private Double tenthPercentage = 88.0;
+
+    private Double twelfthPercentage = 86.0;
+
+    private Integer activeBacklogs = 0;
+
     public User() {
     }
 
@@ -184,5 +192,37 @@ public class User {
 
     public void setOnboardingCompleted(boolean onboardingCompleted) {
         this.onboardingCompleted = onboardingCompleted;
+    }
+
+    public Double getCgpa() {
+        return cgpa;
+    }
+
+    public void setCgpa(Double cgpa) {
+        this.cgpa = cgpa;
+    }
+
+    public Double getTenthPercentage() {
+        return tenthPercentage;
+    }
+
+    public void setTenthPercentage(Double tenthPercentage) {
+        this.tenthPercentage = tenthPercentage;
+    }
+
+    public Double getTwelfthPercentage() {
+        return twelfthPercentage;
+    }
+
+    public void setTwelfthPercentage(Double twelfthPercentage) {
+        this.twelfthPercentage = twelfthPercentage;
+    }
+
+    public Integer getActiveBacklogs() {
+        return activeBacklogs;
+    }
+
+    public void setActiveBacklogs(Integer activeBacklogs) {
+        this.activeBacklogs = activeBacklogs;
     }
 }

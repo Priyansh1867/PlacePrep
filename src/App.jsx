@@ -157,6 +157,7 @@ export default function App() {
             onSelectQuestion={handleSelectQuestion}
             onStartMockInterview={handleStartMockInterview}
             onViewInsights={handleViewAiInsights}
+            onNavigateToDrives={() => setCurrentRoute('drives')}
           />
         )}
 

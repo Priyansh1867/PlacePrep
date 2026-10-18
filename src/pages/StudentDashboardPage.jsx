@@ -17,7 +17,9 @@ import {
   Flame,
   Check,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
 import { 
   getCurrentUser, 
@@ -29,7 +31,8 @@ import {
   getInterviewQuestions, 
   getUpcomingDrives, 
   getMockSessions, 
-  getCompanies 
+  getCompanies,
+  getStudentApplications
 } from '../services/storage';
 
 export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
@@ -44,6 +47,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
   const practicedQuestionIds = getPracticedQuestions();
   const revisionQuestionIds = getRevisionList();
   const mockSessions = getMockSessions();
+  const myApplications = getStudentApplications();
 
   const savedCompanies = companies.filter(c => savedCompIds.includes(c.id));
   const savedQuestions = allQuestions.filter(q => savedQuestionIds.includes(q.id));
@@ -355,6 +359,75 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         </div>
 
       </div>
+
+      {/* MY REGISTERED PLACEMENT DRIVES & INTERVIEW STATUS */}
+      {myApplications.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-indigo-600" />
+                My Registered Placement Drives & Scheduled Passes ({myApplications.length})
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Active candidate registration passes, scheduled interview stages, and reporting guidelines.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('drives')}
+              className="text-xs font-bold text-indigo-600 hover:underline"
+            >
+              Manage in Placement Suite
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {myApplications.map((app) => (
+              <div
+                key={app.applicationId}
+                className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">{app.companyName}</h3>
+                    <p className="text-xs text-slate-600">{app.role}</p>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    app.status === 'INTERVIEW_SCHEDULED'
+                      ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {app.status.replace('_', ' ')}
+                  </span>
+                </div>
+
+                {app.conflictFlagged && (
+                  <div className="bg-amber-100/70 border border-amber-300 p-2.5 rounded-lg text-[11px] text-amber-900 flex items-center gap-1.5 font-medium">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Schedule Conflict: Overlaps with another interview round.</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div>
+                    <span className="text-slate-400 block font-semibold">STAGE</span>
+                    <span className="font-bold text-slate-800">{app.currentRound || 'Technical Round'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-semibold">SCHEDULED SLOT</span>
+                    <span className="font-bold text-indigo-600">{app.scheduledDate} ({app.scheduledTime || '10:00 AM'})</span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">{app.venue || 'Campus Auditorium Hall A'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* SAVED QUESTIONS & REVISION LIST */}
       {savedQuestions.length > 0 && (

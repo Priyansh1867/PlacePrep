@@ -39,4 +39,17 @@ public class CompanyService {
     public Company create(Company company) {
         return companyRepository.save(company);
     }
+
+    public Company update(String companyId, Company updatedData) {
+        Company existing = getByCompanyId(companyId);
+        if (updatedData.getName() != null) existing.setName(updatedData.getName());
+        if (updatedData.getTier() != null) existing.setTier(updatedData.getTier());
+        if (updatedData.getCtcRange() != null) existing.setCtcRange(updatedData.getCtcRange());
+        if (updatedData.getEligibilityCriteria() != null) existing.setEligibilityCriteria(updatedData.getEligibilityCriteria());
+        if (updatedData.getUpcomingDriveDate() != null) existing.setUpcomingDriveDate(updatedData.getUpcomingDriveDate());
+        if (updatedData.getDriveStatus() != null) existing.setDriveStatus(updatedData.getDriveStatus());
+        if (updatedData.getRoles() != null && !updatedData.getRoles().isEmpty()) existing.setRoles(updatedData.getRoles());
+        if (updatedData.getEligibleBatches() != null && !updatedData.getEligibleBatches().isEmpty()) existing.setEligibleBatches(updatedData.getEligibleBatches());
+        return companyRepository.save(existing);
+    }
 }

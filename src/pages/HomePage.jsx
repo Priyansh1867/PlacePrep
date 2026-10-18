@@ -585,6 +585,18 @@ export default function HomePage({ onNavigate, onSelectCompany, onSelectQuestion
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
+              title: 'Selection Workflow & Pipeline',
+              desc: 'Round-by-round selection engine (Aptitude, Tech, Managerial, HR), shortlisting, rubrics, and feedback.',
+              tag: 'Placement Support',
+              route: 'workflow'
+            },
+            {
+              title: 'Technical Question Bank',
+              desc: 'High-yield technical questions: JVM internals, Collections, Streams API, Concurrency, Git, Maven, and SQL ACID transactions.',
+              tag: 'Technical Track',
+              route: 'prep'
+            },
+            {
               title: 'Core CS 100 Checklist',
               desc: 'High-frequency OS, DBMS, OOP, and Networks questions asked across all mass & differential drives.',
               tag: 'Fundamentals',
@@ -595,18 +607,6 @@ export default function HomePage({ onNavigate, onSelectCompany, onSelectQuestion
               desc: 'Proven structured frameworks to articulate behavioral & managerial answers convincingly.',
               tag: 'HR & Managerial',
               route: 'prep'
-            },
-            {
-              title: 'SQL & Query Optimization',
-              desc: 'Nth highest salary, correlated subqueries, indexing mechanics, and window function cheat sheets.',
-              tag: 'Database',
-              route: 'prep'
-            },
-            {
-              title: 'Live AI Mock Simulator',
-              desc: 'Simulate full rounds for HCLTech, TCS, and Accenture with immediate scoring feedback.',
-              tag: 'Interactive Tool',
-              route: 'mock-interview'
             }
           ].map((res, i) => (
             <div

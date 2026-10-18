@@ -16,6 +16,7 @@ import AiInsightsPage from './pages/AiInsightsPage';
 import MockInterviewPage from './pages/MockInterviewPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminPage from './pages/AdminPage';
+import AcademicRecordsPage from './pages/AcademicRecordsPage';
 
 import { 
   isOnboardingCompleted, 
@@ -103,6 +104,8 @@ export default function App() {
       setCurrentRoute('drives');
     } else if (resultItem.type === 'experience') {
       setCurrentRoute('experiences');
+    } else if (resultItem.type === 'academic-record') {
+      setCurrentRoute('academic-records');
     }
   };
 
@@ -191,6 +194,10 @@ export default function App() {
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
+        )}
+
+        {currentRoute === 'academic-records' && (
+          <AcademicRecordsPage />
         )}
 
         {currentRoute === 'admin' && (

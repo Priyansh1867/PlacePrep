@@ -41,6 +41,7 @@ export default function Navbar({
 
   const navLinks = [
     { id: 'home', label: 'Home', icon: BookOpen },
+    { id: 'academic-records', label: 'Academic Records', icon: GraduationCap },
     { id: 'drives', label: 'Placement Drives', icon: Briefcase },
     { id: 'companies', label: 'Companies', icon: Building2 },
     { id: 'prep', label: 'Interview Prep', icon: BookOpen },
@@ -153,6 +154,13 @@ export default function Navbar({
                     >
                       <User className="w-3.5 h-3.5 text-indigo-600" />
                       My Placement Dashboard
+                    </button>
+                    <button
+                      onClick={() => handleNavigate('academic-records')}
+                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+                      Student Academic Records
                     </button>
                     <button
                       onClick={() => {

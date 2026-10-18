@@ -11,10 +11,11 @@ import {
   Filter
 } from 'lucide-react';
 import { getCompanies, getInterviewQuestions, getUpcomingDrives, getInterviewExperiences } from '../services/storage';
+import { getAllStudents } from '../services/academicRecordsService';
 
 export default function GlobalSearchModal({ isOpen, onClose, onSelectResult }) {
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'companies', 'questions', 'drives', 'experiences'
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'companies', 'questions', 'drives', 'experiences', 'students'
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -122,6 +123,33 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelectResult }) {
           });
         }
       });
+    }
+
+    // Search Student Academic Records
+    if (activeFilter === 'all' || activeFilter === 'students') {
+      try {
+        const students = getAllStudents();
+        students.forEach(s => {
+          if (
+            s.fullName?.toLowerCase().includes(q) ||
+            s.rollNumber?.toLowerCase().includes(q) ||
+            s.registrationNumber?.toLowerCase().includes(q) ||
+            s.branch?.toLowerCase().includes(q)
+          ) {
+            found.push({
+              type: 'academic-record',
+              id: s.id,
+              title: `${s.fullName} (${s.rollNumber})`,
+              subtitle: `${s.branch} • Sem ${s.currentSemester} • CGPA: ${s.cgpa || 'N/A'}`,
+              badge: 'Academic Record',
+              badgeColor: 'bg-indigo-100 text-indigo-700',
+              data: s
+            });
+          }
+        });
+      } catch (err) {
+        console.warn('Academic records search failed:', err);
+      }
     }
 
     return found;

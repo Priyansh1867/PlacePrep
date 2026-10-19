@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   ChevronDown,
   LogOut,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ClipboardCheck
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -41,6 +42,7 @@ export default function Navbar({
 
   const navLinks = [
     { id: 'home', label: 'Home', icon: BookOpen },
+    { id: 'workflow', label: 'Selection Workflow', icon: ClipboardCheck },
     { id: 'drives', label: 'Placement Drives', icon: Briefcase },
     { id: 'companies', label: 'Companies', icon: Building2 },
     { id: 'prep', label: 'Interview Prep', icon: BookOpen },

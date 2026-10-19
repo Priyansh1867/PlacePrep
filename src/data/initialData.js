@@ -768,6 +768,528 @@ This protects client trust, supports the colleague, and ensures our firm deliver
     followUps: [
       'What if the colleague dismisses your observation and insists on presenting the wrong numbers?'
     ]
+  },
+
+  // Java Fullstack Syllabus Questions
+  {
+    id: 'java-jvm-01',
+    companyId: 'hcltech',
+    round: 'technical',
+    category: 'Java Platform & JVM',
+    difficulty: 'Medium',
+    question: 'Explain the difference between JDK, JRE, and JVM. How does the JVM ClassLoader subsystem and JIT compiler work?',
+    frequencyScore: 97,
+    recencyRating: 'High',
+    timesReported: 62,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['JVM', 'ClassLoader', 'JIT Compiler', 'Java Architecture', 'Bytecode'],
+    approach: 'Define the architectural hierarchy: JDK contains JRE + development tools (javac, debugger); JRE contains JVM + core runtime libraries; JVM executes bytecode. Detail the 3 ClassLoader phases (Loading, Linking, Initialization) and contrast Interpreter vs JIT compiler.',
+    suggestedAnswer: `1. Hierarchy:
+- JDK (Java Development Kit): Complete development environment containing compiler (javac), debugger, and utilities plus the JRE.
+- JRE (Java Runtime Environment): Provides the runtime libraries (rt.jar / modular runtime) and JVM required to run compiled Java programs.
+- JVM (Java Virtual Machine): Abstract computing machine that loads, verifies, and executes platform-independent bytecode (.class files).
+
+2. ClassLoader Subsystem:
+Loads class files using the Delegation Hierarchy:
+- Bootstrap ClassLoader: Loads core JDK classes ($JAVA_HOME/lib, java.lang.*).
+- Platform / Extension ClassLoader: Loads platform extension modules.
+- Application / System ClassLoader: Loads classes on the application CLASSPATH.
+Follows 3 phases: Loading -> Linking (Verify, Prepare static fields, Resolve symbolic references) -> Initialization (executes static initializers).
+
+3. JIT (Just-In-Time) Compiler:
+The JVM begins execution using an Interpreter for fast startup. When HotSpot profiling identifies 'hot spots' (frequently executed loops or methods), the JIT compiles that bytecode into native CPU machine instructions, drastically accelerating execution speed.`,
+    sampleCode: `// Verifying JVM runtime memory parameters programmatically:
+public class JVMCheck {
+    public static void main(String[] args) {
+        Runtime runtime = Runtime.getRuntime();
+        System.out.println("Available Processors: " + runtime.availableProcessors());
+        System.out.println("Total Allocated Heap: " + (runtime.totalMemory() / (1024 * 1024)) + " MB");
+        System.out.println("Max Usable Heap: " + (runtime.maxMemory() / (1024 * 1024)) + " MB");
+    }
+}`,
+    followUps: [
+      'What is the difference between C1 (Client) and C2 (Server) JIT compilers in Tiered Compilation?',
+      'Why is Java considered both a compiled and an interpreted language?'
+    ]
+  },
+  {
+    id: 'java-streams-01',
+    companyId: 'tcs',
+    round: 'technical',
+    category: 'Functional Programming & Streams',
+    difficulty: 'Hard',
+    question: 'How does Java 8 Streams API differ from traditional collections? Explain intermediate vs terminal operations, and when to avoid parallel streams.',
+    frequencyScore: 95,
+    recencyRating: 'High',
+    timesReported: 58,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Java 8 Streams', 'Collectors', 'Functional Interfaces', 'Parallel Streams', 'Lambdas'],
+    approach: 'Contrast storage (Collections store data in memory) vs computation (Streams convey elements through a computational pipeline). Detail lazy intermediate operations vs eager terminal operations, and explain ForkJoinPool thread contention risks in parallel streams.',
+    suggestedAnswer: `1. Collections vs Streams:
+- Collections are in-memory data structures holding elements eagerly. You iterate imperatively (for-loops).
+- Streams are declarative computational pipelines that do not store data. They process data on-demand and cannot be re-traversed once consumed.
+
+2. Intermediate vs Terminal Operations:
+- Intermediate Operations: Return a new Stream and are strictly LAZY (e.g. filter(), map(), flatMap(), sorted()). No processing happens until a terminal operation is called.
+- Terminal Operations: Produce a non-stream result or side-effect (e.g. collect(), forEach(), reduce(), count(), anyMatch()). Triggers the pipeline execution.
+
+3. Parallel Streams Cautions:
+Parallel streams split data across the shared ForkJoinPool.commonPool(). Avoid parallel streams when:
+- The dataset is small (thread-switching overhead exceeds compute gains).
+- Operations involve blocking I/O (can starve the entire JVM's common pool).
+- Lambdas access shared mutable state (causes severe race conditions).
+- Order of elements is critical (requires expensive synchronization).`,
+    sampleCode: `// Grouping and computing average CTC by company using Streams & Collectors:
+Map<String, Double> avgCtcByCompany = drives.stream()
+    .filter(d -> "Verified Upcoming Drive".equals(d.getStatus()))
+    .collect(Collectors.groupingBy(
+        PlacementDrive::getCompanyName,
+        Collectors.averagingDouble(PlacementDrive::getNumericCtc)
+    ));`,
+    followUps: [
+      'What is the difference between map() and flatMap() in Java Streams?',
+      'How does short-circuiting work in operations like findFirst(), anyMatch(), and limit()?'
+    ]
+  },
+  {
+    id: 'java-memory-01',
+    companyId: 'infosys',
+    round: 'technical',
+    category: 'Memory Management & Garbage Collection',
+    difficulty: 'Hard',
+    question: 'Explain the difference between Heap and Stack memory in Java. How does Generational Garbage Collection work?',
+    frequencyScore: 92,
+    recencyRating: 'High',
+    timesReported: 41,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Memory Management', 'JVM Heap', 'Garbage Collection', 'Generational GC', 'OOM'],
+    approach: 'Contrast Stack (thread-private, stack frames, primitive values, reference pointers, LIFO order) vs Heap (shared across threads, dynamic object allocation). Detail Young Gen (Eden, S0, S1) Minor GC, Old Gen Major GC, and object promotion thresholds.',
+    suggestedAnswer: `1. Stack vs Heap Memory:
+- Stack Memory: Thread-isolated memory used for execution frames. Stores local primitive variables and object reference pointers. Allocated and deallocated automatically in LIFO order as methods enter and exit. Very fast access. Exhaustion causes StackOverflowError.
+- Heap Memory: Shared memory space used for dynamic runtime allocation of all Java objects and JRE classes. Managed exclusively by Garbage Collection. Exhaustion causes java.lang.OutOfMemoryError: Java heap space.
+
+2. Generational Garbage Collection (Weak Generational Hypothesis):
+Most objects die young shortly after creation. Hence the Heap is partitioned:
+- Young Generation:
+  * Eden Space: Where all newly created objects (via 'new') are initially allocated.
+  * Survivor Spaces (S0 and S1 / From and To): Objects surviving a Minor GC in Eden are copied to one survivor space while the other remains empty.
+- Old (Tenured) Generation: Objects that survive a configured number of GC cycles (tenuring threshold, default 15) are promoted to the Old Generation. Full GC (Major GC) cleans this space.
+- Metaspace (Native Memory): Stores class metadata, bytecode, and method tables (replaced PermGen since Java 8).`,
+    sampleCode: `// Common memory leak pitfall: Static collection retention
+public class LeakExample {
+    // Objects added here are never garbage collected because root GC path remains live!
+    private static final List<byte[]> LIVE_LEAK = new ArrayList<>();
+    
+    public static void cache(byte[] block) {
+        LIVE_LEAK.add(block); // Will eventually cause OutOfMemoryError
+    }
+}`,
+    followUps: [
+      'What are G1 GC, ZGC, and Shenandoah collectors designed for in low-latency environments?',
+      'Does calling System.gc() guarantee immediate garbage collection in Java?'
+    ]
+  },
+  {
+    id: 'java-modern-01',
+    companyId: 'accenture',
+    round: 'technical',
+    category: 'Modern Java (Java 17-21 LTS)',
+    difficulty: 'Medium',
+    question: 'What are Records, Sealed Classes, and Pattern Matching in modern Java 17 and 21? Why were they introduced?',
+    frequencyScore: 90,
+    recencyRating: 'High',
+    timesReported: 37,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Java 17', 'Java 21', 'Records', 'Sealed Classes', 'Pattern Matching', 'Switch Expressions'],
+    approach: 'Highlight how modern Java focuses on data-oriented programming and eliminating boilerplate. Explain Records as immutable data carriers, Sealed classes as bounded inheritance, and Pattern Matching in switch expressions.',
+    suggestedAnswer: `Modern Java LTS versions (17 & 21) introduced features to make code concise, expressive, and safe:
+1. Records (Java 16+):
+Immutable data carriers that replace verbose POJOs. The compiler automatically generates constructor, private final fields, accessors, equals(), hashCode(), and toString().
+Syntax: public record Candidate(String name, double cgpa, String batch) {}
+
+2. Sealed Classes & Interfaces (Java 17+):
+Allows classes or interfaces to restrict which other classes can extend or implement them using the 'permits' keyword. Gives domain models closed type hierarchies that compiler can verify exhaustively.
+Syntax: public sealed interface DriveResult permits Selected, Rejected, Waitlist {}
+
+3. Pattern Matching with Switch (Java 21):
+Allows testing types and extracting components directly within switch expressions without unsafe casting. The compiler verifies exhaustiveness without needing a default branch when sealed types are used!`,
+    sampleCode: `// Java 21 Record + Sealed Interface + Pattern Matching Switch:
+public sealed interface InterviewOutcome permits Offer, Rejected {}
+public record Offer(String company, double lpa) implements InterviewOutcome {}
+public record Rejected(String reason) implements InterviewOutcome {}
+
+public String formatResult(InterviewOutcome outcome) {
+    return switch (outcome) {
+        case Offer o -> "Hired at " + o.company() + " with CTC ₹" + o.lpa() + " LPA!";
+        case Rejected r -> "Feedback provided: " + r.reason();
+    };
+}`,
+    followUps: [
+      'What are Virtual Threads (Project Loom) in Java 21 and how do they differ from OS platform threads?',
+      'Can a Record class extend another class or be declared abstract?'
+    ]
+  },
+  {
+    id: 'git-maven-01',
+    companyId: 'deloitte',
+    round: 'technical',
+    category: 'DevOps, Git & Maven',
+    difficulty: 'Medium',
+    question: 'Explain Git merge vs Git rebase. How does Maven manage transitive dependencies and dependency scopes?',
+    frequencyScore: 89,
+    recencyRating: 'High',
+    timesReported: 34,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Git', 'Branching', 'Rebase', 'Maven', 'pom.xml', 'Dependency Scopes'],
+    approach: 'Contrast Git Merge (creates non-destructive merge commit, preserves branch geometry) vs Git Rebase (re-applies commits linearly, creates clean git history). Explain Maven dependency scopes (compile, provided, runtime, test) and conflict mediation.',
+    suggestedAnswer: `1. Git Merge vs Git Rebase:
+- Git Merge: Combines history of two branches by creating a special 'merge commit' that has multiple parents. It is non-destructive and preserves the complete chronological history of feature development.
+- Git Rebase: Rewinds the feature branch commits, moves the base of the branch to the tip of main, and re-applies each commit sequentially. Result: Clean, linear commit history without cluttering merge commits. (Rule: Never rebase shared public branches!).
+
+2. Maven Dependency Scopes:
+- compile (default): Dependency available in all classpaths (build, test, runtime) and propagates transitively.
+- provided: Dependency needed for compilation but expected to be provided by JDK or container at runtime (e.g., servlet-api, lombok).
+- runtime: Dependency not needed for compilation, but required during execution (e.g., JDBC driver implementation, H2 database).
+- test: Dependency only available for compiling and running unit tests (e.g., JUnit, Mockito).
+
+3. Maven Transitive Dependency Mediation:
+Follows 'Nearest Definition' rule: Dependency closest to the project in the dependency tree is chosen. If depths are equal, the first declared wins.`,
+    sampleCode: `# Resolving Git Merge Conflict:
+# 1. Inspect conflict markers:
+# <<<<<<< HEAD (Current branch code)
+# =======
+# >>>>>>> feature/drives (Incoming branch code)
+# 2. Edit file manually to desired state
+git add src/main/java/DriveController.java
+git rebase --continue # or git commit -m "Merge resolved"`,
+    followUps: [
+      'What is the difference between git pull and git fetch?',
+      'What are Maven profiles and build lifecycles (clean, default, site)?'
+    ]
+  },
+  {
+    id: 'sql-joins-01',
+    companyId: 'cognizant',
+    round: 'technical',
+    category: 'SQL & Database Architecture',
+    difficulty: 'Hard',
+    question: 'Explain INNER, LEFT, RIGHT, and FULL joins. What are database Indexing B-Trees and ACID transaction isolation levels?',
+    frequencyScore: 96,
+    recencyRating: 'High',
+    timesReported: 64,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['SQL Joins', 'B-Tree Indexing', 'ACID Properties', 'Transactions', 'Isolation Levels'],
+    approach: 'Explain Venn diagrams of SQL Joins. Explain B-Tree indexing reducing O(N) to O(log N) lookup. Explain the 4 ACID properties and 4 isolation levels (Read Uncommitted, Read Committed, Repeatable Read, Serializable).',
+    suggestedAnswer: `1. SQL Joins:
+- INNER JOIN: Returns records that have matching values in both tables.
+- LEFT JOIN: Returns all records from the left table, and matched records from the right table (NULL if no match).
+- RIGHT JOIN: Returns all records from the right table, and matched records from the left table.
+- FULL OUTER JOIN: Returns all records when there is a match in either left or right table.
+
+2. Database Indexing (B-Tree):
+Indexes are auxiliary balanced tree data structures holding sorted column keys and row pointers. Lookups drop from O(N) full table scans to O(log N) tree traversals. 
+- Clustered Index: Determines physical sorting order of rows on disk (only 1 per table, typically Primary Key).
+- Non-Clustered Index: Separate structure storing keys pointing to clustered index keys or disk addresses.
+
+3. ACID Properties & Isolation Levels:
+- Atomicity: All operations in a transaction succeed or all roll back.
+- Consistency: State transitions only between valid states satisfying constraints.
+- Isolation: Concurrent transactions do not interfere. Levels:
+  * Read Uncommitted: Susceptible to Dirty Reads.
+  * Read Committed: Default in Postgres/Oracle; prevents Dirty Reads.
+  * Repeatable Read: Default in MySQL InnoDB; prevents Non-Repeatable Reads.
+  * Serializable: Complete serial execution; prevents Phantom Reads via range locks.
+- Durability: Committed updates persist permanently via Write-Ahead Log (WAL).`,
+    sampleCode: `-- Finding candidates who applied to drives but have no interview experience logged:
+SELECT c.full_name, d.company_name, a.status
+FROM candidates c
+INNER JOIN applications a ON c.candidate_id = a.candidate_id
+INNER JOIN placement_drives d ON a.drive_id = d.drive_id
+LEFT JOIN interview_experiences e ON e.student_name = c.full_name AND e.company_name = d.company_name
+WHERE e.experience_id IS NULL;`,
+    followUps: [
+      'What is a Composite Index and the Leftmost Prefix rule in SQL query optimization?',
+      'What is the difference between a Clustered and Non-Clustered index?'
+    ]
+  },
+  {
+    id: 'java-collections-01',
+    companyId: 'wipro',
+    round: 'technical',
+    category: 'Java Collections Framework',
+    difficulty: 'Medium',
+    question: 'How does HashMap work internally in Java 8+? Explain hashing, hash collisions, load factor, and when LinkedList converts into Red-Black Tree.',
+    frequencyScore: 98,
+    recencyRating: 'High',
+    timesReported: 76,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['HashMap', 'Collections', 'Hash Collisions', 'Red-Black Tree', 'Time Complexity'],
+    approach: 'Detail the underlying Node<K,V>[] table array. Explain hash calculation ((h = key.hashCode()) ^ (h >>> 16)) & (n - 1) index mapping. Explain TREEIFY_THRESHOLD (8) and MIN_TREEIFY_CAPACITY (64) converting buckets into TreeNode Red-Black trees.',
+    suggestedAnswer: `1. Internal Data Structure:
+Java 8+ HashMap uses an array of Node<K, V> buckets.
+Each bucket holds either null, a singly LinkedList of Node instances, or a balanced Red-Black Tree of TreeNode instances.
+
+2. Put and Get Execution Flow:
+- Calculate hash code: Spreads higher bits downward to reduce collisions: (h = key.hashCode()) ^ (h >>> 16).
+- Find bucket index: index = hash & (n - 1) where n is table array length (always a power of 2).
+- Collision Handling:
+  * If the bucket is empty, a new Node is placed.
+  * If occupied, it traverses the bucket. If key.equals() matches, value is updated.
+  * If keys are distinct, node is appended to the tail.
+
+3. Treeification in Java 8+:
+- When bucket chain length reaches TREEIFY_THRESHOLD (8) and total table capacity >= MIN_TREEIFY_CAPACITY (64), the LinkedList converts into a Red-Black Tree (TreeMap equivalent).
+- Improves collision search worst-case time complexity from O(N) to O(log N).
+- Untreeifies back to linked list if count drops below UNTREEIFY_THRESHOLD (6) during rehashing.
+
+4. Load Factor & Rehashing:
+Default initial capacity is 16; load factor is 0.75. When size exceeds capacity * 0.75 (threshold 12), the array doubles to 32, and all elements rehash.`,
+    sampleCode: `// Custom class used as key in HashMap MUST override hashCode() and equals()!
+public final class StudentKey {
+    private final String rollNumber;
+    private final String collegeId;
+
+    public StudentKey(String rollNumber, String collegeId) {
+        this.rollNumber = rollNumber;
+        this.collegeId = collegeId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StudentKey that)) return false;
+        return Objects.equals(rollNumber, that.rollNumber) && Objects.equals(collegeId, that.collegeId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(rollNumber, collegeId);
+    }
+}`,
+    followUps: [
+      'What happens if two keys have the same hash code but are not equal?',
+      'Why is ConcurrentHashMap preferred over Collections.synchronizedMap() in multi-threaded code?'
+    ]
+  },
+  {
+    id: 'java-oop-01',
+    companyId: 'capgemini',
+    round: 'technical',
+    category: 'OOP, Interfaces & Polymorphism',
+    difficulty: 'Medium',
+    question: 'Explain Interface vs Abstract Class in Java 8+. What are default/static methods, and how are diamond problems resolved?',
+    frequencyScore: 94,
+    recencyRating: 'High',
+    timesReported: 52,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['OOP Concepts', 'Abstract Class', 'Interface', 'Default Methods', 'Polymorphism'],
+    approach: 'Contrast IS-A (inheritance of state + behavior via abstract class) vs CAN-DO (contract / capability via interfaces). Explain Java 8 default/static methods and the 3 rules for resolving interface default method conflicts.',
+    suggestedAnswer: `1. Key Differences:
+- State & Constructors: Abstract classes can have instance variables and constructors to initialize common state. Interfaces cannot have state (fields are implicitly public static final) and have no constructors.
+- Multiple Inheritance: A class can extend only one abstract class, but can implement multiple interfaces.
+- Design Intent: Abstract class models core identity ("Car IS-A Vehicle"); Interface models peripheral capability ("Car CAN-DO Printable, Serializable").
+
+2. Default & Static Methods in Interfaces (Java 8+):
+- Default methods allow adding new methods to interfaces without breaking existing implementing classes (backward compatibility).
+- Static methods provide helper utility functions directly scoped to the interface namespace.
+
+3. Resolving the Diamond Conflict:
+If a class implements two interfaces having the exact same default method signature:
+- Rule 1 (Class wins): A method in a superclass always takes priority over any interface default method.
+- Rule 2 (Sub-interface wins): If one interface extends another, the more specific sub-interface default method wins.
+- Rule 3 (Explicit Override): If neither applies, the compiler issues an error; the implementing class MUST override the method and explicitly call InterfaceName.super.method() or supply its own logic.`,
+    sampleCode: `public interface OnlineEvaluator {
+    default void conductRound() {
+        System.out.println("Conducting automated online proctoring assessment.");
+    }
+}
+
+public interface HumanPanel {
+    default void conductRound() {
+        System.out.println("Conducting live technical panel discussion.");
+    }
+}
+
+public class HybridAssessment implements OnlineEvaluator, HumanPanel {
+    @Override
+    public void conductRound() {
+        // Explicitly resolving diamond conflict:
+        OnlineEvaluator.super.conductRound();
+        HumanPanel.super.conductRound();
+    }
+}`,
+    followUps: [
+      'Can an interface declare private methods in Java 9+?',
+      'What is dynamic method dispatch and how does the JVM implement it via vtable?'
+    ]
+  },
+  {
+    id: 'java-exceptions-01',
+    companyId: 'infosys',
+    round: 'technical',
+    category: 'Exception Handling & Generics',
+    difficulty: 'Medium',
+    question: 'Explain Checked vs Unchecked Exceptions, try-with-resources, and how finally block behaves with return statements.',
+    frequencyScore: 91,
+    recencyRating: 'High',
+    timesReported: 47,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Exception Handling', 'Checked Exceptions', 'try-with-resources', 'AutoCloseable', 'Runtime Exceptions'],
+    approach: 'Differentiate checked (compiler-enforced, subclass of Exception but not RuntimeException) vs unchecked (subclass of RuntimeException / Error). Explain AutoCloseable with try-with-resources and finally block execution semantics.',
+    suggestedAnswer: `1. Exception Hierarchy:
+- Throwable is the root:
+  * Error: Serious JVM conditions (OutOfMemoryError, StackOverflowError) that applications should never attempt to catch.
+  * Exception: Recoverable program conditions.
+    - Checked Exceptions (Exception subclasses except RuntimeException): Enforced at compile-time (IOException, SQLException, ClassNotFoundException). Must be declared with 'throws' or caught in 'try-catch'.
+    - Unchecked Exceptions (RuntimeException subclasses): Represent programmatic bugs (NullPointerException, ArrayIndexOutOfBoundsException, IllegalArgumentException). Compile-time declaration not enforced.
+
+2. Try-With-Resources (Java 7+):
+Replaces cumbersome try-finally resource cleanup. Any class implementing java.lang.AutoCloseable can be opened in parentheses:
+- Guarantees resources are closed in reverse order of declaration even when exceptions are thrown.
+- Suppressed Exceptions: If both the try block and close() throw an exception, the try block exception is propagated, and close() exceptions are attached as suppressed exceptions (accessible via getSuppressed()).
+
+3. Finally Block Semantics:
+- The finally block ALWAYS executes whether an exception is caught, uncaught, or handled.
+- Only stops if System.exit(0) is invoked or the JVM crashes.
+- If a return statement is in both try and finally, the finally block's return overrides the try block (an anti-pattern to avoid).`,
+    sampleCode: `// Try-with-resources auto-closing JDBC and streams:
+public void exportAuditLog(String candidateId) throws SQLException, IOException {
+    String sql = "SELECT * FROM candidate_applications WHERE candidate_id = ?";
+    try (Connection conn = dataSource.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, candidateId);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                System.out.println("Candidate: " + rs.getString("name"));
+            }
+        }
+    } // AutoCloseable guarantees conn, ps, rs closed cleanly in reverse order!
+}`,
+    followUps: [
+      'What is multi-catch syntax in Java 7+ and why are multi-catch parameters implicitly final?',
+      'How does custom exception design improve domain modeling in enterprise applications?'
+    ]
+  },
+  {
+    id: 'java-concurrency-01',
+    companyId: 'tcs',
+    round: 'technical',
+    category: 'Concurrency & Multithreading',
+    difficulty: 'Hard',
+    question: 'Explain Callable vs Runnable, and how CompletableFuture enables asynchronous non-blocking programming in Java 8+.',
+    frequencyScore: 93,
+    recencyRating: 'High',
+    timesReported: 49,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Concurrency', 'CompletableFuture', 'ExecutorService', 'Callable', 'Async Programming'],
+    approach: 'Contrast Runnable (void run(), no return, cannot throw checked exceptions) vs Callable<T> (T call(), returns value, throws checked exceptions). Explain CompletableFuture supplyAsync, thenApply, thenCompose, and exceptionally pipelines.',
+    suggestedAnswer: `1. Runnable vs Callable:
+- Runnable: Functional interface with 'void run()'. Cannot return a computed result and cannot throw checked exceptions directly.
+- Callable<T>: Functional interface with 'T call() throws Exception'. Returns a parameterized generic result and can throw checked exceptions. Used with ExecutorService.submit().
+
+2. Future Limitations:
+Standard Future<T> requires blocking calls: future.get() blocks the calling thread until computation finishes. It cannot be manually completed, cannot chain callbacks, and cannot combine multiple futures without blocking.
+
+3. CompletableFuture<T> (Java 8+):
+Implements Future<T> and CompletionStage<T> for reactive, non-blocking asynchronous workflows:
+- Asynchronous Initiation: CompletableFuture.supplyAsync(() -> fetchCandidateScores(), executorService);
+- Transformation (Mapping): .thenApply(scores -> computePercentile(scores))
+- Composition (Chaining async operations): .thenCompose(percentile -> triggerCandidateInterviewSlot(percentile))
+- Combining Multiple Parallel Async Tasks: CompletableFuture.allOf(techFuture, hrFuture, managerialFuture).thenRun(...)
+- Exception Handling: .exceptionally(ex -> fallbackScore) handles failures gracefully without crashing worker threads.`,
+    sampleCode: `// Non-blocking asynchronous candidate evaluation aggregator:
+public CompletableFuture<EvaluationSummary> aggregateAssessmentAsync(String candidateId) {
+    CompletableFuture<Integer> aptFuture = CompletableFuture.supplyAsync(() -> fetchAptitudeScore(candidateId));
+    CompletableFuture<Integer> techFuture = CompletableFuture.supplyAsync(() -> fetchTechnicalScore(candidateId));
+
+    return aptFuture.thenCombine(techFuture, (apt, tech) -> {
+        double avg = (apt + tech) / 2.0;
+        String decision = avg >= 75.0 ? "Eligible for Managerial Round" : "Needs Retest";
+        return new EvaluationSummary(candidateId, avg, decision);
+    }).exceptionally(ex -> {
+        System.err.println("Async scoring failed: " + ex.getMessage());
+        return new EvaluationSummary(candidateId, 0.0, "System Error");
+    });
+}`,
+    followUps: [
+      'What is the difference between thenApply() and thenApplyAsync()?',
+      'How does the ForkJoinPool work work-stealing algorithm distribute tasks across CPU cores?'
+    ]
+  },
+  {
+    id: 'apt-01',
+    companyId: 'hcltech',
+    round: 'aptitude',
+    category: 'Quantitative Aptitude',
+    difficulty: 'Medium',
+    question: 'A train 180 meters long running at 72 km/h crosses a platform in 20 seconds. What is the length of the platform?',
+    frequencyScore: 94,
+    recencyRating: 'High',
+    timesReported: 38,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Speed, Time and Distance', 'Unit Conversion', 'Aptitude Screening'],
+    approach: 'Convert speed from km/h to m/s by multiplying by (5/18). Total distance covered = Speed * Time. Total distance = Length of train + Length of platform.',
+    suggestedAnswer: `Step 1: Convert speed to m/s:
+72 * (5 / 18) = 20 m/s.
+
+Step 2: Calculate total distance covered in 20 seconds:
+Distance = Speed * Time = 20 m/s * 20 s = 400 meters.
+
+Step 3: Distance = Length of Train (180m) + Length of Platform (P)
+400 = 180 + P
+P = 400 - 180 = 220 meters.
+
+Answer: The platform is 220 meters long.`,
+    followUps: [
+      'How does the formula change if two trains are moving in opposite directions?',
+      'What if the train crosses a standing man instead of a platform?'
+    ]
+  },
+  {
+    id: 'apt-02',
+    companyId: 'tcs',
+    round: 'aptitude',
+    category: 'Logical Reasoning',
+    difficulty: 'Medium',
+    question: 'In a certain code, "SPRING" is written as "UNUFRH". How is "MOBILE" written in that same code language?',
+    frequencyScore: 91,
+    recencyRating: 'High',
+    timesReported: 42,
+    lastReportedDate: 'October 2026',
+    verifiedHistorical: true,
+    skills: ['Coding-Decoding', 'Alphabetical Patterns', 'Pattern Recognition'],
+    approach: 'Determine character shift values: S (+2) -> U, P (-2) -> N, R (+3) -> U, I (-3) -> F, N (+4) -> R, G (-4) -> C/H. Alternate addition and subtraction increments.',
+    suggestedAnswer: `Pattern analysis of S P R I N G:
+S (19) + 2 = U (21)
+P (16) - 2 = N (14)
+R (18) + 3 = U (21)
+I (9) - 3 = F (6)
+N (14) + 4 = R (18)
+G (7) + 1 = H (8)
+
+Applying the identical alternating pattern to M O B I L E:
+M (13) + 2 = O (15)
+O (15) - 2 = M (13)
+B (2) + 3 = E (5)
+I (9) - 3 = F (6)
+L (12) + 4 = P (16)
+E (5) - 4 = A (1)
+
+Result: "OMEFPA"`,
+    followUps: [
+      'What are common alternative patterns (e.g. reverse alphabetical or ASCII distance)?'
+    ]
   }
 ];
 

@@ -44,6 +44,11 @@ export default function Footer({ onNavigate }) {
                 </button>
               </li>
               <li>
+                <button onClick={() => onNavigate('academic-records')} className="hover:text-white transition-colors">
+                  Student Academic Records
+                </button>
+              </li>
+              <li>
                 <button onClick={() => onNavigate('mock-interview')} className="hover:text-white transition-colors flex items-center gap-1 text-indigo-400 font-semibold">
                   <span>AI Mock Interviewer</span>
                   <span className="px-1 py-0.2 bg-indigo-500/30 text-indigo-300 rounded text-[9px]">LIVE</span>

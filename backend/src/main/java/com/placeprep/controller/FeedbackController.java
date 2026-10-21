@@ -39,4 +39,21 @@ public class FeedbackController {
         Feedback created = feedbackService.submit(feedback);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+
+    @PostMapping("/recruiter")
+    public ResponseEntity<?> submitRecruiterFeedback(@RequestBody com.placeprep.model.RecruiterFeedback feedback) {
+        try {
+            com.placeprep.model.RecruiterFeedback created = feedbackService.submitRecruiterFeedback(feedback);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/recruiter")
+    public ResponseEntity<List<com.placeprep.model.RecruiterFeedback>> getRecruiterFeedback(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String driveId
+    ) {
+        return ResponseEntity.ok(feedbackService.getAllRecruiterFeedback(driveId));
+    }
 }

@@ -1,245 +1,368 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Lock, 
-  Mail, 
-  Building2, 
-  GraduationCap, 
-  X, 
-  CheckCircle2, 
-  ShieldCheck, 
-  ArrowRight,
+import {
+  X,
+  Mail,
+  Lock,
+  User as UserIcon,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  Building,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
   Sparkles
 } from 'lucide-react';
-import { setCurrentUser, getGraduationBatch } from '../services/storage';
+import { AuthApi } from '../services/api';
+import { setCurrentUser, setGraduationBatch } from '../services/storage';
+import PlacePrepLogo from './PlacePrepLogo';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Select from './ui/Select';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
-  const currentBatch = getGraduationBatch();
-  const [tab, setTab] = useState('signin'); // 'signin' or 'signup'
-  
-  // Form states
-  const [name, setName] = useState('Priyansh Jain');
-  const [email, setEmail] = useState('priyansh.jain@example.edu');
-  const [college, setCollege] = useState('Delhi Technological University (DTU)');
-  const [branch, setBranch] = useState('Computer Science and Engineering');
-  const [graduationBatch, setGraduationBatch] = useState(currentBatch);
-  const [password, setPassword] = useState('••••••••');
+  const [tab, setTab] = useState('login'); // 'login' | 'signup' | 'demo'
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    college: '',
+    branch: '',
+    graduationBatch: '2028'
+  });
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) {
-      setErrorMsg('Please provide a valid name and college email.');
+    if (!formData.email || !formData.password) {
+      setErrorMsg('Please enter both email and password.');
       return;
     }
 
-    const userData = {
-      name: name.trim(),
-      email: email.trim(),
-      college: college.trim(),
-      branch: branch.trim(),
-      graduationBatch,
-      role: email.includes('admin') || email.includes('tpo') ? 'admin' : 'student',
-      signedInAt: new Date().toISOString()
-    };
-
-    setCurrentUser(userData);
+    setLoading(true);
     setErrorMsg('');
-    if (onAuthSuccess) onAuthSuccess(userData);
-    onClose();
+    try {
+      const res = await AuthApi.login({
+        email: formData.email.trim(),
+        password: formData.password
+      });
+
+      setCurrentUser(res.user);
+      setSuccessMsg(`Welcome back, ${res.user.name}!`);
+      setTimeout(() => {
+        onAuthSuccess?.(res.user);
+        onClose();
+      }, 500);
+    } catch (err) {
+      setErrorMsg(err.message || 'Invalid email or password.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDemoSignIn = (roleType) => {
-    let demoUser;
-    if (roleType === 'student') {
-      demoUser = {
-        name: 'Priyansh Jain',
-        email: 'priyansh.jain@dtu.ac.in',
-        college: 'Delhi Technological University (DTU)',
-        branch: 'Computer Science and Engineering',
-        graduationBatch: currentBatch,
-        cgpa: 8.85,
-        tenthPercentage: 92.4,
-        twelfthPercentage: 89.6,
-        activeBacklogs: 0,
-        role: 'student',
-        signedInAt: new Date().toISOString()
-      };
-    } else {
-      demoUser = {
-        name: 'Dr. R. K. Sharma',
-        email: 'tpo.head@dtu.ac.in',
-        college: 'Delhi Technological University (DTU)',
-        branch: 'Placement & Career Services Office',
-        graduationBatch: 'All Batches',
-        role: 'admin',
-        signedInAt: new Date().toISOString()
-      };
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.password) {
+      setErrorMsg('Please fill in all mandatory fields.');
+      return;
+    }
+    if (formData.password.length < 6) {
+      setErrorMsg('Password should be at least 6 characters.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
     }
 
-    setCurrentUser(demoUser);
-    if (onAuthSuccess) onAuthSuccess(demoUser);
-    onClose();
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await AuthApi.register({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        college: formData.college.trim() || 'Engineering College',
+        branch: formData.branch.trim() || 'Computer Science',
+        graduationBatch: formData.graduationBatch
+      });
+
+      setCurrentUser(res.user);
+      setGraduationBatch(formData.graduationBatch);
+      setSuccessMsg('Account created successfully! Welcome to PlacePrep.');
+      setTimeout(() => {
+        onAuthSuccess?.(res.user);
+        onClose();
+      }, 600);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to register account.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async (role = 'student') => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await AuthApi.demoLogin(role);
+      setCurrentUser(res.user);
+      setSuccessMsg(`Signed in as Demo ${role === 'admin' ? 'Placement Officer (Admin)' : 'Student'}!`);
+      setTimeout(() => {
+        onAuthSuccess?.(res.user);
+        onClose();
+      }, 500);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to sign in with demo credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div 
-        className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-modal="true"
       >
-        
         {/* Header */}
-        <div className="p-5 border-b border-slate-200 flex items-start justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-base text-slate-900">
-                {tab === 'signin' ? 'Sign in to PlacePrep' : 'Create Student Profile'}
-              </h3>
-              <p className="text-xs text-slate-500">
-                Access verified campus drives, conflict detector & question bank.
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="p-1 text-slate-400 hover:text-slate-600 rounded"
+        <div className="relative p-6 pb-5 bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white shrink-0">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Close modal"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
-        </div>
 
-        {/* Tab switch */}
-        <div className="px-5 pt-3">
-          <div className="segmented-control w-full grid grid-cols-2 text-center text-xs">
+          <div className="flex items-center gap-2.5 mb-2">
+            <PlacePrepLogo className="w-8 h-8" />
+            <span className="font-extrabold text-lg text-white">PlacePrep Account</span>
+          </div>
+          <p className="text-xs text-indigo-200 leading-relaxed">
+            {tab === 'login'
+              ? 'Sign in to access your saved questions, personalized drives, and mock history.'
+              : 'Create a student profile to track eligibility and company preparation.'}
+          </p>
+
+          {/* Tab selector */}
+          <div className="flex rounded-xl bg-white/10 p-1 mt-4 gap-1">
             <button
-              onClick={() => setTab('signin')}
-              className={`py-1.5 rounded-md font-medium transition-colors ${
-                tab === 'signin' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600'
+              onClick={() => {
+                setTab('login');
+                setErrorMsg('');
+              }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                tab === 'login' ? 'bg-white text-indigo-950 shadow-xs' : 'text-indigo-200 hover:text-white'
               }`}
             >
               Sign In
             </button>
             <button
-              onClick={() => setTab('signup')}
-              className={`py-1.5 rounded-md font-medium transition-colors ${
-                tab === 'signup' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600'
+              onClick={() => {
+                setTab('signup');
+                setErrorMsg('');
+              }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                tab === 'signup' ? 'bg-white text-indigo-950 shadow-xs' : 'text-indigo-200 hover:text-white'
               }`}
             >
-              New Student Registration
+              Register
             </button>
           </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
           {errorMsg && (
-            <div className="p-2.5 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
-              {errorMsg}
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-[#DC2626] font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus-ring"
-              placeholder="e.g. Priyansh Jain"
-              required
-            />
-          </div>
+          {successMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-[#16A34A] font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">College Email ID</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus-ring"
-              placeholder="e.g. student@college.edu"
-              required
-            />
-          </div>
+          {tab === 'login' ? (
+            <form onSubmit={handleLogin} className="space-y-3.5">
+              <Input
+                label="Email Address"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="name@college.edu"
+                icon={Mail}
+                required
+              />
 
-          {tab === 'signup' && (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">University / College</label>
-                <input
-                  type="text"
-                  value={college}
-                  onChange={(e) => setCollege(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus-ring"
-                  placeholder="e.g. DTU, VIT, NIT"
+              <div className="space-y-1.5 text-left">
+                <label className="block text-xs font-bold text-[#0F172A]">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    required
+                    className="w-full pl-10 pr-10 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Button type="submit" loading={loading} className="w-full">
+                  Sign In
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSignup} className="space-y-3">
+              <Input
+                label="Full Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Priyansh Jain"
+                icon={UserIcon}
+                required
+              />
+
+              <Input
+                label="College Email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="student@dtu.ac.in"
+                icon={Mail}
+                required
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="College / University"
+                  name="college"
+                  value={formData.college}
+                  onChange={handleChange}
+                  placeholder="DTU, Delhi"
+                  icon={Building}
+                />
+                <Select
+                  label="Graduation Batch"
+                  name="graduationBatch"
+                  value={formData.graduationBatch}
+                  onChange={handleChange}
+                  options={[
+                    { value: '2026', label: '2026 Batch' },
+                    { value: '2027', label: '2027 Batch' },
+                    { value: '2028', label: '2028 Batch' },
+                    { value: '2029', label: '2029 Batch' }
+                  ]}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Branch</label>
+              <div className="space-y-1.5 text-left">
+                <label className="block text-xs font-bold text-[#0F172A]">Password (min 6 chars)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
                   <input
-                    type="text"
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus-ring"
-                    placeholder="e.g. CSE"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    required
+                    className="w-full pl-10 pr-10 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Graduation Batch</label>
-                  <select
-                    value={graduationBatch}
-                    onChange={(e) => setGraduationBatch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus-ring"
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
                   >
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
-                    <option value="2028">2028</option>
-                    <option value="2029">2029</option>
-                  </select>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
-            </>
+
+              <Input
+                label="Confirm Password"
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+
+              <div className="pt-2">
+                <Button type="submit" loading={loading} className="w-full">
+                  Create Student Account
+                </Button>
+              </div>
+            </form>
           )}
 
-          <button
-            type="submit"
-            className="w-full mt-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-xs transition-colors"
-          >
-            {tab === 'signin' ? 'Sign In to Dashboard' : 'Complete Registration'}
-          </button>
-        </form>
-
-        {/* 1-Click Demo Profiles */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            1-Click Instant Demo Login:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleDemoSignIn('student')}
-              className="px-2.5 py-1.5 text-xs text-left bg-white border border-slate-200 hover:border-slate-300 rounded-lg"
-            >
-              <div className="font-semibold text-slate-800">Student Profile</div>
-              <div className="text-[10px] text-slate-500">Priyansh Jain (2026)</div>
-            </button>
-            <button
-              onClick={() => handleDemoSignIn('admin')}
-              className="px-2.5 py-1.5 text-xs text-left bg-white border border-slate-200 hover:border-slate-300 rounded-lg"
-            >
-              <div className="font-semibold text-slate-800">TPO / Admin Profile</div>
-              <div className="text-[10px] text-slate-500">Placement Officer</div>
-            </button>
+          {/* Quick Demo Access Bar */}
+          <div className="pt-3 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-[#64748B] text-center mb-2 uppercase tracking-wider">
+              1-Click Demo Evaluation Profiles
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => handleDemoLogin('student')}
+                className="w-full"
+              >
+                Demo Student
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => handleDemoLogin('admin')}
+                className="w-full"
+              >
+                Demo Admin
+              </Button>
+            </div>
           </div>
         </div>
-
       </div>
     </div>
   );

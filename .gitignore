@@ -12,10 +12,23 @@ dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Java / Maven
+target/
+backend/target/
+*.class
+*.jar
+*.war
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# IDEs
 .vscode/*
 !.vscode/extensions.json
 .idea
+*.iml
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,12 +36,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# Java / Maven
-target/
-backend/target/
-*.iml
-
 # Project documents and diagrams
 Responsibilities.md
 *.excalidraw
-

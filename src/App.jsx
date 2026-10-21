@@ -4,8 +4,16 @@ import Footer from './components/Footer';
 import BatchSelectionModal from './components/BatchSelectionModal';
 import AuthModal from './components/AuthModal';
 import GlobalSearchModal from './components/GlobalSearchModal';
+import PushNotificationDrawer from './components/PushNotificationDrawer';
 
-// Pages
+// Unified Portal Pages
+import PortalGatewayPage from './pages/PortalGatewayPage';
+import AuthPortalPage from './pages/AuthPortalPage';
+import InstitutePortalPage from './pages/InstitutePortalPage';
+import PlacementPortalPage from './pages/PlacementPortalPage';
+import RemiiLandingPage from './pages/RemiiLandingPage';
+
+// Specialized Placement Prep Pages
 import HomePage from './pages/HomePage';
 import PlacementDrivesPage from './pages/PlacementDrivesPage';
 import CompaniesPage from './pages/CompaniesPage';
@@ -16,39 +24,26 @@ import AiInsightsPage from './pages/AiInsightsPage';
 import MockInterviewPage from './pages/MockInterviewPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminPage from './pages/AdminPage';
-
 import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
-
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
 
-
-import { 
-  isOnboardingCompleted, 
-  getGraduationBatch, 
-  getCompanies, 
-  getInterviewQuestions 
-} from './services/storage';
+import { getCompanies } from './services/storage';
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState('home');
+  // Default to gateway (the Master Home Page with Institute & Placement options)
+  const [currentRoute, setCurrentRoute] = useState('gateway');
+  const [selectedAuthPortal, setSelectedAuthPortal] = useState('institute');
+  const [authorizedPortal, setAuthorizedPortal] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [selectedRoundType, setSelectedRoundType] = useState('technical');
   const [mockSessionParams, setMockSessionParams] = useState({ company: null, round: 'technical' });
 
-  // Modals
+  // Modals & Drawers
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-
-  // Check onboarding on mount
-  useEffect(() => {
-    const onboardingDone = isOnboardingCompleted();
-    if (!onboardingDone) {
-      // First visit onboarding prompt
-      setIsBatchModalOpen(true);
-    }
-  }, []);
+  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
 
   // Global Keyboard shortcuts
   useEffect(() => {
@@ -63,6 +58,37 @@ export default function App() {
   }, []);
 
   // Navigation handlers
+  const handleSelectPortal = (portal) => {
+    if (authorizedPortal !== portal) {
+      handleNavigateAuth(portal);
+      return;
+    }
+    if (portal === 'institute') {
+      setCurrentRoute('institute-portal');
+    } else if (portal === 'placement') {
+      setCurrentRoute('placement-portal');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavigateAuth = (portalBranch = 'institute') => {
+    setSelectedAuthPortal(portalBranch);
+    setCurrentRoute('auth-portal');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAuthSuccess = (user, portalBranch) => {
+    setAuthorizedPortal(portalBranch);
+    if (portalBranch === 'institute') {
+      setCurrentRoute('institute-portal');
+    } else if (portalBranch === 'placement') {
+      setCurrentRoute('placement-portal');
+    } else {
+      setCurrentRoute('dashboard');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSelectCompany = (company) => {
     setSelectedCompany(company);
     setCurrentRoute('company-hub');
@@ -113,21 +139,70 @@ export default function App() {
     }
   };
 
+  // If route is 'landing', render standalone Remii-style Landing Page
+  if (currentRoute === 'landing') {
+    return (
+      <RemiiLandingPage onBackToApp={() => setCurrentRoute('gateway')} />
+    );
+  }
+
+  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal'].includes(currentRoute);
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+    <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
       
-      {/* Persistent Navigation Header */}
-      <Navbar
-        currentRoute={currentRoute}
-        setCurrentRoute={setCurrentRoute}
-        onOpenSearch={() => setIsSearchModalOpen(true)}
-        onOpenBatchModal={() => setIsBatchModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-      />
+      {!isGuidedFlowRoute && (
+        <Navbar
+          currentRoute={currentRoute}
+          setCurrentRoute={setCurrentRoute}
+          onOpenSearch={() => setIsSearchModalOpen(true)}
+          onOpenBatchModal={() => setIsBatchModalOpen(true)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
+          onNavigateAuth={handleNavigateAuth}
+        />
+      )}
 
       {/* Main Content Router */}
       <main className="flex-1">
-        {currentRoute === 'home' && (
+        
+        {/* 1. MASTER HOME PAGE: Portal Gateway (Institute & Placement Options) */}
+        {(currentRoute === 'gateway' || currentRoute === 'home') && (
+          <PortalGatewayPage
+            onSelectPortal={handleSelectPortal}
+            onNavigateAuth={handleNavigateAuth}
+          />
+        )}
+
+        {/* 2. DEDICATED LOGIN / REGISTER PAGE for selected portal */}
+        {currentRoute === 'auth-portal' && (
+          <AuthPortalPage
+            initialPortal={selectedAuthPortal}
+            onAuthSuccess={handleAuthSuccess}
+            onBackToGateway={() => setCurrentRoute('gateway')}
+          />
+        )}
+
+        {/* 3. INSTITUTE PORTAL (Teacher, HOD, Students) */}
+        {currentRoute === 'institute-portal' && (
+          <InstitutePortalPage
+            onNavigate={setCurrentRoute}
+            onSelectCompany={handleSelectCompany}
+            onSelectQuestion={handleSelectQuestion}
+          />
+        )}
+
+        {/* 4. PLACEMENT PORTAL (HR, Director, TPO, Coordinator) */}
+        {currentRoute === 'placement-portal' && (
+          <PlacementPortalPage
+            onNavigate={setCurrentRoute}
+            onSelectCompany={handleSelectCompany}
+            onSelectQuestion={handleSelectQuestion}
+          />
+        )}
+
+        {/* 5. CLASSIC PLACEMENT HOMEPAGE */}
+        {currentRoute === 'classic-home' && (
           <HomePage
             onNavigate={setCurrentRoute}
             onSelectCompany={handleSelectCompany}
@@ -135,6 +210,7 @@ export default function App() {
           />
         )}
 
+        {/* 6. SELECTION WORKFLOW ENGINE */}
         {currentRoute === 'workflow' && (
           <SelectionWorkflowPage
             onNavigate={setCurrentRoute}
@@ -142,12 +218,14 @@ export default function App() {
           />
         )}
 
+        {/* 7. DRIVES & PLACEMENT CALENDAR */}
         {currentRoute === 'drives' && (
           <PlacementDrivesPage
             onSelectCompany={handleSelectCompany}
           />
         )}
 
+        {/* 8. COMPANIES LISTING */}
         {currentRoute === 'companies' && (
           <CompaniesPage
             onSelectCompany={handleSelectCompany}
@@ -155,6 +233,7 @@ export default function App() {
           />
         )}
 
+        {/* 9. COMPANY PREPARATION HUB */}
         {currentRoute === 'company-hub' && selectedCompany && (
           <CompanyHubPage
             company={selectedCompany}
@@ -167,6 +246,7 @@ export default function App() {
           />
         )}
 
+        {/* 10. QUESTION PREPARATION & PRACTICE */}
         {currentRoute === 'prep' && (
           <QuestionPrepPage
             initialQuestion={selectedQuestion}
@@ -174,16 +254,18 @@ export default function App() {
             companyId={selectedCompany?.id}
             onBack={() => {
               if (selectedCompany) setCurrentRoute('company-hub');
-              else setCurrentRoute('home');
+              else setCurrentRoute('gateway');
             }}
             onNavigateToMock={(company, round) => handleStartMockInterview(company, round)}
           />
         )}
 
+        {/* 11. INTERVIEW EXPERIENCES */}
         {currentRoute === 'experiences' && (
           <ExperiencesPage />
         )}
 
+        {/* 12. AI INSIGHTS */}
         {currentRoute === 'ai-insights' && (
           <AiInsightsPage
             initialCompanyId={selectedCompany?.id || 'hcltech'}
@@ -192,6 +274,7 @@ export default function App() {
           />
         )}
 
+        {/* 13. MOCK INTERVIEW */}
         {currentRoute === 'mock-interview' && (
           <MockInterviewPage
             initialCompany={mockSessionParams.company || selectedCompany}
@@ -200,6 +283,7 @@ export default function App() {
           />
         )}
 
+        {/* 14. STUDENT DASHBOARD */}
         {currentRoute === 'dashboard' && (
           <StudentDashboardPage
             onNavigate={setCurrentRoute}
@@ -208,45 +292,46 @@ export default function App() {
           />
         )}
 
+        {/* 15. ACADEMIC RECORDS */}
         {currentRoute === 'academic-records' && (
           <AcademicRecordsPage />
         )}
 
+        {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
           <AdminPage />
         )}
+
       </main>
 
-      {/* Footer */}
-      <Footer onNavigate={setCurrentRoute} />
+      {!isGuidedFlowRoute && <Footer onNavigate={setCurrentRoute} />}
 
-      {/* Graduation Batch Selection Modal */}
-      <BatchSelectionModal
-        isOpen={isBatchModalOpen}
-        onClose={() => setIsBatchModalOpen(false)}
-        onBatchSelected={(batch) => {
-          // Toast or refresh
-        }}
-      />
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuthSuccess={(user) => {
-          setCurrentRoute('dashboard');
-        }}
-        triggerBatchModal={() => setIsBatchModalOpen(true)}
-      />
-
-      {/* Global Search Modal */}
-      <GlobalSearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-        onSelectResult={handleSearchSelect}
-      />
+      {!isGuidedFlowRoute && (
+        <>
+          <BatchSelectionModal
+            isOpen={isBatchModalOpen}
+            onClose={() => setIsBatchModalOpen(false)}
+            onBatchSelected={() => {}}
+          />
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            onAuthSuccess={() => setCurrentRoute('dashboard')}
+            triggerBatchModal={() => setIsBatchModalOpen(true)}
+          />
+          <GlobalSearchModal
+            isOpen={isSearchModalOpen}
+            onClose={() => setIsSearchModalOpen(false)}
+            onSelectResult={handleSearchSelect}
+          />
+          <PushNotificationDrawer
+            isOpen={isNotificationDrawerOpen}
+            onClose={() => setIsNotificationDrawerOpen(false)}
+            onNavigate={setCurrentRoute}
+          />
+        </>
+      )}
 
     </div>
   );
 }
-

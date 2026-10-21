@@ -23,7 +23,10 @@ import {
   CalendarDays,
   ShieldAlert,
   ArrowUpRight,
-  
+  ExternalLink,
+  Sparkles,
+  BookmarkCheck,
+  GraduationCap
 } from 'lucide-react';
 import { 
   getUpcomingDrives, 
@@ -39,8 +42,15 @@ import {
   getDriveRoundsConfig
 } from '../services/storage';
 import { DriveApi, ApplicationApi } from '../services/api';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Input from '../components/ui/Input';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import PageHeader from '../components/ui/PageHeader';
 
-export default function PlacementDrivesPage({ onSelectCompany }) {
+export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpenAuthModal }) {
   const currentUser = getCurrentUser();
   const currentBatch = getGraduationBatch();
 
@@ -51,8 +61,12 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
   const [selectedBatchFilter, setSelectedBatchFilter] = useState(currentBatch);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [drivesList, setDrivesList] = useState(getUpcomingDrives());
-  const [applications, setApplications] = useState(getStudentApplications());
+  const [drivesList, setDrivesList] = useState(() => getUpcomingDrives());
+  const [applications, setApplications] = useState(() => getStudentApplications());
+  const [trackedApps, setTrackedApps] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [trackingLoadingId, setTrackingLoadingId] = useState(null);
 
   // Logistics / Instructions Modal
   const [selectedDriveForInstructions, setSelectedDriveForInstructions] = useState(null);
@@ -114,21 +128,56 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
   const companies = getCompanies();
 
-  // Refresh data on mount or backend sync
+  // Load backend drives and applications on mount or batch filter change
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [drivesData, myAppsData] = await Promise.allSettled([
+        DriveApi.getAll(selectedBatchFilter === 'all' ? null : selectedBatchFilter),
+        currentUser ? ApplicationApi.getMyApplications().catch(() => []) : Promise.resolve([])
+      ]);
+
+      if (drivesData.status === 'fulfilled' && Array.isArray(drivesData.value) && drivesData.value.length > 0) {
+        setDrivesList(drivesData.value);
+      } else {
+        setDrivesList(getUpcomingDrives());
+      }
+
+      if (myAppsData.status === 'fulfilled' && Array.isArray(myAppsData.value)) {
+        setTrackedApps(myAppsData.value);
+      }
+
+      setApplications(getStudentApplications());
+    } catch (err) {
+      console.warn('Backend unavailable, utilizing cached drives and passes:', err);
+      setDrivesList(getUpcomingDrives());
+      setApplications(getStudentApplications());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [selectedBatchFilter, currentUser?.email]);
+
   useEffect(() => {
     const handleAppsChanged = () => setApplications(getStudentApplications());
     window.addEventListener('applications-changed', handleAppsChanged);
     return () => window.removeEventListener('applications-changed', handleAppsChanged);
   }, []);
 
-  // Sync configured rounds when selectedDriveForConfig changes
+  // Sync configured rounds when selected drive changes in team controls
   useEffect(() => {
-    const targetDrive = drivesList.find(d => d.id === selectedDriveForConfig);
-    const customConfig = getDriveRoundsConfig(selectedDriveForConfig);
-    if (customConfig && customConfig.roundConfigs) {
-      setRoundsConfigState(customConfig.roundConfigs);
-    } else if (targetDrive && targetDrive.roundConfigs) {
-      setRoundsConfigState(targetDrive.roundConfigs);
+    const target = drivesList.find(d => (d.driveId || d.id) === selectedDriveForConfig);
+    if (target && target.roundConfigs) {
+      setRoundsConfigState(target.roundConfigs);
+    } else {
+      const stored = getDriveRoundsConfig(selectedDriveForConfig);
+      if (stored && stored.roundConfigs) {
+        setRoundsConfigState(stored.roundConfigs);
+      }
     }
   }, [selectedDriveForConfig, drivesList]);
 
@@ -137,19 +186,59 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  // Filtered drives
+  // Filtered drives list
   const filteredDrives = useMemo(() => {
     return drivesList.filter(d => {
-      const matchBatch = selectedBatchFilter === 'all' || (d.eligibleBatches && d.eligibleBatches.includes(selectedBatchFilter));
-      const matchSearch = d.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchBatch = selectedBatchFilter === 'all' || 
+        (d.eligibleBatches && (d.eligibleBatches.includes(selectedBatchFilter) || d.eligibleBatches.includes(Number(selectedBatchFilter))));
+      const matchSearch = (d.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (d.role || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (d.venue && d.venue.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchStatus = statusFilter === 'all' ? true : d.status.toLowerCase().includes(statusFilter);
+      const matchStatus = statusFilter === 'all' ? true : (d.status || '').toLowerCase().includes(statusFilter);
       return matchBatch && matchSearch && matchStatus;
     });
   }, [drivesList, selectedBatchFilter, searchQuery, statusFilter]);
 
-  // Handle Application Submit
+  // Track drive in personal applications tracker
+  const handleTrackDrive = async (drive, initialStatus = 'APPLIED') => {
+    if (!currentUser) {
+      if (onOpenAuthModal) onOpenAuthModal();
+      return;
+    }
+    const dId = drive.driveId || drive.id;
+    setTrackingLoadingId(dId);
+    try {
+      const app = await ApplicationApi.trackApplication({
+        driveId: dId,
+        companyName: drive.companyName,
+        roleTitle: drive.role,
+        status: initialStatus,
+        notes: `Eligible batches: ${(drive.eligibleBatches || []).join(', ')}. CTC: ${drive.ctc || drive.packageDetails || 'N/A'}`
+      });
+      setTrackedApps(prev => [...prev.filter(a => a.driveId !== app.driveId), app]);
+      showToast(`Drive application for ${drive.companyName} tracked!`);
+    } catch (err) {
+      showToast('Failed to track application: ' + err.message);
+    } finally {
+      setTrackingLoadingId(null);
+    }
+  };
+
+  const getApplicationForDrive = (drive) => {
+    if (!drive) return null;
+    const id = drive.driveId || drive.id;
+    const pass = applications.find(a => 
+      (id && (a.driveId === id || a.id === id)) ||
+      (a.companyName && drive.companyName && a.companyName.toLowerCase() === drive.companyName.toLowerCase())
+    );
+    if (pass) return pass;
+    return trackedApps.find(a => 
+      (id && a.driveId === id) ||
+      (a.companyName && drive.companyName && a.companyName.toLowerCase() === drive.companyName.toLowerCase())
+    );
+  };
+
+  // Handle Application Submit (Verifies eligibility, checks conflicts, creates pass, tracks application)
   const handleApplySubmit = async (e) => {
     e.preventDefault();
     if (!driveToApply) return;
@@ -163,7 +252,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       driveToApply.driveDate,
       driveToApply.driveTime || '09:00 AM',
       '05:00 PM',
-      driveToApply.id
+      driveToApply.id || driveToApply.driveId
     );
 
     const newApp = {
@@ -178,7 +267,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       tenthPercentage: applyStudentProfile.tenthPercentage,
       twelfthPercentage: applyStudentProfile.twelfthPercentage,
       activeBacklogs: applyStudentProfile.activeBacklogs,
-      driveId: driveToApply.id,
+      driveId: driveToApply.driveId || driveToApply.id,
       companyId: driveToApply.companyId,
       companyName: driveToApply.companyName,
       role: driveToApply.role,
@@ -200,8 +289,21 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
     saveStudentApplication(newApp);
     setApplications(getStudentApplications());
 
-    // Also sync to backend API if available
-    ApplicationApi.register(newApp).catch(() => {});
+    // Also sync to backend API
+    try {
+      await ApplicationApi.register(newApp).catch(() => {});
+      if (currentUser) {
+        await ApplicationApi.trackApplication({
+          driveId: driveToApply.driveId || driveToApply.id,
+          companyName: driveToApply.companyName,
+          roleTitle: driveToApply.role,
+          status: 'APPLIED',
+          notes: `Drive Pass ID: ${newApp.applicationId}. Status: ${newApp.status}`
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('API sync warning:', err);
+    }
 
     setApplyFeedbackMsg({
       isEligible: eligCheck.isEligible,
@@ -231,7 +333,8 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
     
     // Also update current drive in state
     setDrivesList(prev => prev.map(d => {
-      if (d.id === selectedDriveForConfig) {
+      const id = d.driveId || d.id;
+      if (id === selectedDriveForConfig) {
         return { ...d, rounds: roundsList, roundConfigs: roundsConfigState };
       }
       return d;
@@ -271,7 +374,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
   // Selected drive for eligibility interactive engine
   const targetDriveForEligibility = useMemo(() => {
-    return drivesList.find(d => d.id === eligibilityForm.targetDriveId) || drivesList[0];
+    return drivesList.find(d => (d.driveId || d.id) === eligibilityForm.targetDriveId) || drivesList[0] || {};
   }, [drivesList, eligibilityForm.targetDriveId]);
 
   const liveEligibilityEvaluation = useMemo(() => {
@@ -284,7 +387,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* Toast */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-bottom-5">
-          <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
@@ -310,17 +413,25 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               Batch {currentBatch} Verification Active
             </span>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('applications')}
+                className="px-3 py-1 text-xs font-semibold rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
+              >
+                Tracked Applications ({applications.length})
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Suite Navigation Tabs */}
-      <div className="surface-card p-2 shadow-xl flex flex-wrap gap-2">
+      <div className="surface-card p-2 shadow-sm flex flex-wrap gap-2">
         {[
           { id: 'drives', label: 'Recruitment Drives', icon: Briefcase, count: filteredDrives.length },
           { id: 'calendar', label: 'Drive Calendar & Logistics', icon: CalendarDays },
           { id: 'eligibility', label: 'Eligibility Engine', icon: ShieldCheck, isBadge: 'Live Check' },
-          { id: 'applications', label: 'My Applications', icon: FileText, count: applications.length },
+          { id: 'applications', label: 'My Registration Passes', icon: FileText, count: applications.length },
           { id: 'conflicts', label: 'Schedule Conflict Radar', icon: AlertTriangle, hasAlert: applications.some(a => a.conflictFlagged) || campusClashes.length > 0 },
           { id: 'team-controls', label: 'Placement-Team Controls', icon: Sliders, isBadge: 'Admin/TPO' },
         ].map(tab => {
@@ -330,28 +441,26 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
-                isActive ? 'bg-indigo-600 text-white shadow-xs font-mono' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-mono'
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer ${
+                isActive ? 'bg-indigo-600 text-white shadow-xs font-mono' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-mono'
               }`}
             >
               <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
                 <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-                  isActive ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 font-mono'
+                  isActive ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-700 font-mono'
                 }`}>
                   {tab.count}
                 </span>
               )}
               {tab.isBadge && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] uppercase font-black ${
-                  isActive ? 'bg-white/20 text-white font-mono' : 'bg-indigo-50 text-indigo-600 border border-indigo-200 font-mono'
-                }`}>
+                <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">
                   {tab.isBadge}
                 </span>
               )}
               {tab.hasAlert && (
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
               )}
             </button>
           );
@@ -363,34 +472,34 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* ======================================================== */}
       {activeTab === 'drives' && (
         <div className="space-y-6">
-          
-          {/* Filters Bar */}
-          <div className="surface-card p-4 sm:p-5 shadow-xl space-y-4">
+          {/* Filter and Search Bar */}
+          <div className="surface-card p-4 sm:p-5 border-slate-200 space-y-4">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-              
-              {/* Search */}
+              {/* Search Input */}
               <div className="relative w-full md:w-96">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by company, role, or campus venue..."
-                  className="w-full pl-10 pr-4 py-2 bg-white border-slate-300 border border-slate-200 text-slate-900 placeholder-slate-500 rounded-xl text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
+                  placeholder="Search drives by company, role, or venue..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
-              {/* Batch Selector */}
+              {/* Batch Selector Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto text-xs">
-                <span className="text-slate-500 text-xs mr-1 font-semibold flex items-center gap-1">
+                <span className="text-slate-400 text-xs mr-1 font-semibold flex items-center gap-1">
                   <Filter className="w-3.5 h-3.5" /> Batch:
                 </span>
                 {['all', '2026', '2027', '2028', '2029'].map(b => (
                   <button
                     key={b}
                     onClick={() => setSelectedBatchFilter(b)}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
-                      selectedBatchFilter === b ? 'bg-indigo-600 text-white shadow-xs font-mono' : 'bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 font-mono'
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      selectedBatchFilter === b
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     {b === 'all' ? 'All Batches' : `${b} Batch`}
@@ -398,69 +507,83 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Conflict Alert Banner if clashing drives exist */}
-          {campusClashes.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs space-y-1">
-                <p className="font-bold text-amber-900">
-                  Campus Schedule Conflict Detected: {campusClashes.length} drive clash(es) flagged!
-                </p>
-                <p className="text-amber-700">
-                  Multiple drives (e.g., HCLTech and Accenture on Nov 18, 2026) are scheduled on the same date for overlapping batches.
-                </p>
+            {/* Quick Stats / Filter tags */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-2 text-slate-500">
+                <span>Showing <b>{filteredDrives.length}</b> verified campus opportunities</span>
+                {selectedBatchFilter !== 'all' && (
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[11px]">
+                    Targeting Batch {selectedBatchFilter}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setActiveTab('conflicts')}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 mt-1"
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer ${
+                    statusFilter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
                 >
-                  <span>Open Schedule Conflict Radar to review & resolve</span>
-                  <ArrowRight className="w-3 h-3" />
+                  All Status
+                </button>
+                <button
+                  onClick={() => setStatusFilter('active')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer ${
+                    statusFilter === 'active' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Open Drives
                 </button>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Drives Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDrives.map((drive) => {
-              const matchedCompany = companies.find(c => c.id === drive.companyId);
-              const isEligible = drive.eligibleBatches.includes(currentBatch);
-              const hasApplied = applications.some(a => a.driveId === drive.id && a.studentId === (currentUser?.id || 'user-demo-01'));
-              const applicationObj = applications.find(a => a.driveId === drive.id && a.studentId === (currentUser?.id || 'user-demo-01'));
+              const driveId = drive.driveId || drive.id;
+              const applicationObj = getApplicationForDrive(drive);
+              const hasApplied = !!applicationObj;
+              const isEligible = (drive.eligibleBatches || []).map(String).includes(String(currentBatch));
+              const isTracking = trackingLoadingId === driveId;
+              const matchedCompany = companies.find(c => (c.companyId || c.id) === drive.companyId) || {
+                id: (drive.companyId || drive.companyName).toLowerCase().replace(/\s+/g, ''),
+                name: drive.companyName
+              };
 
               return (
                 <div
-                  key={drive.id}
-                  className="surface-card p-6 shadow-xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between"
+                  key={driveId}
+                  className="surface-card p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
                 >
                   <div>
-                    {/* Header */}
+                    {/* Top Section */}
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h2 className="font-extrabold text-xl text-white">{drive.companyName}</h2>
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
+                        <h3 className="font-semibold text-lg text-slate-900">{drive.companyName}</h3>
+                        <p className="text-xs font-semibold text-slate-500">{drive.role}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            {drive.status}
+                            {drive.status || 'Verified Drive'}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-700 mt-0.5">{drive.role}</p>
                       </div>
 
                       <div className="text-right">
                         <span className="text-xs text-slate-500 font-medium">CTC Package</span>
-                        <p className="text-base font-extrabold text-indigo-600">{drive.ctc}</p>
+                        <p className="text-base font-extrabold text-indigo-600">{drive.ctc || drive.packageDetails || '₹7 - ₹12 LPA'}</p>
                       </div>
                     </div>
 
                     {/* Date, Reporting Time & Logistics */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 my-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
                       <div>
-                        <span className="text-slate-500 block text-[11px] font-semibold">Drive Date & Time</span>
+                        <span className="text-slate-500 block text-[11px] font-semibold">Drive Date</span>
                         <span className="font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                          <CalendarIcon className="w-3.5 h-3.5 text-indigo-600" /> {drive.driveDate}
+                          <CalendarIcon className="w-3.5 h-3.5 text-indigo-600" /> {drive.driveDate || drive.date || 'TBA'}
                         </span>
                         <span className="text-[11px] text-slate-500 block">{drive.driveTime || '09:00 AM'}</span>
                       </div>
@@ -473,13 +596,13 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                       <div>
                         <span className="text-slate-500 block text-[11px] font-semibold">Reg. Deadline</span>
                         <span className="font-bold text-rose-600 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3.5 h-3.5 text-rose-500" /> {drive.deadline}
+                          <Clock className="w-3.5 h-3.5 text-rose-500" /> {drive.deadline || 'Dec 2026'}
                         </span>
                       </div>
                     </div>
 
                     {/* Venue */}
-                    <div className="flex items-start gap-2 text-xs text-slate-500 mb-3 bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100/60">
+                    <div className="flex items-start gap-2 text-xs text-slate-600 mb-3 bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100/60">
                       <MapPin className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-bold text-indigo-950">Venue: </span>
@@ -489,27 +612,27 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
                     {/* Eligibility thresholds summary */}
                     <div className="flex flex-wrap items-center gap-2 text-[11px] mb-4">
-                      <span className="px-2 py-0.5 bg-slate-800/60 rounded-lg text-slate-700 font-semibold">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
                         Min CGPA: <b>{drive.minCgpa || 6.5}</b>
                       </span>
-                      <span className="px-2 py-0.5 bg-slate-800/60 rounded-lg text-slate-700 font-semibold">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
                         Max Backlogs: <b>{drive.maxBacklogs ?? 0}</b>
                       </span>
-                      <span className="px-2 py-0.5 bg-slate-800/60 rounded-lg text-slate-700 font-semibold">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
                         10th/12th: <b>{drive.minTenthPercentage || 60}%</b>
                       </span>
-                      <span className="px-2 py-0.5 bg-slate-800/60 rounded-lg text-slate-700 font-semibold">
-                        Batches: <b>{drive.eligibleBatches.join(', ')}</b>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
+                        Batches: <b>{(drive.eligibleBatches || []).join(', ')}</b>
                       </span>
                     </div>
 
                     {/* Rounds Sequence */}
                     <div className="mb-4">
                       <p className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-indigo-600" /> Interview Rounds ({drive.rounds?.length || 4}):
+                        <Layers className="w-3.5 h-3.5 text-indigo-600" /> Interview Rounds ({drive.rounds?.length || 3}):
                       </p>
                       <div className="flex flex-wrap gap-1.5">
-                        {drive.rounds?.map((r, i) => (
+                        {(drive.rounds || ['Online Assessment', 'Technical Round', 'HR Round']).map((r, i) => (
                           <span
                             key={i}
                             className="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-900 text-xs font-medium"
@@ -544,7 +667,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
                       <button
                         onClick={() => setSelectedDriveForInstructions(drive)}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
                       >
                         <Info className="w-3.5 h-3.5" />
                         <span>Venue & Instructions</span>
@@ -558,24 +681,34 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                           setIsApplyModalOpen(true);
                           setApplyFeedbackMsg(null);
                         }}
-                        className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all ${
+                        className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${
                           hasApplied
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                             : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/25'
                         }`}
                       >
                         <Send className="w-3.5 h-3.5" />
-                        <span>{hasApplied ? 'View Registration Pass' : 'Apply / Register Now'}</span>
+                        <span>{hasApplied ? 'View Registration Pass' : 'Apply / Register Pass'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleTrackDrive(drive, 'APPLIED')}
+                        disabled={isTracking}
+                        className="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 font-bold text-xs text-slate-700 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="Track in personal placement tracker"
+                      >
+                        <BookmarkCheck className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Track</span>
                       </button>
 
                       <button
                         onClick={() => {
-                          if (matchedCompany) onSelectCompany(matchedCompany);
+                          if (onSelectCompany && matchedCompany) onSelectCompany(matchedCompany);
                         }}
-                        className="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-800/60 font-bold text-xs text-slate-700 flex items-center gap-1"
+                        className="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 font-bold text-xs text-slate-700 flex items-center gap-1 cursor-pointer"
                         title="Company Profile & Hub"
                       >
-                        <span>Profile</span>
+                        <span>Prep Hub</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -592,10 +725,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* ======================================================== */}
       {activeTab === 'calendar' && (
         <div className="space-y-6">
-          <div className="surface-card p-6 shadow-xs">
+          <div className="surface-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
               <div>
-                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                   <CalendarDays className="w-5 h-5 text-indigo-600" />
                   Upcoming Recruitment Calendar & Timeline
                 </h3>
@@ -611,10 +744,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
             {/* Calendar Events List */}
             <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-indigo-200">
-              {drivesList.map((drive, idx) => {
+              {drivesList.map((drive) => {
                 const isNov18Clash = drive.driveDate && drive.driveDate.includes('18');
                 return (
-                  <div key={drive.id} className="relative group">
+                  <div key={drive.driveId || drive.id} className="relative group">
                     {/* Circle Node */}
                     <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 bg-white ${
                       isNov18Clash ? 'border-amber-500 ring-2 ring-amber-200' : 'border-indigo-600'
@@ -623,20 +756,20 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                     <div className="bg-slate-50/80 group-hover:bg-indigo-50/40 rounded-2xl p-5 border border-slate-200 transition-all">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-white text-base">{drive.companyName}</span>
-                          <span className="text-xs text-slate-500 font-semibold">ΓÇó {drive.role}</span>
+                          <span className="font-extrabold text-slate-900 text-base">{drive.companyName}</span>
+                          <span className="text-xs text-slate-500 font-semibold">• {drive.role}</span>
                           <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">
-                            {drive.ctc}
+                            {drive.ctc || drive.packageDetails}
                           </span>
                           {isNov18Clash && (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono font-bold text-xs flex items-center gap-1 border border-amber-300">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono font-bold text-xs flex items-center gap-1 border-amber-300">
                               <AlertTriangle className="w-3 h-3 text-amber-600" /> Overlapping Slot
                             </span>
                           )}
                         </div>
 
                         <div className="text-xs font-bold text-indigo-700 bg-white px-3 py-1 rounded-xl border border-indigo-200 shrink-0">
-                          {drive.driveDate} ΓÇó {drive.driveTime || '09:00 AM'}
+                          {drive.driveDate || drive.date} • {drive.driveTime || '09:00 AM'}
                         </div>
                       </div>
 
@@ -662,7 +795,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                             {drive.roundConfigs.map((rc, rIdx) => (
                               <div key={rIdx} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
-                                <span className="font-bold text-white block truncate">R{rc.roundNumber}: {rc.roundName}</span>
+                                <span className="font-bold text-slate-900 block truncate">R{rc.roundNumber}: {rc.roundName}</span>
                                 <span className="text-[11px] text-indigo-600 font-semibold block">{rc.scheduledTime || `${rc.durationMinutes} mins`}</span>
                                 <span className="text-[10px] text-slate-500 block truncate">{rc.venueOrLink}</span>
                               </div>
@@ -674,7 +807,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                       <div className="mt-3 flex justify-end">
                         <button
                           onClick={() => setSelectedDriveForInstructions(drive)}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
                         >
                           <span>Full Venue & Reporting Pass Details</span>
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -694,10 +827,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* ======================================================== */}
       {activeTab === 'eligibility' && (
         <div className="space-y-6">
-          <div className="surface-card p-6 shadow-xs">
+          <div className="surface-card p-6 shadow-sm">
             <div className="mb-6 pb-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-indigo-600" />
                   Dynamic Eligibility Engine
                 </h3>
@@ -712,10 +845,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                 <select
                   value={eligibilityForm.targetDriveId}
                   onChange={(e) => setEligibilityForm({ ...eligibilityForm, targetDriveId: e.target.value })}
-                  className="text-xs font-bold bg-indigo-50 text-indigo-900 border border-indigo-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="text-xs font-bold bg-indigo-50 text-indigo-900 border border-indigo-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
                 >
                   {drivesList.map(d => (
-                    <option key={d.id} value={d.id}>
+                    <option key={d.driveId || d.id} value={d.driveId || d.id}>
                       {d.companyName} - {d.role}
                     </option>
                   ))}
@@ -776,7 +909,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                 <select
                   value={eligibilityForm.graduationBatch}
                   onChange={(e) => setEligibilityForm({ ...eligibilityForm, graduationBatch: e.target.value })}
-                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
                 >
                   {['2026', '2027', '2028', '2029'].map(b => (
                     <option key={b} value={b}>{b} Batch</option>
@@ -789,7 +922,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                 <select
                   value={eligibilityForm.branch}
                   onChange={(e) => setEligibilityForm({ ...eligibilityForm, branch: e.target.value })}
-                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
                 >
                   <option value="Computer Science and Engineering">CSE / IT</option>
                   <option value="Electronics and Communication">ECE</option>
@@ -826,7 +959,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                     setDriveToApply(targetDriveForEligibility);
                     setIsApplyModalOpen(true);
                   }}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-md shadow-emerald-600/25 shrink-0 flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-md shadow-emerald-600/25 shrink-0 flex items-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Register for {targetDriveForEligibility.companyName}</span>
@@ -837,7 +970,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
             {/* Breakdown Table */}
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-800/60 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
                   <tr>
                     <th className="py-3 px-4">Evaluation Rule</th>
                     <th className="py-3 px-4">Your Profile Value</th>
@@ -876,10 +1009,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* ======================================================== */}
       {activeTab === 'applications' && (
         <div className="space-y-6">
-          <div className="surface-card p-6 shadow-xs">
+          <div className="surface-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
               <div>
-                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-600" />
                   Student Applications & Registration Tracker
                 </h3>
@@ -895,14 +1028,14 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
             {applications.length === 0 ? (
               <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+                <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
                 <h4 className="font-bold text-slate-700 text-sm">No applications submitted yet</h4>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  Browse upcoming placement drives and click "Apply / Register Now" to initiate your registration.
+                  Browse upcoming placement drives and click "Apply / Register Pass" to initiate your registration.
                 </p>
                 <button
                   onClick={() => setActiveTab('drives')}
-                  className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+                  className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs cursor-pointer"
                 >
                   Explore Upcoming Drives
                 </button>
@@ -911,38 +1044,38 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
               <div className="space-y-4">
                 {applications.map((app) => (
                   <div
-                    key={app.applicationId}
+                    key={app.applicationId || app.id}
                     className="bg-slate-50/80 rounded-2xl border border-slate-200 p-5 hover:border-indigo-300 transition-all space-y-4"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-extrabold text-white text-base">{app.companyName}</h4>
-                          <span className="text-xs font-semibold text-slate-500">ΓÇó {app.role}</span>
+                          <h4 className="font-extrabold text-slate-900 text-base">{app.companyName}</h4>
+                          <span className="text-xs font-semibold text-slate-500">• {app.role}</span>
                           <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px]">
-                            ID: {app.applicationId}
+                            ID: {app.applicationId || app.id}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">Applied: {app.appliedAt}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Applied: {app.appliedAt || app.appliedDate || 'Verified'}</p>
                       </div>
 
                       {/* Status Badges */}
                       <div className="flex items-center gap-2">
                         {app.conflictFlagged && (
-                          <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono text-xs font-bold flex items-center gap-1 border border-amber-300 animate-pulse">
+                          <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-300 font-mono text-xs font-bold flex items-center gap-1 animate-pulse">
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Conflict Flagged
                           </span>
                         )}
                         <span className={`px-3 py-1 rounded-full text-xs font-black ${
                           app.status === 'INTERVIEW_SCHEDULED'
                             ? 'bg-purple-50 text-purple-700 border border-purple-200 font-mono'
-                            : app.status === 'ELIGIBILITY_PASSED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono border border-emerald-200'
+                            : app.status === 'ELIGIBILITY_PASSED' || app.status === 'CONFIRMED_PASS'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono'
                             : app.status === 'OFFERED'
                             ? 'bg-green-600 text-white shadow-xs'
                             : 'bg-slate-200 text-slate-800'
                         }`}>
-                          {app.status.replace('_', ' ')}
+                          {(app.status || 'APPLIED').replace('_', ' ')}
                         </span>
                       </div>
                     </div>
@@ -956,10 +1089,8 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                           <span>{app.conflictReason || 'This round collides with another scheduled campus interview on the same date.'}</span>
                           <div className="mt-2 flex gap-2">
                             <button
-                              onClick={() => {
-                                setActiveTab('conflicts');
-                              }}
-                              className="px-2.5 py-1 bg-amber-600 text-white font-bold rounded-lg text-[11px]"
+                              onClick={() => setActiveTab('conflicts')}
+                              className="px-2.5 py-1 bg-amber-600 text-white font-bold rounded-lg text-[11px] cursor-pointer"
                             >
                               Resolve in Conflict Radar
                             </button>
@@ -982,7 +1113,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                       </div>
                       <div>
                         <span className="text-slate-500 font-bold block text-[10px] uppercase">Venue & Desk</span>
-                        <span className="font-bold text-slate-800">{app.venue || 'Auditorium Hall A, Panel 4'}</span>
+                        <span className="font-bold text-slate-800">{app.venue || app.reportingVenue || 'Auditorium Hall A, Panel 4'}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 font-bold block text-[10px] uppercase">Reporting Time</span>
@@ -991,7 +1122,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                     </div>
 
                     {/* Reporting instructions */}
-                    <div className="text-xs text-slate-500 flex items-start gap-2 bg-slate-800/60/70 p-3 rounded-xl">
+                    <div className="text-xs text-slate-500 flex items-start gap-2 bg-slate-100 p-3 rounded-xl">
                       <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-bold text-slate-800">Candidate Instructions: </span>
@@ -1011,9 +1142,9 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* ======================================================== */}
       {activeTab === 'conflicts' && (
         <div className="space-y-6">
-          <div className="surface-card p-6 shadow-xs">
+          <div className="surface-card p-6 shadow-sm">
             <div className="mb-6 pb-4 border-b border-slate-200">
-              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+              <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
                 Cross-Company Schedule Conflict Detection Radar
               </h3>
@@ -1048,14 +1179,14 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div className="bg-white p-3.5 rounded-xl border border-amber-200">
                           <span className="text-[10px] uppercase font-bold text-slate-500 block">Drive A</span>
-                          <span className="font-extrabold text-white text-sm">{clash.drive1.companyName}</span>
+                          <span className="font-extrabold text-slate-900 text-sm">{clash.drive1.companyName}</span>
                           <span className="block text-slate-500 mt-0.5">{clash.drive1.role}</span>
                           <span className="block text-indigo-600 font-semibold mt-1">Venue: {clash.drive1.venue}</span>
                         </div>
 
                         <div className="bg-white p-3.5 rounded-xl border border-amber-200">
                           <span className="text-[10px] uppercase font-bold text-slate-500 block">Drive B</span>
-                          <span className="font-extrabold text-white text-sm">{clash.drive2.companyName}</span>
+                          <span className="font-extrabold text-slate-900 text-sm">{clash.drive2.companyName}</span>
                           <span className="block text-slate-500 mt-0.5">{clash.drive2.role}</span>
                           <span className="block text-indigo-600 font-semibold mt-1">Venue: {clash.drive2.venue}</span>
                         </div>
@@ -1079,7 +1210,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
             {/* Interactive Candidate Slot Conflict Tester */}
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-              <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+              <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-indigo-600" />
                 Test Specific Interview Slot for Schedule Conflicts
               </h4>
@@ -1125,7 +1256,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
               <button
                 onClick={handleRunConflictCheck}
-                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 flex items-center gap-1.5 cursor-pointer"
               >
                 <Search className="w-3.5 h-3.5" />
                 <span>Check for Candidate Conflicts</span>
@@ -1185,10 +1316,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* ======================================================== */}
       {activeTab === 'team-controls' && (
         <div className="space-y-6">
-          <div className="surface-card p-6 shadow-xs">
+          <div className="surface-card p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
               <div>
-                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                   <Sliders className="w-5 h-5 text-purple-600" />
                   Placement-Team Controls: Interview Rounds & Workflow
                 </h3>
@@ -1203,10 +1334,10 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                 <select
                   value={selectedDriveForConfig}
                   onChange={(e) => setSelectedDriveForConfig(e.target.value)}
-                  className="text-xs font-bold bg-purple-50 text-purple-900 border border-purple-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="text-xs font-bold bg-purple-50 text-purple-900 border border-purple-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer"
                 >
                   {drivesList.map(d => (
-                    <option key={d.id} value={d.id}>{d.companyName} - {d.role}</option>
+                    <option key={d.driveId || d.id} value={d.driveId || d.id}>{d.companyName} - {d.role}</option>
                   ))}
                 </select>
               </div>
@@ -1235,8 +1366,8 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                       {idx + 1}
                     </span>
                     <div>
-                      <span className="font-extrabold text-white text-sm block">{r.roundName}</span>
-                      <span className="text-slate-500 text-[11px] font-semibold">{r.roundType} ΓÇó {r.mode || 'In-Person'}</span>
+                      <span className="font-extrabold text-slate-900 text-sm block">{r.roundName}</span>
+                      <span className="text-slate-500 text-[11px] font-semibold">{r.roundType} • {r.mode || 'In-Person'}</span>
                     </div>
                   </div>
 
@@ -1258,7 +1389,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
                     <button
                       onClick={() => handleRemoveRound(idx)}
-                      className="text-xs text-rose-600 hover:text-rose-800 font-bold p-1"
+                      className="text-xs text-rose-600 hover:text-rose-800 font-bold p-1 cursor-pointer"
                       title="Remove Round"
                     >
                       <X className="w-4 h-4" />
@@ -1292,7 +1423,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                   <select
                     value={newRoundType}
                     onChange={(e) => setNewRoundType(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold cursor-pointer"
                   >
                     <option value="Aptitude Assessment">Aptitude Assessment</option>
                     <option value="Coding Assessment">Coding Assessment</option>
@@ -1327,7 +1458,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
               <button
                 onClick={handleAddRound}
-                className="px-4 py-2 rounded-xl bg-purple-700 text-white font-bold text-xs hover:bg-purple-800 flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-purple-700 text-white font-bold text-xs hover:bg-purple-800 flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add This Round</span>
@@ -1338,7 +1469,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
             <div className="flex justify-end pt-4 border-t border-slate-200">
               <button
                 onClick={handleSaveTeamRounds}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/25 flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-600/25 flex items-center gap-2 cursor-pointer"
               >
                 <Check className="w-4 h-4" />
                 <span>Save & Deploy Interview Pipeline</span>
@@ -1352,14 +1483,14 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* MODAL: VENUE, REPORTING TIME & INSTRUCTIONS PASS         */}
       {/* ======================================================== */}
       {selectedDriveForInstructions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between">
               <div>
                 <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
                   Logistics & Candidate Instructions
                 </span>
-                <h3 className="text-2xl font-extrabold text-white mt-2">
+                <h3 className="text-2xl font-extrabold text-slate-900 mt-2">
                   {selectedDriveForInstructions.companyName}
                 </h3>
                 <p className="text-xs text-slate-500 font-semibold">{selectedDriveForInstructions.role}</p>
@@ -1367,7 +1498,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
 
               <button
                 onClick={() => setSelectedDriveForInstructions(null)}
-                className="p-2 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-800/60"
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1377,7 +1508,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
               <div>
                 <span className="text-slate-500 font-bold block text-[10px] uppercase">Drive Date</span>
-                <span className="font-extrabold text-slate-800 text-sm">{selectedDriveForInstructions.driveDate}</span>
+                <span className="font-extrabold text-slate-800 text-sm">{selectedDriveForInstructions.driveDate || selectedDriveForInstructions.date}</span>
               </div>
               <div>
                 <span className="text-slate-500 font-bold block text-[10px] uppercase">Reporting Time</span>
@@ -1398,7 +1529,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                 {selectedDriveForInstructions.venue || 'Auditorium Hall A & Online Computing Labs'}
               </p>
               <p className="text-[11px] text-slate-500">
-                Placement Cell Gate 2 Entrance ΓÇó Parking permitted at Student Quad
+                Placement Cell Gate 2 Entrance • Parking permitted at Student Quad
               </p>
             </div>
 
@@ -1407,7 +1538,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
               <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                 Instructions & Documents to Carry:
               </span>
-              <div className="text-xs text-slate-500 bg-slate-50 p-4 rounded-2xl border border-slate-200 leading-relaxed space-y-2">
+              <div className="text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-200 leading-relaxed space-y-2">
                 <p>{selectedDriveForInstructions.instructions}</p>
                 <ul className="list-disc list-inside space-y-1 text-slate-700 mt-2">
                   <li>3 hard copies of updated resume with color photograph.</li>
@@ -1421,7 +1552,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
             <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
               <button
                 onClick={() => setSelectedDriveForInstructions(null)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-200 font-bold text-xs text-slate-700"
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700 cursor-pointer"
               >
                 Close
               </button>
@@ -1432,7 +1563,7 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                   setDriveToApply(drive);
                   setIsApplyModalOpen(true);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white shadow-md shadow-indigo-600/20"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white shadow-md shadow-indigo-600/20 cursor-pointer"
               >
                 Register for Drive
               </button>
@@ -1445,22 +1576,22 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
       {/* MODAL: APPLICATION REGISTRATION & ELIGIBILITY CHECK     */}
       {/* ======================================================== */}
       {isApplyModalOpen && driveToApply && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between">
               <div>
                 <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
                   Drive Registration & Eligibility Verification
                 </span>
-                <h3 className="text-2xl font-extrabold text-white mt-2">
+                <h3 className="text-2xl font-extrabold text-slate-900 mt-2">
                   Apply for {driveToApply.companyName}
                 </h3>
-                <p className="text-xs text-slate-500 font-semibold">{driveToApply.role} ΓÇó {driveToApply.ctc}</p>
+                <p className="text-xs text-slate-500 font-semibold">{driveToApply.role} • {driveToApply.ctc || driveToApply.packageDetails}</p>
               </div>
 
               <button
                 onClick={() => setIsApplyModalOpen(false)}
-                className="p-2 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-800/60"
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1482,120 +1613,149 @@ export default function PlacementDrivesPage({ onSelectCompany }) {
                     ) : (
                       <>
                         <ShieldAlert className="w-5 h-5 text-rose-600" />
-                        <span>Eligibility Check Incomplete</span>
+                        <span>Registration Ineligible: Academic Criteria Not Met</span>
                       </>
                     )}
                   </div>
-                  <p>{applyFeedbackMsg.summary}</p>
+                  <p className="text-xs opacity-90">{applyFeedbackMsg.summary}</p>
+
+                  {applyFeedbackMsg.hasConflict && (
+                    <div className="mt-2 p-2.5 rounded-xl bg-amber-100/70 border border-amber-300 text-amber-950 font-semibold flex items-start gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>{applyFeedbackMsg.conflictDesc || 'Warning: You have another interview slot conflicting with this drive date.'}</span>
+                    </div>
+                  )}
                 </div>
 
-                {applyFeedbackMsg.hasConflict && (
-                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1">
-                    <span className="font-bold flex items-center gap-1.5 text-amber-800">
-                      <AlertTriangle className="w-4 h-4 text-amber-600" /> Schedule Conflict Alert
-                    </span>
-                    <p>{applyFeedbackMsg.conflictDesc}</p>
-                    <p className="text-[11px] text-amber-700">
-                      Your registration is logged. Please access the Schedule Conflict Radar to review reschedule options.
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex justify-end pt-3">
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     onClick={() => {
                       setIsApplyModalOpen(false);
+                      setApplyFeedbackMsg(null);
                       setActiveTab('applications');
                     }}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 cursor-pointer"
                   >
-                    View My Applications & Pass
+                    View in My Applications
                   </button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleApplySubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <form onSubmit={handleApplySubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Full Name</label>
+                    <label className="font-bold text-slate-700 block mb-1">Full Name</label>
                     <input
                       type="text"
-                      required
                       value={applyStudentProfile.studentName}
                       onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, studentName: e.target.value })}
                       className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                      required
                     />
                   </div>
+
                   <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Student Email</label>
+                    <label className="font-bold text-slate-700 block mb-1">Student Email</label>
                     <input
                       type="email"
-                      required
                       value={applyStudentProfile.studentEmail}
                       onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, studentEmail: e.target.value })}
                       className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Branch</label>
-                    <input
-                      type="text"
                       required
-                      value={applyStudentProfile.branch}
-                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, branch: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Graduation Batch</label>
-                    <input
-                      type="text"
-                      required
-                      value={applyStudentProfile.graduationBatch}
-                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, graduationBatch: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Current CGPA</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={applyStudentProfile.cgpa}
-                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, cgpa: parseFloat(e.target.value) || 0 })}
-                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Active Backlogs</label>
-                    <input
-                      type="number"
-                      min="0"
-                      required
-                      value={applyStudentProfile.activeBacklogs}
-                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, activeBacklogs: parseInt(e.target.value, 10) || 0 })}
-                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                     />
                   </div>
                 </div>
 
-                <div className="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-100 text-xs text-indigo-900">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">College</label>
+                    <input
+                      type="text"
+                      value={applyStudentProfile.college}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, college: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Branch</label>
+                    <input
+                      type="text"
+                      value={applyStudentProfile.branch}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, branch: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">CGPA</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={applyStudentProfile.cgpa}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, cgpa: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-indigo-700"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">10th %</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={applyStudentProfile.tenthPercentage}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, tenthPercentage: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">12th %</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={applyStudentProfile.twelfthPercentage}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, twelfthPercentage: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Backlogs</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={applyStudentProfile.activeBacklogs}
+                      onChange={(e) => setApplyStudentProfile({ ...applyStudentProfile, activeBacklogs: parseInt(e.target.value, 10) || 0 })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 text-xs text-indigo-900 leading-snug">
                   <span className="font-bold block">Eligibility Threshold for {driveToApply.companyName}:</span>
-                  <span>Min CGPA: {driveToApply.minCgpa || 6.5} ΓÇó Max Backlogs: {driveToApply.maxBacklogs ?? 0} ΓÇó Date: {driveToApply.driveDate}</span>
+                  <span>Min CGPA: {driveToApply.minCgpa || 6.5} • Max Backlogs: {driveToApply.maxBacklogs ?? 0} • Date: {driveToApply.driveDate || driveToApply.date}</span>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setIsApplyModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-200 font-bold text-xs text-slate-700"
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white shadow-md shadow-indigo-600/20 flex items-center gap-1.5 cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Run Verification & Submit</span>

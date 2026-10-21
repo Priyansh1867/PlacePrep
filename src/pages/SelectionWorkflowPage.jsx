@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   CheckCircle2,
@@ -23,8 +23,11 @@ import {
   Star,
   UserCheck,
   Shield,
-  Briefcase
+  Briefcase,
+  Upload,
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import {
   SELECTION_ROUNDS,
   INITIAL_CANDIDATES_PIPELINE,
@@ -33,6 +36,7 @@ import {
 } from '../data/selectionWorkflowData';
 import { getCompanies, getInterviewQuestions } from '../services/storage';
 import { WorkflowApi } from '../services/api';
+import PortalModuleCards from '../components/PortalModuleCards';
 
 export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) {
   const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline', 'engine', 'evaluations', 'feedback', 'questions'
@@ -91,6 +95,10 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
 
   const [activeFeedbackRole, setActiveFeedbackRole] = useState('All');
   const [feedbackSuccessMsg, setFeedbackSuccessMsg] = useState('');
+  const csvInputRef = useRef(null);
+  const [candidateImport, setCandidateImport] = useState(null);
+  const [candidateImportError, setCandidateImportError] = useState('');
+  const [candidateImportSuccess, setCandidateImportSuccess] = useState('');
 
   // Check backend connectivity on mount and sync candidates if backend has records
   useEffect(() => {
@@ -268,6 +276,68 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
     setTimeout(() => setFeedbackSuccessMsg(''), 4000);
   };
 
+  const handleCandidateCsvSelect = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    setCandidateImportError('');
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setCandidateImportError('Please choose a CSV file. You can download the template to see the expected columns.');
+      return;
+    }
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+      const parsedRows = rawRows.map((row, index) => normaliseCandidateRow(row, index + 2));
+      const validRows = parsedRows.filter((row) => row.isValid);
+      const invalidRows = parsedRows.filter((row) => !row.isValid);
+      if (!validRows.length) {
+        setCandidateImportError('No usable candidate rows found. Include at least a Name column with a value.');
+        return;
+      }
+      setCandidateImport({ fileName: file.name, validRows, invalidRows });
+    } catch {
+      setCandidateImportError('We could not read this CSV. Please save it as a standard comma-separated .csv file and try again.');
+    }
+  };
+
+  const commitCandidateImport = () => {
+    if (!candidateImport) return;
+    let added = 0;
+    let updated = 0;
+    setCandidates((current) => {
+      const next = [...current];
+      candidateImport.validRows.forEach(({ candidate }) => {
+        const existingIndex = next.findIndex((item) =>
+          (candidate.email && item.email?.toLowerCase() === candidate.email.toLowerCase()) || item.id === candidate.id
+        );
+        if (existingIndex >= 0) {
+          next[existingIndex] = { ...next[existingIndex], ...candidate, scores: { ...next[existingIndex].scores, ...candidate.scores } };
+          updated += 1;
+        } else {
+          next.unshift(candidate);
+          added += 1;
+        }
+      });
+      return next;
+    });
+    setCandidateImportSuccess(`${added} candidate${added === 1 ? '' : 's'} added${updated ? ` and ${updated} updated` : ''} in the selection pipeline.`);
+    setCandidateImport(null);
+    window.setTimeout(() => setCandidateImportSuccess(''), 5000);
+  };
+
+  const downloadCandidateCsvTemplate = () => {
+    const headers = ['name', 'email', 'college', 'branch', 'batch', 'companyName', 'currentRound', 'status', 'evaluator', 'aptitude', 'technical', 'managerial', 'hr', 'notes'];
+    const example = ['Aarav Sharma', 'aarav.sharma@example.edu', 'Delhi Technological University', 'B.Tech CSE', '2028', 'HCLTech', 'technical', 'Shortlisted', 'Vikram Mehta', '84', '88', '', '', 'Strong problem-solving and communication'];
+    const csv = [headers, example].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    link.download = 'placeprep-candidate-import-template.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   // Filter candidates
   const filteredCandidates = candidates.filter(cand => {
     const matchesRound = selectedRoundFilter === 'all' || cand.currentRound === selectedRoundFilter;
@@ -286,6 +356,13 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
 
   // All questions for question bank view
   const allQuestions = getInterviewQuestions();
+  const workflowSections = [
+    { id: 'pipeline', label: 'Selection Pipeline', icon: Users, badge: `${candidates.length} candidates`, description: 'Live candidate decisions' },
+    { id: 'engine', label: '4-Round Interview Engine', icon: Layers, badge: '4 rounds', description: 'Configure the process' },
+    { id: 'evaluations', label: 'Evaluator Records', icon: ClipboardCheck, badge: `${evaluatorRecords.length} reviews`, description: 'Scorecards & rubrics' },
+    { id: 'questions', label: 'Question Knowledge Base', icon: Briefcase, badge: `${allQuestions.length} questions`, description: 'Round-wise preparation' },
+    { id: 'feedback', label: 'Stakeholder Feedback', icon: MessageSquare, badge: `${stakeholderFeedback.length} reviews`, description: 'TPO, faculty & company' },
+  ];
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -357,38 +434,14 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
             <span>{feedbackSuccessMsg}</span>
           </div>
         )}
+        {candidateImportSuccess && (
+          <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />{candidateImportSuccess}
+          </div>
+        )}
 
-        {/* Main Navigation Tabs */}
-        <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-2">
-          {[
-            { id: 'pipeline', label: 'Candidate Selection Pipeline', icon: Users, badge: candidates.length },
-            { id: 'engine', label: '4-Round Interview Engine', icon: Layers, badge: '4 Rounds' },
-            { id: 'evaluations', label: 'Evaluator Records & Rubrics', icon: ClipboardCheck, badge: evaluatorRecords.length },
-            { id: 'questions', label: 'Round-Wise Question Knowledge Base', icon: Briefcase, badge: allQuestions.length },
-            { id: 'feedback', label: 'Multi-Stakeholder Feedback', icon: MessageSquare, badge: stakeholderFeedback.length },
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {tab.badge}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Visual workflow navigation */}
+        <PortalModuleCards items={workflowSections} activeId={activeTab} onSelect={setActiveTab} tone="indigo" />
 
         {/* TAB 1: CANDIDATE SELECTION PIPELINE */}
         {activeTab === 'pipeline' && (
@@ -415,114 +468,47 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
                 ))}
               </div>
 
-              <div className="relative w-full md:w-72">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search candidate, college, company..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
-                />
+              <div className="flex w-full items-center gap-2 md:w-auto">
+                <div className="relative flex-1 md:w-72"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search candidate, college, company..." className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" /></div>
+                <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={handleCandidateCsvSelect} className="hidden" />
+                <button type="button" onClick={() => csvInputRef.current?.click()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700"><Upload className="h-3.5 w-3.5" />Import CSV</button>
               </div>
             </div>
 
-            {/* Candidate Pipeline Cards / Table */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            {candidateImportError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">{candidateImportError}</div>}
+
+            {/* Candidate decision cards */}
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_35px_-27px_rgba(15,23,42,0.35)] sm:p-6">
+              <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Round-Wise Candidate Roster</h3>
-                  <p className="text-xs text-slate-500">Live shortlisting, elimination, advancement, and final selection audit records.</p>
+                  <div className="mb-1 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" /><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600">Live decision board</span></div>
+                  <h3 className="text-lg font-black tracking-tight text-slate-950">Candidate selection roster</h3>
+                  <p className="mt-1 text-xs text-slate-500">Review scores, evidence, and the next decision without losing candidate context.</p>
                 </div>
-                <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                  Showing {filteredCandidates.length} of {candidates.length} candidates
-                </span>
+                <span className="w-fit rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">{filteredCandidates.length} of {candidates.length} candidates</span>
               </div>
 
-              <div className="divide-y divide-slate-100">
+              <div className="grid gap-4 xl:grid-cols-2">
                 {filteredCandidates.map((cand) => {
                   const currentRoundObj = SELECTION_ROUNDS.find(r => r.id === cand.currentRound);
+                  const roundIndex = Math.max(0, SELECTION_ROUNDS.findIndex(r => r.id === cand.currentRound));
+                  const initials = cand.name.split(' ').map((name) => name[0]).slice(0, 2).join('');
 
                   return (
-                    <div key={cand.id} className="p-5 hover:bg-slate-50/70 transition flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Left: Info */}
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-sm">{cand.name}</h4>
-                          <span className="text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
-                            {cand.companyName}
-                          </span>
-                          <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
-                            {cand.branch} • {cand.batch} Batch
-                          </span>
-                          {getStatusBadge(cand.status)}
-                        </div>
-
-                        <p className="text-xs text-slate-500">{cand.college} • {cand.email}</p>
-
-                        <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
-                          <span className="text-slate-600">
-                            Current Stage: <span className="font-semibold text-indigo-600">{currentRoundObj?.name || cand.currentRound}</span>
-                          </span>
-                          <span className="text-slate-400">•</span>
-                          <span className="text-slate-500">
-                            Evaluator: <span className="text-slate-700 font-medium">{cand.evaluator}</span>
-                          </span>
-                          <span className="text-slate-400">•</span>
-                          <span className="text-slate-400">Updated {cand.lastUpdated}</span>
-                        </div>
-
-                        {cand.notes && (
-                          <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
-                            "{cand.notes}"
-                          </p>
-                        )}
+                    <article key={cand.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-[0_18px_30px_-22px_rgba(49,46,129,0.45)]">
+                      <div className="flex items-start justify-between gap-3 bg-gradient-to-r from-slate-50 to-indigo-50/60 px-4 py-3.5">
+                        <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-xs font-black text-white shadow-lg shadow-indigo-200">{initials}</div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h4 className="truncate text-sm font-black text-slate-950">{cand.name}</h4>{getStatusBadge(cand.status)}</div><p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">{cand.branch} · {cand.batch} batch</p></div></div>
+                        <span className="rounded-lg border border-indigo-100 bg-white px-2 py-1 text-[10px] font-bold text-indigo-700 shadow-sm">{cand.companyName}</span>
                       </div>
-
-                      {/* Right: Scores & Action Buttons */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-end lg:self-auto">
-                        {/* Scores summary */}
-                        <div className="flex items-center gap-1.5 text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
-                          <span className="text-slate-500 font-medium">Apt: <strong className="text-slate-800">{cand.scores.aptitude || '-'}</strong></span>
-                          <span className="text-slate-300">|</span>
-                          <span className="text-slate-500 font-medium">Tech: <strong className="text-slate-800">{cand.scores.technical || '-'}</strong></span>
-                          <span className="text-slate-300">|</span>
-                          <span className="text-slate-500 font-medium">Mgr: <strong className="text-slate-800">{cand.scores.managerial || '-'}</strong></span>
-                          <span className="text-slate-300">|</span>
-                          <span className="text-slate-500 font-medium">HR: <strong className="text-slate-800">{cand.scores.hr || '-'}</strong></span>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleOpenEvaluation(cand)}
-                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition flex items-center gap-1"
-                          >
-                            <ClipboardCheck className="w-3.5 h-3.5" /> Evaluate
-                          </button>
-
-                          {cand.status !== 'Selected' && cand.status !== 'Eliminated' && (
-                            <>
-                              <button
-                                onClick={() => handleUpdateStatus(cand.id, 'Advanced')}
-                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold transition"
-                                title="Advance to Next Stage"
-                              >
-                                Advance
-                              </button>
-                              <button
-                                onClick={() => handleUpdateStatus(cand.id, 'Eliminated')}
-                                className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition"
-                                title="Mark as Eliminated"
-                              >
-                                Eliminate
-                              </button>
-                            </>
-                          )}
-                        </div>
+                      <div className="space-y-4 p-4">
+                        <div className="flex items-center justify-between gap-3 text-xs"><div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current stage</p><p className="mt-0.5 font-bold text-indigo-700">{currentRoundObj?.name || cand.currentRound}</p></div><div className="text-right"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last updated</p><p className="mt-0.5 font-semibold text-slate-600">{cand.lastUpdated}</p></div></div>
+                        <div className="flex gap-1.5">{SELECTION_ROUNDS.map((round, index) => <span key={round.id} title={round.name} className={`h-1.5 flex-1 rounded-full ${index <= roundIndex ? 'bg-indigo-500' : 'bg-slate-100'}`} />)}</div>
+                        <div className="grid grid-cols-4 gap-1.5">{[['Apt', cand.scores.aptitude], ['Tech', cand.scores.technical], ['Mgr', cand.scores.managerial], ['HR', cand.scores.hr]].map(([label, score]) => <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-1.5 text-center"><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-0.5 text-sm font-black text-slate-800">{score || '—'}</p></div>)}</div>
+                        <div className="border-l-2 border-indigo-200 bg-indigo-50/50 px-3 py-2 text-[11px] leading-4 text-slate-600"><span className="font-bold text-slate-700">Evaluator:</span> {cand.evaluator || 'Awaiting allocation'}<span className="mx-1.5 text-indigo-300">·</span>{cand.college}</div>
+                        {cand.notes && <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] italic leading-4 text-slate-600">“{cand.notes}”</p>}
                       </div>
-
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3"><button onClick={() => handleOpenEvaluation(cand)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-indigo-700"><ClipboardCheck className="h-3.5 w-3.5" />Evaluate</button>{cand.status !== 'Selected' && cand.status !== 'Eliminated' && <><button onClick={() => handleUpdateStatus(cand.id, 'Advanced')} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100">Advance</button><button onClick={() => handleUpdateStatus(cand.id, 'Eliminated')} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100">Eliminate</button></>}</div>
+                    </article>
                   );
                 })}
               </div>
@@ -1084,6 +1070,62 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
         </div>
       )}
 
+      {/* CSV candidate import review */}
+      {candidateImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="bg-gradient-to-r from-indigo-700 to-violet-700 px-6 py-5 text-white"><div className="flex items-start justify-between gap-4"><div><div className="mb-2 flex items-center gap-2 text-xs font-bold tracking-wider text-indigo-100"><FileSpreadsheet className="h-4 w-4" />CSV CANDIDATE IMPORT</div><h3 className="text-xl font-black">Review data before auto-entry</h3><p className="mt-1 text-xs text-indigo-100">{candidateImport.fileName}</p></div><button type="button" onClick={() => setCandidateImport(null)} className="rounded-lg bg-white/10 px-2 py-1 text-sm font-bold hover:bg-white/20">×</button></div></div>
+            <div className="space-y-5 p-6"><div className="grid grid-cols-3 gap-3"><div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Ready</p><p className="mt-1 text-2xl font-black text-indigo-900">{candidateImport.validRows.length}</p></div><div className="rounded-2xl border border-rose-100 bg-rose-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Skipped</p><p className="mt-1 text-2xl font-black text-rose-900">{candidateImport.invalidRows.length}</p></div><div className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Import type</p><p className="mt-2 text-xs font-bold text-slate-700">Add or update</p></div></div>
+              <div className="overflow-hidden rounded-2xl border border-slate-200"><div className="grid grid-cols-[1.25fr_1fr_0.85fr] bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"><span>Candidate</span><span>Company</span><span>Current round</span></div><div className="max-h-48 overflow-y-auto divide-y divide-slate-100">{candidateImport.validRows.slice(0, 8).map(({ candidate }) => <div key={candidate.id} className="grid grid-cols-[1.25fr_1fr_0.85fr] px-4 py-3 text-xs"><div><p className="font-bold text-slate-800">{candidate.name}</p><p className="truncate text-[10px] text-slate-400">{candidate.email || 'No email supplied'}</p></div><span className="font-semibold text-indigo-700">{candidate.companyName}</span><span className="capitalize text-slate-600">{candidate.currentRound}</span></div>)}</div></div>
+              {candidateImport.validRows.length > 8 && <p className="text-center text-[11px] font-medium text-slate-400">+ {candidateImport.validRows.length - 8} more candidate rows ready to add</p>}
+              {candidateImport.invalidRows.length > 0 && <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Rows without a candidate name are skipped automatically.</p>}
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-between"><button type="button" onClick={downloadCandidateCsvTemplate} className="inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-50"><Download className="h-3.5 w-3.5" />Download template</button><div className="flex gap-2"><button type="button" onClick={() => setCandidateImport(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="button" onClick={commitCandidateImport} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700">Import {candidateImport.validRows.length} candidate records</button></div></div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
+}
+
+function normaliseCandidateRow(row, rowNumber) {
+  const values = Object.entries(row).reduce((result, [key, value]) => {
+    result[String(key).trim().toLowerCase().replace(/[^a-z0-9]/g, '')] = String(value ?? '').trim();
+    return result;
+  }, {});
+  const read = (...aliases) => aliases.map((alias) => values[alias]).find(Boolean) || '';
+  const name = read('name', 'candidatename', 'studentname', 'fullname');
+  const email = read('email', 'emailaddress');
+  const candidate = {
+    id: read('id', 'candidateid') || `csv-${Date.now()}-${rowNumber}`,
+    name,
+    email,
+    college: read('college', 'university', 'institute') || 'Not specified',
+    branch: read('branch', 'department', 'course') || 'Not specified',
+    batch: read('batch', 'graduationbatch', 'year') || 'Not specified',
+    companyId: read('companyid') || 'imported-company',
+    companyName: read('companyname', 'company', 'organisation', 'organization') || 'General placement drive',
+    currentRound: normaliseRound(read('currentround', 'round', 'stage')),
+    status: read('status') || 'Shortlisted',
+    evaluator: read('evaluator', 'evaluatorname') || 'Awaiting allocation',
+    scores: {
+      aptitude: read('aptitude', 'aptitudescore'),
+      technical: read('technical', 'technicalscore', 'tech'),
+      managerial: read('managerial', 'managerialscore', 'mgr'),
+      hr: read('hr', 'hrscore'),
+    },
+    notes: read('notes', 'feedback', 'remarks'),
+    lastUpdated: 'Imported just now',
+  };
+  return { rowNumber, isValid: Boolean(name), candidate };
+}
+
+function normaliseRound(value) {
+  const round = value.toLowerCase();
+  if (round.startsWith('apt')) return 'aptitude';
+  if (round.startsWith('tech')) return 'technical';
+  if (round.startsWith('man') || round.startsWith('mgr')) return 'managerial';
+  if (round.startsWith('hr')) return 'hr';
+  return 'aptitude';
 }

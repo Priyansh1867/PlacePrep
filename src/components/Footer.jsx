@@ -34,6 +34,11 @@ export default function Footer({ onNavigate }) {
                 </button>
               </li>
               <li>
+                <button onClick={() => onNavigate('opportunities')} className="hover:text-white transition-colors">
+                  Hackathons & Internships
+                </button>
+              </li>
+              <li>
                 <button onClick={() => onNavigate('companies')} className="hover:text-white transition-colors">
                   Company Directory & Hubs
                 </button>

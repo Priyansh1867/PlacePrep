@@ -20,6 +20,7 @@ import AdminPage from './pages/AdminPage';
 import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
+import OpportunitiesPage from './pages/OpportunitiesPage';
 
 
 import { 
@@ -148,6 +149,10 @@ export default function App() {
           />
         )}
 
+        {currentRoute === 'opportunities' && (
+          <OpportunitiesPage />
+        )}
+
         {currentRoute === 'companies' && (
           <CompaniesPage
             onSelectCompany={handleSelectCompany}
@@ -249,4 +254,3 @@ export default function App() {
     </div>
   );
 }
-

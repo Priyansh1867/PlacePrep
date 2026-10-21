@@ -15,7 +15,8 @@ import {
   ChevronDown,
   LogOut,
   SlidersHorizontal,
-  ClipboardCheck
+  ClipboardCheck,
+  Trophy
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -45,6 +46,7 @@ export default function Navbar({
     { id: 'workflow', label: 'Selection Workflow', icon: ClipboardCheck },
     { id: 'academic-records', label: 'Academic Records', icon: GraduationCap },
     { id: 'drives', label: 'Placement Drives', icon: Briefcase },
+    { id: 'opportunities', label: 'Opportunities', icon: Trophy },
     { id: 'companies', label: 'Companies', icon: Building2 },
     { id: 'prep', label: 'Interview Prep', icon: BookOpen },
     { id: 'experiences', label: 'Experiences', icon: MessageSquare },

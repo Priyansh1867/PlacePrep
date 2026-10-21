@@ -1,10 +1,14 @@
 package com.placeprep.config;
 
 import com.placeprep.model.Company;
+import com.placeprep.model.Hackathon;
+import com.placeprep.model.Internship;
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.StudentApplication;
 import com.placeprep.model.User;
 import com.placeprep.repository.CompanyRepository;
+import com.placeprep.repository.HackathonRepository;
+import com.placeprep.repository.InternshipRepository;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import com.placeprep.repository.UserRepository;
@@ -23,9 +27,12 @@ public class DataInitializer {
             CompanyRepository companyRepository,
             PlacementDriveRepository driveRepository,
             StudentApplicationRepository applicationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            HackathonRepository hackathonRepository,
+            InternshipRepository internshipRepository
     ) {
         return args -> {
+            // Seed Users (including ineligible 2028 batch student & eligible 2026 final-year student)
             if (userRepository.count() == 0) {
                 User demoUser = new User();
                 demoUser.setName("Priyansh Jain");
@@ -37,6 +44,28 @@ public class DataInitializer {
                 demoUser.setRole("student");
                 demoUser.setOnboardingCompleted(true);
                 userRepository.save(demoUser);
+
+                User finalYearUser = new User();
+                finalYearUser.setName("Aarav Sharma");
+                finalYearUser.setEmail("finalyear.student@placeprep.edu");
+                finalYearUser.setPassword("password123");
+                finalYearUser.setCollege("Delhi Technological University (DTU)");
+                finalYearUser.setBranch("Computer Science and Engineering");
+                finalYearUser.setGraduationBatch("2026");
+                finalYearUser.setRole("student");
+                finalYearUser.setOnboardingCompleted(true);
+                userRepository.save(finalYearUser);
+
+                User defaultDemo = new User();
+                defaultDemo.setName("Demo Student");
+                defaultDemo.setEmail("demo@placeprep.com");
+                defaultDemo.setPassword("password123");
+                defaultDemo.setCollege("Delhi Technological University (DTU)");
+                defaultDemo.setBranch("Information Technology");
+                defaultDemo.setGraduationBatch("2028");
+                defaultDemo.setRole("student");
+                defaultDemo.setOnboardingCompleted(true);
+                userRepository.save(defaultDemo);
             }
 
             if (companyRepository.count() == 0) {
@@ -93,6 +122,7 @@ public class DataInitializer {
             }
 
             if (driveRepository.count() == 0) {
+                // On-Campus Drives
                 PlacementDrive hclDrive = new PlacementDrive();
                 hclDrive.setDriveId("drv-hcl-2026");
                 hclDrive.setCompanyId("hcltech");
@@ -164,6 +194,88 @@ public class DataInitializer {
                 accDrive.setAllowedBranches(Arrays.asList("All Engineering Branches"));
                 accDrive.setRounds(Arrays.asList("Cognitive Assessment", "Technical & Coding Assessment", "Communication Assessment", "Virtual Technical + HR Interview"));
                 driveRepository.save(accDrive);
+
+                // Off-Campus Placement Drives (Exclusively gated for Batch 2026 final-year students)
+                PlacementDrive amznOff = new PlacementDrive();
+                amznOff.setDriveId("off-amzn-sde-2026");
+                amznOff.setCompanyId("amazon");
+                amznOff.setCompanyName("Amazon Web Services (AWS)");
+                amznOff.setRole("Software Development Engineer (Off-Campus)");
+                amznOff.setCtc("₹18.0 - ₹24.0 LPA");
+                amznOff.setDriveDate("2026-12-10");
+                amznOff.setDriveTime("10:00 AM");
+                amznOff.setDeadline("2026-11-20");
+                amznOff.setStatus("Active Off-Campus Drive");
+                amznOff.setVerifiedBadge(true);
+                amznOff.setDriveType("OFF_CAMPUS");
+                amznOff.setOffCampus(true);
+                amznOff.setRegistrationLink("https://www.amazon.jobs/en/teams/university-tech");
+                amznOff.setVenue("Virtual Online Assessment & Amazon Chime Panel");
+                amznOff.setReportingTime("09:30 AM");
+                amznOff.setInstructions("Final-year graduating students only. Candidate must apply on Amazon Jobs with campus roll number. Internal employee referral can be requested via LinkedIn alumni before 2026-11-15.");
+                amznOff.setMinCgpa(7.0);
+                amznOff.setMinTenthPercentage(65.0);
+                amznOff.setMinTwelfthPercentage(65.0);
+                amznOff.setMaxBacklogs(0);
+                amznOff.setEligibleBatches(Arrays.asList("2026"));
+                amznOff.setLocations(Arrays.asList("Bengaluru", "Hyderabad", "Remote Eligible"));
+                amznOff.setAllowedBranches(Arrays.asList("CSE", "IT", "ECE", "EEE", "MCA"));
+                amznOff.setRounds(Arrays.asList("Online Cognitive & Coding Assessment", "Technical Interview Round 1 (DSA)", "Technical Interview Round 2 (System & OOP)", "Bar Raiser & Leadership Principles"));
+                driveRepository.save(amznOff);
+
+                PlacementDrive googOff = new PlacementDrive();
+                googOff.setDriveId("off-goog-swe-2026");
+                googOff.setCompanyId("google");
+                googOff.setCompanyName("Google India");
+                googOff.setRole("Software Engineer - University Graduate (Off-Campus)");
+                googOff.setCtc("₹28.0 - ₹35.0 LPA");
+                googOff.setDriveDate("2026-12-20");
+                googOff.setDriveTime("11:00 AM");
+                googOff.setDeadline("2026-11-28");
+                googOff.setStatus("Active Off-Campus Drive");
+                googOff.setVerifiedBadge(true);
+                googOff.setDriveType("OFF_CAMPUS");
+                googOff.setOffCampus(true);
+                googOff.setRegistrationLink("https://careers.google.com/jobs/results/university-grad");
+                googOff.setVenue("Google Meet Virtual Assessment Suite");
+                googOff.setReportingTime("10:30 AM");
+                googOff.setInstructions("Strictly for 2026 graduating batch. Clean coding skills in C++, Java, or Python required. Employee referral link can be attached during application if available from DTU alumni network.");
+                googOff.setMinCgpa(7.5);
+                googOff.setMinTenthPercentage(70.0);
+                googOff.setMinTwelfthPercentage(70.0);
+                googOff.setMaxBacklogs(0);
+                googOff.setEligibleBatches(Arrays.asList("2026"));
+                googOff.setLocations(Arrays.asList("Bengaluru", "Hyderabad", "Gurugram"));
+                googOff.setAllowedBranches(Arrays.asList("Computer Science", "Information Technology", "Mathematics & Computing"));
+                googOff.setRounds(Arrays.asList("Google Online Challenge (Coding)", "Technical Phone Screen", "Virtual Onsite Coding Round 1", "Virtual Onsite Coding Round 2", "Googliness & Leadership Round"));
+                driveRepository.save(googOff);
+
+                PlacementDrive infyOff = new PlacementDrive();
+                infyOff.setDriveId("off-infy-sp-2026");
+                infyOff.setCompanyId("infosys");
+                infyOff.setCompanyName("Infosys Limited");
+                infyOff.setRole("Specialist Programmer (Off-Campus National Drive)");
+                infyOff.setCtc("₹9.50 LPA");
+                infyOff.setDriveDate("2026-12-02");
+                infyOff.setDriveTime("09:00 AM");
+                infyOff.setDeadline("2026-11-18");
+                infyOff.setStatus("Active Off-Campus Drive");
+                infyOff.setVerifiedBadge(true);
+                infyOff.setDriveType("OFF_CAMPUS");
+                infyOff.setOffCampus(true);
+                infyOff.setRegistrationLink("https://career.infosys.com/jobdesc?jobReferenceCode=INFYS-SP-2026");
+                infyOff.setVenue("Infosys Assessment Platform & Webex Interview");
+                infyOff.setReportingTime("08:30 AM");
+                infyOff.setInstructions("National off-campus drive open to final-year students (Batch 2026). Requires advanced competitive programming knowledge and dynamic programming proficiency.");
+                infyOff.setMinCgpa(6.5);
+                infyOff.setMinTenthPercentage(60.0);
+                infyOff.setMinTwelfthPercentage(60.0);
+                infyOff.setMaxBacklogs(0);
+                infyOff.setEligibleBatches(Arrays.asList("2026"));
+                infyOff.setLocations(Arrays.asList("Bengaluru", "Pune", "Hyderabad", "Chennai"));
+                infyOff.setAllowedBranches(Arrays.asList("All Engineering Branches"));
+                infyOff.setRounds(Arrays.asList("HackWithInfy / National Coding Qualifier", "Technical Interview (DSA & Design)", "HR & Documentation Verification"));
+                driveRepository.save(infyOff);
             }
 
             if (applicationRepository.count() == 0) {
@@ -197,6 +309,147 @@ public class DataInitializer {
                 app1.setConflictFlagged(true);
                 app1.setConflictReason("Schedule collision detected: Overlaps with Accenture Virtual Assessment slot on 2026-11-18.");
                 applicationRepository.save(app1);
+            }
+
+            // Seed Hackathons (Development Sample Records)
+            if (hackathonRepository.count() == 0) {
+                Hackathon h1 = Hackathon.builder()
+                        .title("Smart India Hackathon (SIH 2026)")
+                        .organizer("Ministry of Education & AICTE")
+                        .description("World's biggest open innovation model for engineering students to solve pressing national challenges presented by ministries, departments, and industries.")
+                        .registrationDeadline("2026-11-20")
+                        .eventDate("2026-12-15 to 2026-12-17")
+                        .teamSize("6 Members (Min 1 Female)")
+                        .prizePool("₹1,00,000 per problem statement + Mentorship")
+                        .registrationUrl("https://www.sih.gov.in")
+                        .tags("Smart Automation, Clean Tech, Healthcare, AI/ML")
+                        .mode("HYBRID")
+                        .bannerUrl("https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format&fit=crop&q=80")
+                        .build();
+                hackathonRepository.save(h1);
+
+                Hackathon h2 = Hackathon.builder()
+                        .title("Google Solution Challenge 2027")
+                        .organizer("Google Developer Student Clubs (GDSC)")
+                        .description("Build an impactful solution for one or more of the United Nations 17 Sustainable Development Goals using Google Cloud, Firebase, Flutter, Android, or TensorFlow.")
+                        .registrationDeadline("2026-11-30")
+                        .eventDate("2027-01-10 to 2027-03-31")
+                        .teamSize("1-4 Members")
+                        .prizePool("Top 3: $3,000/member + Google Mentorship")
+                        .registrationUrl("https://developers.google.com/community/gdsc-solution-challenge")
+                        .tags("Cloud, AI/ML, Flutter, Sustainability, Mobile")
+                        .mode("ONLINE")
+                        .bannerUrl("https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80")
+                        .build();
+                hackathonRepository.save(h2);
+
+                Hackathon h3 = Hackathon.builder()
+                        .title("HackDTU 7.0 - Northern Flagship Collegiate Hackathon")
+                        .organizer("Delhi Technological University (DTU)")
+                        .description("36-hour non-stop collegiate hackathon bringing together over 500 passionate developers across India to build frontier technology projects.")
+                        .registrationDeadline("2026-11-12")
+                        .eventDate("2026-11-28 to 2026-11-29")
+                        .teamSize("2-4 Members")
+                        .prizePool("₹2,50,000 Cash Pool + Cloud Credits")
+                        .registrationUrl("https://hackdtu.in")
+                        .tags("Web3, FinTech, Cybersecurity, System Design")
+                        .mode("OFFLINE")
+                        .bannerUrl("https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&auto=format&fit=crop&q=80")
+                        .build();
+                hackathonRepository.save(h3);
+
+                Hackathon h4 = Hackathon.builder()
+                        .title("Microsoft Imagine Cup 2027")
+                        .organizer("Microsoft Corporation")
+                        .description("Global student developer competition empowering the next generation of founders to leverage Microsoft Azure AI and build transformative startup solutions.")
+                        .registrationDeadline("2026-12-15")
+                        .eventDate("2027-02-01 to 2027-05-15")
+                        .teamSize("1-4 Members")
+                        .prizePool("$100,000 USD + Mentorship with Microsoft Leadership")
+                        .registrationUrl("https://imaginecup.microsoft.com")
+                        .tags("Azure AI, Generative AI, Cloud Computing, Startups")
+                        .mode("ONLINE")
+                        .bannerUrl("https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80")
+                        .build();
+                hackathonRepository.save(h4);
+            }
+
+            // Seed Internships (Development Sample Records)
+            if (internshipRepository.count() == 0) {
+                Internship i1 = Internship.builder()
+                        .companyName("Amazon")
+                        .role("Software Development Engineer (SDE) Intern")
+                        .stipend("₹1,10,000 / month")
+                        .duration("6 Months (Jan - June 2027)")
+                        .location("Bengaluru, Karnataka (Hybrid)")
+                        .deadline("2026-11-15")
+                        .eligibleBatches("2026, 2027")
+                        .eligibleBranches("CSE, IT, ECE, Mathematics & Computing")
+                        .skillsRequired("Java / C++, Data Structures & Algorithms, Distributed Systems basics, OOP")
+                        .applicationUrl("https://www.amazon.jobs/en/jobs/internship-sde")
+                        .ppoOpportunity(true)
+                        .build();
+                internshipRepository.save(i1);
+
+                Internship i2 = Internship.builder()
+                        .companyName("Adobe Systems")
+                        .role("Product Technology Intern (R&D)")
+                        .stipend("₹1,00,000 / month")
+                        .duration("2 Months (May - July 2027)")
+                        .location("Noida, Uttar Pradesh (In-Office)")
+                        .deadline("2026-11-25")
+                        .eligibleBatches("2027, 2028")
+                        .eligibleBranches("CSE, IT, Software Engineering")
+                        .skillsRequired("C++, Computer Graphics, Algorithms, System Programming")
+                        .applicationUrl("https://careers.adobe.com/us/en/university-internships")
+                        .ppoOpportunity(true)
+                        .build();
+                internshipRepository.save(i2);
+
+                Internship i3 = Internship.builder()
+                        .companyName("Razorpay")
+                        .role("Frontend Engineering Intern")
+                        .stipend("₹45,000 / month")
+                        .duration("6 Months (Immediate Start)")
+                        .location("Remote (India-Wide)")
+                        .deadline("2026-11-08")
+                        .eligibleBatches("2026, 2027, 2028")
+                        .eligibleBranches("All Engineering Branches")
+                        .skillsRequired("React, TypeScript, Tailwind CSS, REST APIs, Web Performance")
+                        .applicationUrl("https://razorpay.com/jobs/frontend-intern")
+                        .ppoOpportunity(true)
+                        .build();
+                internshipRepository.save(i3);
+
+                Internship i4 = Internship.builder()
+                        .companyName("Deloitte USI")
+                        .role("Analyst Intern - Cloud & Data Engineering")
+                        .stipend("₹35,000 / month")
+                        .duration("3 Months (Summer 2027)")
+                        .location("Hyderabad, Telangana (Hybrid)")
+                        .deadline("2026-12-01")
+                        .eligibleBatches("2027, 2028")
+                        .eligibleBranches("CSE, IT, ECE, Mechanical, Civil, Electrical")
+                        .skillsRequired("SQL, Python, Cloud Fundamentals (AWS/Azure), PowerBI basics")
+                        .applicationUrl("https://www2.deloitte.com/ui/en/careers/students.html")
+                        .ppoOpportunity(false)
+                        .build();
+                internshipRepository.save(i4);
+
+                Internship i5 = Internship.builder()
+                        .companyName("Swiggy")
+                        .role("Backend Engineering Intern")
+                        .stipend("₹65,000 / month")
+                        .duration("6 Months (Jan - June 2027)")
+                        .location("Bengaluru, Karnataka (Remote / Hybrid)")
+                        .deadline("2026-11-18")
+                        .eligibleBatches("2026, 2027")
+                        .eligibleBranches("CSE, IT")
+                        .skillsRequired("Golang / Java, Spring Boot, PostgreSQL, Redis, Microservices")
+                        .applicationUrl("https://careers.swiggy.com/internships")
+                        .ppoOpportunity(true)
+                        .build();
+                internshipRepository.save(i5);
             }
         };
     }

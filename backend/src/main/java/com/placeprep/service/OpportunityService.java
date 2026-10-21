@@ -2,14 +2,15 @@ package com.placeprep.service;
 
 import com.placeprep.model.Hackathon;
 import com.placeprep.model.Internship;
-import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.User;
+import com.placeprep.dto.opportunity.OffCampusOpportunityDto;
 import com.placeprep.repository.HackathonRepository;
 import com.placeprep.repository.InternshipRepository;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,6 +72,7 @@ public class OpportunityService {
 
     // --- OFF CAMPUS OPPORTUNITIES (STRICTLY GATED FOR FINAL YEAR STUDENTS) ---
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getOffCampusOpportunitiesForStudent(String studentEmailOrId) {
         Map<String, Object> response = new HashMap<>();
 
@@ -79,6 +81,14 @@ public class OpportunityService {
             Optional<User> userOpt = userRepository.findByEmail(studentEmailOrId.trim().toLowerCase());
             if (userOpt.isPresent()) {
                 batch = userOpt.get().getGraduationBatch();
+            } else {
+                try {
+                    Long userId = Long.parseLong(studentEmailOrId.trim());
+                    userOpt = userRepository.findById(userId);
+                    if (userOpt.isPresent()) {
+                        batch = userOpt.get().getGraduationBatch();
+                    }
+                } catch (NumberFormatException ignored) {}
             }
         }
 
@@ -95,8 +105,9 @@ public class OpportunityService {
             return response;
         }
 
-        List<PlacementDrive> offCampusDrives = driveRepository.findAll().stream()
+        List<OffCampusOpportunityDto> offCampusDrives = driveRepository.findAll().stream()
                 .filter(d -> d.isOffCampus() || "OFF_CAMPUS".equalsIgnoreCase(d.getDriveType()))
+                .map(OffCampusOpportunityDto::from)
                 .toList();
 
         response.put("status", "ACCESS_GRANTED");

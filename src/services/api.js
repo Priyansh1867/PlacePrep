@@ -197,3 +197,16 @@ export const InsightsApi = {
   }
 };
 
+export const OpportunityApi = {
+  async getHackathons() {
+    return await fetchJson('/opportunities/hackathons');
+  },
+  async getInternships(batch) {
+    const qs = batch ? `?batch=${encodeURIComponent(batch)}` : '';
+    return await fetchJson(`/opportunities/internships${qs}`);
+  },
+  async getOffCampus(studentEmailOrId) {
+    const qs = new URLSearchParams({ studentEmailOrId }).toString();
+    return await fetchJson(`/opportunities/off-campus?${qs}`);
+  }
+};

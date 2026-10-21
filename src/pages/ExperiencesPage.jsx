@@ -139,7 +139,8 @@ export default function ExperiencesPage() {
     const matchSearch = companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         role.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         tips.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCompany = companyFilter === 'all' || exp.companyId === companyFilter;
+    const compId = exp.companyId;
+    const matchCompany = companyFilter === 'all' || compId === companyFilter;
     const matchBatch = batchFilter === 'all' || exp.batch === batchFilter;
     return matchSearch && matchCompany && matchBatch;
   });
@@ -341,22 +342,22 @@ export default function ExperiencesPage() {
         </div>
       </div>
 
-      {/* Filters and Search Bar */}
+      {/* Filter and Search Bar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           
-          <div className="relative w-full lg:w-96">
+          <div className="relative w-full md:w-96">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search experiences by company, role, or keywords..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              placeholder="Search by company, role, or interview advice..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto text-xs">
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto text-xs pb-1 md:pb-0">
             <span className="text-slate-400 font-semibold mr-1 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" /> Company:
             </span>
@@ -476,22 +477,20 @@ export default function ExperiencesPage() {
                         <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                         <span>Interview Questions Asked:</span>
                       </p>
-                      <ul className="space-y-1.5">
-                        {(exp.questionsEncountered || []).map((q, qIdx) => (
-                          <li key={qIdx} className="text-xs text-slate-600 flex items-start gap-2">
-                            <span className="text-indigo-600 font-extrabold">•</span>
-                            <span className="leading-snug">{q}</span>
+                      <ul className="space-y-1">
+                        {(exp.questionsEncountered || []).map((q, qIndex) => (
+                          <li key={qIndex} className="text-xs text-slate-700 flex items-start gap-2">
+                            <span className="text-indigo-600 font-bold">•</span>
+                            <span>{q}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
 
                     {/* Tips */}
-                    {exp.tips && (
-                      <p className="text-xs text-slate-600 italic bg-amber-50/50 p-3 rounded-xl border border-amber-100 mb-4 leading-relaxed">
-                        "{exp.tips}"
-                      </p>
-                    )}
+                    <p className="text-xs text-slate-600 italic bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/60 mb-4 leading-relaxed">
+                      "{exp.tips}"
+                    </p>
                   </div>
 
                   {/* Card Footer */}
@@ -505,14 +504,12 @@ export default function ExperiencesPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-[11px] text-slate-400">{exp.interviewDate}</span>
                       
-                      {/* Helpful Upvote Button */}
-                      <button 
+                      <button
                         onClick={() => handleVoteHelpful(exp)}
-                        disabled={isVoted}
-                        className={`flex items-center gap-1 font-semibold px-2 py-1 rounded-lg transition-colors cursor-pointer ${
-                          isVoted 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                            : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'
+                        className={`flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                          isVoted
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                         }`}
                         title={isVoted ? 'You found this helpful' : 'Mark as helpful'}
                       >
@@ -589,7 +586,7 @@ export default function ExperiencesPage() {
                     type="text"
                     value={formRole}
                     onChange={(e) => setFormRole(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                     placeholder="e.g. Associate Software Engineer"
                   />
                 </div>
@@ -619,7 +616,7 @@ export default function ExperiencesPage() {
                   value={formQuestions}
                   onChange={(e) => setFormQuestions(e.target.value)}
                   placeholder="What is normalization?&#10;Write a query for 2nd highest salary&#10;Tell me about a challenging team conflict"
-                  className="w-full p-2.5 border border-slate-300 rounded-xl"
+                  className="w-full p-2.5 border border-slate-300 rounded-lg"
                   required
                 />
               </div>
@@ -674,12 +671,12 @@ export default function ExperiencesPage() {
                   value={formTips}
                   onChange={(e) => setFormTips(e.target.value)}
                   placeholder="E.g., Revise SQL joins thoroughly, practice speaking out loud..."
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
               {/* Anonymous Checkbox */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
                 <div>
                   <span className="font-bold text-slate-800 block">Submit Anonymously</span>
                   <span className="text-[11px] text-slate-400">Your name and personal college details will be protected publicly.</span>
@@ -741,7 +738,7 @@ export default function ExperiencesPage() {
                 <button
                   type="button"
                   onClick={() => setIsReportModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-bold"
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -793,7 +790,7 @@ export default function ExperiencesPage() {
                   value={fbText}
                   onChange={(e) => setFbText(e.target.value)}
                   placeholder="Share what worked well or what needs revision..."
-                  className="w-full p-2.5 border border-slate-300 rounded-xl"
+                  className="w-full p-2.5 border border-slate-300 rounded-lg"
                   required
                 />
               </div>

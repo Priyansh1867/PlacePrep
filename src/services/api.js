@@ -205,6 +205,24 @@ export const DriveApi = {
     return await request(`/drives/${encodeURIComponent(driveId)}`, {
       method: 'DELETE'
     });
+  },
+
+  async getCalendar() {
+    return await request('/drives/calendar');
+  },
+
+  async updateRounds(driveId, rounds, roundConfigsJson) {
+    return await request(`/drives/${encodeURIComponent(driveId)}/rounds`, {
+      method: 'PUT',
+      body: JSON.stringify({ rounds, roundConfigsJson })
+    });
+  },
+
+  async updateInstructions(driveId, venue, reportingTime, instructions) {
+    return await request(`/drives/${encodeURIComponent(driveId)}/instructions`, {
+      method: 'PUT',
+      body: JSON.stringify({ venue, reportingTime, instructions })
+    });
   }
 };
 
@@ -236,6 +254,25 @@ export const ApplicationApi = {
 
   async getStats() {
     return await request('/applications/stats');
+  },
+
+  async register(application) {
+    return await request('/applications/register', {
+      method: 'POST',
+      body: JSON.stringify(application)
+    });
+  },
+
+  async getByStudent(studentId) {
+    return await request(`/applications/student/${encodeURIComponent(studentId)}`);
+  },
+
+  async getByDrive(driveId) {
+    return await request(`/applications/drive/${encodeURIComponent(driveId)}`);
+  },
+
+  async getAll() {
+    return await request('/applications');
   }
 };
 
@@ -407,4 +444,33 @@ export const FeedbackApi = {
   }
 };
 
+// 12. Academic Eligibility Engine API
+export const EligibilityApi = {
+  async check(metrics) {
+    return await request('/eligibility/check', {
+      method: 'POST',
+      body: JSON.stringify(metrics)
+    });
+  },
+  async checkDriveForStudent(driveId, studentId = 'user-demo-01') {
+    return await request(`/eligibility/check-drive/${encodeURIComponent(driveId)}?studentId=${encodeURIComponent(studentId)}`);
+  }
+};
 
+// 13. Schedule Conflict Radar API
+export const ScheduleConflictApi = {
+  async checkConflict(payload) {
+    return await request('/schedules/check-conflict', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  async getStudentConflicts(studentId, targetDate = null, startTime = '10:00 AM', endTime = '11:30 AM') {
+    const params = new URLSearchParams({ studentId, startTime, endTime });
+    if (targetDate) params.append('targetDate', targetDate);
+    return await request(`/schedules/conflicts/student?${params.toString()}`);
+  },
+  async getDriveConflicts() {
+    return await request('/schedules/conflicts/drives');
+  }
+};

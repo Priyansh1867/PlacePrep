@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/drives")
@@ -27,6 +28,11 @@ public class DriveController {
     @GetMapping
     public ResponseEntity<List<PlacementDrive>> getDrives(@RequestParam(required = false) String batch) {
         return ResponseEntity.ok(driveService.getAll(batch));
+    }
+
+    @GetMapping("/calendar")
+    public ResponseEntity<List<Map<String, Object>>> getCalendar() {
+        return ResponseEntity.ok(driveService.getCalendarEvents());
     }
 
     @GetMapping("/{driveId}")
@@ -57,6 +63,49 @@ public class DriveController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{driveId}/rounds")
+    public ResponseEntity<?> updateDriveRounds(
+            @PathVariable String driveId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> rounds = (List<String>) payload.get("rounds");
+            String roundConfigsJson = (String) payload.get("roundConfigsJson");
+
+            PlacementDrive updated = driveService.updateRounds(driveId, rounds, roundConfigsJson);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{driveId}/instructions")
+    public ResponseEntity<?> updateDriveInstructions(
+            @PathVariable String driveId,
+            @RequestBody Map<String, String> payload
+    ) {
+        try {
+            PlacementDrive updated = driveService.updateInstructions(
+                    driveId,
+                    payload.get("venue"),
+                    payload.get("reportingTime"),
+                    payload.get("instructions")
+            );
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 

@@ -15,7 +15,7 @@
     <name>PlacePrep Backend</name>
     <description>PlacePrep Smart Placement Preparation Platform API</description>
     <properties>
-        <java.version>25</java.version>
+        <java.version>23</java.version>
     </properties>
     <dependencies>
         <dependency>

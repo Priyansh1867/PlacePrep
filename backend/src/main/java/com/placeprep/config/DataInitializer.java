@@ -33,6 +33,9 @@ public class DataInitializer implements CommandLineRunner {
     private CandidateRepository candidateRepository;
 
     @Autowired
+    private StudentApplicationRepository studentApplicationRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
@@ -43,6 +46,7 @@ public class DataInitializer implements CommandLineRunner {
         seedQuestions();
         seedExperiences();
         seedCandidates();
+        seedStudentApplications();
     }
 
     private void seedUsers() {
@@ -657,6 +661,41 @@ public class DataInitializer implements CommandLineRunner {
                     8,
                     "Cleared NQT with 94 percentile. Strong in Java Spring and microservices."
             ));
+        }
+    }
+
+    private void seedStudentApplications() {
+        if (studentApplicationRepository != null && studentApplicationRepository.count() == 0) {
+            StudentApplication app1 = new StudentApplication();
+            app1.setApplicationId("APP-HCL-101");
+            app1.setStudentId("user-demo-01");
+            app1.setStudentName("Priyansh Jain");
+            app1.setStudentEmail("student@placeprep.com");
+            app1.setCollege("Delhi Technological University (DTU)");
+            app1.setBranch("Computer Science and Engineering");
+            app1.setGraduationBatch("2028");
+            app1.setCgpa(8.85);
+            app1.setTenthPercentage(92.4);
+            app1.setTwelfthPercentage(89.6);
+            app1.setActiveBacklogs(0);
+            app1.setDriveId("drive-hcl-2026");
+            app1.setCompanyId("hcltech");
+            app1.setCompanyName("HCLTech");
+            app1.setRole("Software Engineer (GET)");
+            app1.setAppliedAt("2026-10-14 10:15");
+            app1.setStatus("INTERVIEW_SCHEDULED");
+            app1.setEligibilityStatus("ELIGIBLE");
+            app1.setEligibilityRemarks("Candidate meets all academic and backlog thresholds (CGPA 8.85 >= 6.5, Backlogs 0 <= 0).");
+            app1.setCurrentRound("Round 2: Technical Interview");
+            app1.setScheduledDate("2026-11-18");
+            app1.setScheduledTime("10:00 AM");
+            app1.setScheduledEndTime("11:00 AM");
+            app1.setVenue("Auditorium Hall A, Panel Desk #4");
+            app1.setReportingTime("09:30 AM");
+            app1.setCandidateInstructions("Bring printed resume and coding project portfolio on laptop.");
+            app1.setConflictFlagged(true);
+            app1.setConflictReason("Schedule collision detected: Overlaps with Accenture Virtual Assessment slot on 2026-11-18.");
+            studentApplicationRepository.save(app1);
         }
     }
 }

@@ -240,9 +240,9 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
       )}
 
       {/* Trust and Grounding Banner */}
-      <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+      <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
@@ -274,9 +274,9 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* 1. Frequently Asked Questions with Actual Frequency */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+            <h2 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
               <Flame className="w-5 h-5 text-amber-500" />
               Frequently Repeated Questions
             </h2>
@@ -291,11 +291,11 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
             {(insights.frequentQuestions || []).map((q, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-indigo-300 transition-colors flex items-center justify-between gap-3"
+                className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-indigo-300 transition-colors flex items-center justify-between gap-3"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
+                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
                       {q.category}
                     </span>
                     <span className="text-[11px] font-bold text-emerald-600">
@@ -305,7 +305,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
                   <h3 className="text-xs font-bold text-slate-800">{q.question}</h3>
                 </div>
 
-                <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-extrabold border border-amber-200 whitespace-nowrap">
+                <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200 whitespace-nowrap">
                   {q.frequency}
                 </span>
               </div>
@@ -314,9 +314,9 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
         </div>
 
         {/* 2. Trending Topics (Emerging Patterns) */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+            <h2 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
               Trending Topics in Recent Drives
             </h2>
@@ -331,7 +331,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
             {(insights.trendingTopics || []).map((topic, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl bg-indigo-50/40 border border-indigo-100 flex flex-col justify-between"
+                className="p-3.5 rounded-lg bg-indigo-50/40 border border-indigo-100 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-xs font-bold text-slate-900">{topic.topic}</h3>
@@ -355,7 +355,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-purple-600" />
             <h2 className="font-extrabold text-lg text-slate-900">
-              Previous vs. Recent Interview Analysis for {selectedCompany.name}
+              Previous vs. Recent Interview Analysis for {selectedCompany.name || 'Target Recruiter'}
             </h2>
           </div>
 
@@ -396,7 +396,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
                 Preparation Priority Matrix
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Optimized study plan prioritized by statistical recurrence in {selectedCompany.name} drives.
+                Optimized study plan prioritized by statistical recurrence in {selectedCompany.name || 'Target Recruiter'} drives.
               </p>
             </div>
           </div>
@@ -438,16 +438,16 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
       )}
 
       {/* Grounding Disclaimer */}
-      <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-500 leading-relaxed flex items-start gap-2">
+      <div className="p-4 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-500 leading-relaxed flex items-start gap-2">
         <AlertCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
         <span>{insights.disclaimer}</span>
       </div>
 
-      {/* CTA To Mock Interview */}
+      {/* CTA to Practice Section */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-900 to-indigo-800 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h3 className="font-extrabold text-base text-white">
-            Ready to test yourself against {selectedCompany.name}'s interview format?
+          <h3 className="font-semibold text-base text-white">
+            Ready to test yourself against {selectedCompany.name || 'the recruiter'}'s interview format?
           </h3>
           <p className="text-xs text-indigo-200 mt-1">
             Simulate a full Technical, HR, or Managerial round with instant AI scoring.

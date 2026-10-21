@@ -262,6 +262,7 @@ export default function App() {
               onSelectQuestion={handleSelectQuestion}
               onStartMockInterview={handleStartMockInterview}
               onViewInsights={handleViewAiInsights}
+              onNavigateToDrives={() => navigateTo('drives')}
             />
           )}
 
@@ -389,3 +390,4 @@ export default function App() {
     </div>
   );
 }
+

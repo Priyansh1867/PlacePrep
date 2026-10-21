@@ -1,6 +1,7 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.PlacementApplication;
+import com.placeprep.model.StudentApplication;
 import com.placeprep.model.User;
 import com.placeprep.service.ApplicationService;
 import com.placeprep.service.UserService;
@@ -22,10 +23,14 @@ public class ApplicationController {
     @Autowired
     private ApplicationService applicationService;
 
-    @Autowired
+    @Autowired(required = false)
     private UserService userService;
 
     public ApplicationController() {
+    }
+
+    public ApplicationController(ApplicationService applicationService) {
+        this.applicationService = applicationService;
     }
 
     public ApplicationController(ApplicationService applicationService, UserService userService) {
@@ -34,6 +39,9 @@ public class ApplicationController {
     }
 
     private User getAuthenticatedUser() {
+        if (userService == null) {
+            throw new IllegalStateException("UserService unavailable");
+        }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             throw new IllegalStateException("Authentication required");
@@ -70,16 +78,64 @@ public class ApplicationController {
         }
     }
 
-    @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    @PostMapping("/register")
+    public ResponseEntity<?> registerApplication(@RequestBody StudentApplication app) {
         try {
-            User user = getAuthenticatedUser();
-            String status = body != null ? body.get("status") : "APPLIED";
-            String notes = body != null ? body.get("notes") : null;
-            PlacementApplication updated = applicationService.updateStatus(user.getId(), id, status, notes);
-            return ResponseEntity.ok(updated);
+            StudentApplication saved = applicationService.registerApplication(app);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<StudentApplication>> getByStudent(@PathVariable String studentId) {
+        return ResponseEntity.ok(applicationService.getStudentApplications(studentId));
+    }
+
+    @GetMapping("/drive/{driveId}")
+    public ResponseEntity<List<StudentApplication>> getByDrive(@PathVariable String driveId) {
+        return ResponseEntity.ok(applicationService.getDriveApplications(driveId));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<StudentApplication>> getAll() {
+        return ResponseEntity.ok(applicationService.getAllApplications());
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
+        try {
+            Long numericId = null;
+            try {
+                numericId = Long.parseLong(id);
+            } catch (NumberFormatException ignored) {
+            }
+
+            if (numericId != null) {
+                User user = getAuthenticatedUser();
+                String status = body != null ? body.get("status") : "APPLIED";
+                String notes = body != null ? body.get("notes") : null;
+                PlacementApplication updated = applicationService.updateStatus(user.getId(), numericId, status, notes);
+                return ResponseEntity.ok(updated);
+            } else {
+                StudentApplication updated = applicationService.updateStatus(
+                        id,
+                        body != null ? body.get("status") : null,
+                        body != null ? body.get("currentRound") : null,
+                        body != null ? body.get("scheduledDate") : null,
+                        body != null ? body.get("scheduledTime") : null,
+                        body != null ? body.get("scheduledEndTime") : null,
+                        body != null ? body.get("venue") : null,
+                        body != null ? body.get("candidateInstructions") : null
+                );
+                return ResponseEntity.ok(updated);
+            }
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
         }

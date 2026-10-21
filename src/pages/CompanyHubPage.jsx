@@ -19,7 +19,10 @@ import {
   AlertCircle, 
   HelpCircle, 
   Flame, 
-  Bookmark 
+  Bookmark,
+  Terminal,
+  Activity,
+  Zap
 } from 'lucide-react';
 import { QuestionApi } from '../services/api';
 import { 
@@ -27,7 +30,8 @@ import {
   getPracticedQuestions, 
   getSavedCompanies, 
   toggleSavedCompany, 
-  getGraduationBatch 
+  getGraduationBatch,
+  getUpcomingDrives
 } from '../services/storage';
 
 export default function CompanyHubPage({ 
@@ -36,42 +40,46 @@ export default function CompanyHubPage({
   onSelectRound, 
   onSelectQuestion,
   onStartMockInterview,
-  onViewInsights
+  onViewInsights,
+  onNavigateToDrives
 }) {
-  const [activeTab, setActiveTab] = useState('rounds'); // 'rounds', 'overview', 'questions', 'insights'
+  const [activeTab, setActiveTab] = useState('rounds');
   const [selectedRoundFilter, setSelectedRoundFilter] = useState('all');
   const [allCompanyQuestions, setAllCompanyQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const currentBatch = getGraduationBatch();
   const savedCompanies = getSavedCompanies();
-  const [isSaved, setIsSaved] = useState(savedCompanies.includes(company?.id));
+  const [isSaved, setIsSaved] = useState(savedCompanies.includes(company?.companyId || company?.id));
+
+  const activeDrive = getUpcomingDrives().find(d => d.companyId === (company?.companyId || company?.id));
 
   useEffect(() => {
     let isMounted = true;
     const fetchCompanyQuestions = async () => {
       setLoadingQuestions(true);
+      const targetId = company?.companyId || company?.id;
       try {
-        const data = await QuestionApi.getAll({ companyId: company?.id });
+        const data = await QuestionApi.getAll({ companyId: targetId });
         if (isMounted) {
           if (data && data.length > 0) {
             setAllCompanyQuestions(data);
           } else {
-            setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === company?.id));
+            setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === targetId));
           }
         }
       } catch (e) {
         if (isMounted) {
-          setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === company?.id));
+          setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === targetId));
         }
       } finally {
         if (isMounted) setLoadingQuestions(false);
       }
     };
-    if (company?.id) {
+    if (company?.companyId || company?.id) {
       fetchCompanyQuestions();
     }
     return () => { isMounted = false; };
-  }, [company?.id]);
+  }, [company]);
 
   const practicedIds = getPracticedQuestions();
 
@@ -84,11 +92,10 @@ export default function CompanyHubPage({
     : allCompanyQuestions.filter(q => q.round === selectedRoundFilter);
 
   const handleToggleSave = () => {
-    toggleSavedCompany(company.id);
+    toggleSavedCompany(company?.companyId || company?.id);
     setIsSaved(prev => !prev);
   };
 
-  // Subtopics for the 3 main rounds as specified in prompt
   const roundDetails = [
     {
       id: 'technical',
@@ -96,57 +103,50 @@ export default function CompanyHubPage({
       icon: Code2,
       badge: `${technicalQuestions.length} Questions Available`,
       color: 'from-blue-600 to-indigo-700',
-      bgColor: 'bg-indigo-50 border-indigo-200',
-      textColor: 'text-indigo-700',
+      bgColor: 'bg-indigo-50 border border-indigo-200',
+      textColor: 'text-indigo-600',
       topics: [
         'Data Structures and Algorithms',
         'Programming Questions',
-        'Object-Oriented Programming (OOPs)',
-        'DBMS and SQL',
         'Operating Systems',
+        'Database Management Systems',
+        'Object-Oriented Programming (OOP)',
         'Computer Networks',
-        'Language-Specific Questions',
-        'Projects and Technical Fundamentals'
+        'System Design & Architecture'
       ],
-      desc: 'Coding problem solving, memory models, database normalization, query design, and deep technical scrutiny of academic projects.'
+      description: 'Rigorous technical evaluation testing problem solving, time complexity, and core computer science fundamentals.'
     },
     {
       id: 'hr',
       title: '2. HR Interview',
       icon: Users2,
       badge: `${hrQuestions.length} Questions Available`,
-      color: 'from-emerald-600 to-teal-700',
-      bgColor: 'bg-emerald-50 border-emerald-200',
-      textColor: 'text-emerald-700',
+      color: 'from-purple-600 to-pink-700',
+      bgColor: 'bg-purple-50 border border-purple-200',
+      textColor: 'text-purple-600',
       topics: [
-        'Tell me about yourself (STAR Introduction)',
-        'Why do you want to join this company?',
-        'Strengths and weaknesses',
-        'Career goals (3-5 Year Horizon)',
-        'Teamwork and conflict management',
-        'Relocation and shift preferences',
-        'Situational and behavioral questions'
+        'Behavioral Questions (STAR Method)',
+        'Situational Leadership & Team Scenarios',
+        'Company Culture & Values Alignment',
+        'Career Goals & Self-Awareness'
       ],
-      desc: 'Assesses personality, communication clarity, cultural alignment, relocation willingness, and long-term commitment to the firm.'
+      description: 'Evaluates communication clarity, cultural fit, adaptability, and emotional intelligence in workplace situations.'
     },
     {
       id: 'managerial',
-      title: '3. Managerial Interview',
+      title: '3. Managerial Round',
       icon: Briefcase,
       badge: `${managerialQuestions.length} Questions Available`,
-      color: 'from-purple-600 to-indigo-800',
-      bgColor: 'bg-purple-50 border-purple-200',
-      textColor: 'text-purple-700',
+      color: 'from-emerald-600 to-teal-700',
+      bgColor: 'bg-emerald-50 border border-emerald-200',
+      textColor: 'text-emerald-600',
       topics: [
-        'Problem-solving scenarios',
-        'Leadership and teamwork dynamics',
-        'Project-related technical discussions',
-        'Decision-making questions',
-        'Handling deadlines and pressure',
-        'Conflict resolution',
-        'Business and role-related scenarios'
+        'Project Deep-Dives & Trade-offs',
+        'Scenario Handling & Priority Conflicts',
+        'Decision Making Under Ambiguity',
+        'Team Dynamics & Cross-Functional Work'
       ],
-      desc: 'Tests executive maturity, handling ambiguity, working under tight deliverables, and balancing technical vs business trade-offs.'
+      description: 'Senior leadership interview testing project ownership, problem breakdown, and engineering judgment.'
     }
   ];
 
@@ -157,33 +157,36 @@ export default function CompanyHubPage({
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Back to Companies</span>
+          <span>RETURN TO COMPANIES DIRECTORY</span>
         </button>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleToggleSave}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
               isSaved
-                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold'
+                : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-indigo-600' : ''}`} />
-            <span>{isSaved ? 'Saved to Profile' : 'Save Company'}</span>
+            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-indigo-600 text-indigo-600' : ''}`} />
+            <span>{isSaved ? 'Saved to Target Set' : 'Save Recruiter'}</span>
           </button>
         </div>
       </div>
 
-      {/* Hero Header */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-6 sm:p-10 shadow-2xl overflow-hidden">
+      {/* Hero Header - Next-Gen Dark Tech */}
+      <div className="relative surface-card p-6 sm:p-8 border-slate-200 overflow-hidden">
+        {/* Glow corner */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
+
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           
           <div className="flex items-start gap-4 sm:gap-5">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shrink-0 overflow-hidden">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900 border border-slate-200 p-2.5 flex items-center justify-center shadow-lg shrink-0 overflow-hidden shadow-inner">
               <img
                 src={company.logo}
                 alt={company.name}
@@ -197,29 +200,37 @@ export default function CompanyHubPage({
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 font-sans">
                   {company.name}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-bold border border-indigo-400/30">
-                  Placement Preparation Hub
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-mono font-bold border border-indigo-200">
+                  Target Company Hub
                 </span>
               </div>
 
-              <p className="mt-1.5 text-xs sm:text-sm text-indigo-200 font-medium">
-                {company.tier} • {company.headquarters} • CTC: <span className="font-bold text-white">{company.ctcRange}</span>
+              <p className="mt-1.5 text-xs sm:text-sm text-slate-500 font-mono">
+                {company.tier} • {company.headquarters} • Compensation: <span className="font-bold text-emerald-700">{company.ctcRange}</span>
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2 mt-3 text-xs font-mono">
                 {company.verifiedUpcomingDrive && (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold flex items-center gap-1">
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Next Drive: {company.upcomingDriveDate}
                   </span>
                 )}
-                <span className="px-2.5 py-1 rounded-full bg-white/10 text-indigo-100 border border-white/15">
-                  Verified Experiences: {company.experienceCount}+
+                {activeDrive && onNavigateToDrives && (
+                  <button
+                    onClick={onNavigateToDrives}
+                    className="px-2.5 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <Calendar className="w-3.5 h-3.5" /> View Active Drive Schedule
+                  </button>
+                )}
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  Verified Experiences: {company.experienceCount || 10}+
                 </span>
-                <span className="px-2.5 py-1 rounded-full bg-white/10 text-indigo-100 border border-white/15">
-                  Latest Data: {company.latestUpdateDate}
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  Telemetry Freshness: {company.latestUpdateDate || 'October 2026'}
                 </span>
               </div>
             </div>
@@ -228,17 +239,17 @@ export default function CompanyHubPage({
           {/* Quick Mock Interview Launcher CTA */}
           <div className="w-full md:w-auto flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
             <button
-              onClick={() => onStartMockInterview(company)}
-              className="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-extrabold text-xs hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+              onClick={() => onStartMockInterview && onStartMockInterview(company)}
+              className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Bot className="w-4 h-4" />
-              <span>Take AI Mock Interview</span>
+              <Bot className="w-4 h-4 text-cyan-200" />
+              <span>Simulate AI Mock Interview</span>
             </button>
             <button
-              onClick={() => onViewInsights(company)}
-              className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/20 transition-all flex items-center justify-center gap-1.5"
+              onClick={() => onViewInsights && onViewInsights(company)}
+              className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-mono font-bold text-xs border border-slate-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
               <span>View AI Insights</span>
             </button>
           </div>
@@ -246,19 +257,19 @@ export default function CompanyHubPage({
         </div>
 
         {/* Tab Navigation in Banner */}
-        <div className="flex items-center gap-2 mt-8 pt-6 border-t border-white/15 overflow-x-auto text-xs font-semibold">
+        <div className="flex items-center gap-2 mt-8 pt-6 border-t border-slate-200 overflow-x-auto text-xs font-mono font-semibold">
           {[
-            { id: 'rounds', label: 'Interview Rounds (Technical, HR, Managerial)' },
+            { id: 'rounds', label: 'Interview Pipeline (Technical, HR, Managerial)' },
             { id: 'overview', label: 'Company Overview & Eligibility' },
-            { id: 'questions', label: `Question Bank (${allCompanyQuestions.length})` },
+            { id: 'questions', label: `Question Vault (${allCompanyQuestions.length})` },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-xl transition-all whitespace-nowrap ${
+              className={`px-4 py-2 rounded-xl transition-all whitespace-nowrap border cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-white text-indigo-950 font-extrabold shadow-sm'
-                  : 'text-indigo-200 hover:text-white hover:bg-white/10'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs font-bold'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               {tab.label}
@@ -272,10 +283,10 @@ export default function CompanyHubPage({
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                Select an Interview Round
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
+                Select an Interview Stage
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-mono">
                 Practice verified company-specific questions curated for {company.name} recruitment panels.
               </p>
             </div>
@@ -287,7 +298,7 @@ export default function CompanyHubPage({
               return (
                 <div
                   key={round.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-200 flex flex-col justify-between"
+                  className="surface-card p-6 shadow-xl hover:border-indigo-500/50 hover:shadow-[0_0_25px_-5px_rgba(99,102,241,0.2)] transition-all flex flex-col justify-between group"
                 >
                   <div>
                     {/* Header */}
@@ -295,51 +306,42 @@ export default function CompanyHubPage({
                       <div className={`w-12 h-12 rounded-xl ${round.bgColor} flex items-center justify-center`}>
                         <Icon className={`w-6 h-6 ${round.textColor}`} />
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
+                      <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-700">
                         {round.badge}
                       </span>
                     </div>
 
-                    <h3 className="font-extrabold text-lg text-slate-900 mb-2">
+                    <h3 className="font-extrabold text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors font-sans">
                       {round.title}
                     </h3>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                      {round.desc}
+                    <p className="text-xs text-slate-500 mb-4 leading-relaxed font-mono">
+                      {round.description}
                     </p>
 
-                    {/* Subtopics */}
-                    <div className="space-y-2 mb-6">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        Key Tested Areas:
-                      </p>
+                    {/* Verified Syllabus Topics */}
+                    <div className="space-y-2 mb-6 pt-4 border-t border-slate-200">
+                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400 block">
+                        Assessed Syllabus & Concepts
+                      </span>
                       <ul className="space-y-1.5">
-                        {round.topics.slice(0, 5).map((topic, i) => (
-                          <li key={i} className="text-xs text-slate-700 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0" />
-                            <span className="line-clamp-1">{topic}</span>
+                        {round.topics.map((t, idx) => (
+                          <li key={idx} className="text-xs text-slate-700 font-mono flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                            <span>{t}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
-                    <button
-                      onClick={() => onSelectRound(round.id, company)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      <span>Open {round.title.split('.')[1]} Page</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onStartMockInterview(company, round.id)}
-                      className="w-full py-2 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-indigo-50 hover:text-indigo-700 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Bot className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Simulate This Round in AI Mock</span>
-                    </button>
-                  </div>
+                  {/* Action CTA */}
+                  <button
+                    onClick={() => onSelectRound(round.id)}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 group-hover:gap-2 cursor-pointer"
+                  >
+                    <span>Practice {round.title.split('. ')[1]} Questions</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               );
             })}
@@ -347,58 +349,53 @@ export default function CompanyHubPage({
         </div>
       )}
 
-      {/* SECTION A: COMPANY OVERVIEW & ELIGIBILITY */}
+      {/* SECTION B2: COMPANY OVERVIEW & ELIGIBILITY TAB */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono">
           <div className="lg:col-span-2 space-y-6">
-            {/* Overview */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-extrabold text-lg text-slate-900 mb-3 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-indigo-600" /> Company Profile & Placement Overview
+            <div className="surface-card p-6 border-slate-200 space-y-4">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2 font-sans">
+                <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                Eligibility Criteria & Policies
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                {company.name} is a premier global technology powerhouse. As part of campus hiring across major engineering colleges, recruitment focuses on core computer science foundations, problem solving under pressure, and behavioral adaptability.
-              </p>
-
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div>
-                  <span className="text-slate-400 block">Typical Job Roles:</span>
-                  <span className="font-bold text-slate-800">{company.roles.join(', ')}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">CTC Package:</span>
-                  <span className="font-bold text-emerald-600">{company.ctcRange}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Eligibility Criteria */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-extrabold text-lg text-slate-900 mb-3 flex items-center gap-2">
-                <FileCheck className="w-5 h-5 text-emerald-600" /> Verified Eligibility Criteria
-              </h3>
-              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 text-xs sm:text-sm text-emerald-900 leading-relaxed font-medium">
+              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200">
                 {company.eligibilityCriteria}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-2">
-                *Eligibility criteria are updated based on official campus placement cell brochures for 2026/2027/2028 drives.
               </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">Drive Status</span>
+                  <span className="text-xs font-bold text-emerald-700 mt-0.5 block">{company.driveStatus}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">Eligible Cohorts</span>
+                  <span className="text-xs font-bold text-indigo-700 mt-0.5 block">
+                    {company.eligibleBatches?.join(', ')}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">Target Roles</span>
+                  <span className="text-xs font-bold text-slate-800 mt-0.5 block truncate">
+                    {company.roles?.join(', ')}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Step-by-Step Recruitment Process */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-extrabold text-lg text-slate-900 mb-4 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-indigo-600" /> Step-by-Step Recruitment Process
+            <div className="surface-card p-6 border-slate-200 space-y-4">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2 font-sans">
+                <FileCheck className="w-5 h-5 text-emerald-700" />
+                Actual Selection Process Workflow
               </h3>
-              <div className="space-y-4">
-                {company.recruitmentProcess.map((proc) => (
-                  <div key={proc.step} className="flex items-start gap-4 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
-                      {proc.step}
-                    </div>
+              <div className="space-y-3">
+                {company.recruitmentProcess?.map((step) => (
+                  <div key={step.step} className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3.5">
+                    <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                      {step.step}
+                    </span>
                     <div>
-                      <h4 className="font-bold text-sm text-slate-900">{proc.title}</h4>
-                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{proc.desc}</p>
+                      <h4 className="text-xs font-bold text-slate-900 font-sans">{step.title}</h4>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{step.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -406,34 +403,42 @@ export default function CompanyHubPage({
             </div>
           </div>
 
-          {/* Right Sidebar - Verified Updates */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-bold text-sm text-slate-900 mb-3 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" /> Verified Historical Source
+            <div className="surface-card p-6 border-slate-200 space-y-4">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2 font-sans">
+                <Flame className="w-5 h-5 text-amber-500" />
+                Frequent Technical Topics
               </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {company.verifiedHistoricalSource}
-              </p>
-              <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
-                <p>Data Freshness: <b>{company.latestUpdateDate}</b></p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Historical confidence score: 94% based on 80+ peer reports.
+              <div className="flex flex-wrap gap-1.5">
+                {company.frequentTopics?.map((topic, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 hover:border-indigo-300 transition-colors"
+                  >
+                    #{topic}
+                  </span>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-slate-200">
+                <span className="text-[11px] text-slate-400 block mb-1">Source Transparency</span>
+                <p className="text-xs text-slate-500 leading-snug">
+                  {company.verifiedHistoricalSource}
                 </p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-6 shadow-sm">
-              <h3 className="font-bold text-sm text-indigo-950 mb-2 flex items-center gap-1.5">
-                <Bot className="w-4 h-4 text-indigo-600" />
+            <div className="surface-card bg-gradient-to-br from-[#0B0F19] to-indigo-950/60 rounded-2xl border border-indigo-200 p-6 shadow-xl font-mono text-white">
+              <h3 className="font-bold text-sm text-white mb-2 flex items-center gap-1.5 font-sans">
+                <Bot className="w-4 h-4 text-cyan-400" />
                 Practice Simulated Round
               </h3>
-              <p className="text-xs text-indigo-800 leading-relaxed mb-4">
+              <p className="text-xs text-slate-300 leading-relaxed mb-4">
                 Test your responses against an AI panelist trained on {company.name}'s evaluation metrics.
               </p>
               <button
-                onClick={() => onStartMockInterview(company)}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-all shadow-sm"
+                onClick={() => onStartMockInterview && onStartMockInterview(company)}
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs transition-all font-mono cursor-pointer"
               >
                 Launch Mock Interview
               </button>
@@ -444,7 +449,7 @@ export default function CompanyHubPage({
 
       {/* SECTION C: QUESTION BANK TAB */}
       {activeTab === 'questions' && (
-        <div className="space-y-4">
+        <div className="space-y-4 font-mono">
           {/* Round Filter Tabs */}
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200 text-xs font-semibold">
             {[
@@ -456,10 +461,10 @@ export default function CompanyHubPage({
               <button
                 key={r.id}
                 onClick={() => setSelectedRoundFilter(r.id)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${
                   selectedRoundFilter === r.id
-                    ? 'bg-indigo-600 text-white font-bold'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs font-bold'
+                    : 'bg-white text-slate-700 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 {r.label}
@@ -469,35 +474,35 @@ export default function CompanyHubPage({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredQuestions.map(q => {
-              const isPracticed = practicedIds.includes(q.id);
+              const isPracticed = practicedIds.includes(q.questionId || q.id);
               return (
                 <div
-                  key={q.id}
-                  onClick={() => onSelectQuestion(q)}
-                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group"
+                  key={q.questionId || q.id}
+                  onClick={() => onSelectQuestion && onSelectQuestion(q)}
+                  className="surface-card p-5 shadow-xl hover:border-indigo-500/50 cursor-pointer transition-all flex flex-col justify-between group"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-bold uppercase">
+                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200 text-xs font-bold uppercase">
                           {q.round}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-semibold">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs border border-slate-200">
                           {q.category}
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                        <Flame className="w-3 h-3" /> {q.frequencyScore}%
+                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                        <Flame className="w-3 h-3" /> {q.frequencyScore || 90}%
                       </span>
                     </div>
 
                     <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors leading-snug">
-                      {q.question}
+                      {q.questionText || q.question}
                     </h4>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className={isPracticed ? "text-emerald-600 font-bold flex items-center gap-1" : "text-slate-400"}>
+                  <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                    <span className={isPracticed ? "text-emerald-700 font-bold flex items-center gap-1" : "text-slate-500"}>
                       {isPracticed ? "✓ Practiced" : "Pending practice"}
                     </span>
                     <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">

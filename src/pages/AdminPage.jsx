@@ -73,6 +73,10 @@ export default function AdminPage() {
   const [driveCtc, setDriveCtc] = useState('₹6.5 LPA');
   const [driveDate, setDriveDate] = useState('December 20, 2026');
   const [driveDeadline, setDriveDeadline] = useState('December 10, 2026');
+  const [driveVenue, setDriveVenue] = useState('Auditorium Hall B & Labs');
+  const [driveReportingTime, setDriveReportingTime] = useState('08:30 AM');
+  const [driveInstructions, setDriveInstructions] = useState('Carry printed resume, college ID, and laptop.');
+  const [driveMinCgpa, setDriveMinCgpa] = useState(6.5);
 
   // New Question Form State
   const [qCompany, setQCompany] = useState('hcltech');
@@ -214,11 +218,24 @@ export default function AdminPage() {
       role: driveRole,
       ctc: driveCtc,
       driveDate: driveDate,
+      driveTime: '09:00 AM',
       deadline: driveDeadline,
+      venue: driveVenue,
+      reportingTime: driveReportingTime,
+      instructions: driveInstructions,
+      minCgpa: parseFloat(driveMinCgpa) || 6.5,
+      minTenthPercentage: 60.0,
+      minTwelfthPercentage: 60.0,
+      maxBacklogs: 0,
       eligibleBatches: ['2026', '2027', '2028'],
       status: 'Verified Upcoming Drive',
-      locations: ['Pan-India Virtual / Hybrid'],
-      rounds: ['Online Assessment', 'Technical Interview', 'HR Round'],
+      locations: ['Pan-India Virtual & On-Campus'],
+      rounds: ['Online Assessment', 'Technical Round 1', 'HR Round'],
+      roundConfigs: [
+        { roundNumber: 1, roundName: 'Online Assessment', roundType: 'Aptitude Assessment', durationMinutes: 60, cutoffScore: 70, mode: 'Online Proctored', venueOrLink: driveVenue },
+        { roundNumber: 2, roundName: 'Technical Round 1', roundType: 'Technical Interview', durationMinutes: 45, cutoffScore: 75, mode: 'In-Person Panel', venueOrLink: driveVenue },
+        { roundNumber: 3, roundName: 'HR Round', roundType: 'HR Round', durationMinutes: 30, cutoffScore: 80, mode: 'In-Person', venueOrLink: 'Placement Office' }
+      ],
       verifiedBadge: true
     };
 
@@ -301,7 +318,7 @@ export default function AdminPage() {
   // 4. Moderate Candidate Interview Experience (Backend REST)
   const handleModerateExperience = async (expId, status) => {
     try {
-      const updated = await ExperienceApi.moderate(expId, status);
+      await ExperienceApi.moderate(expId, status);
       setExperiences(prev => prev.map(exp => {
         if ((exp.experienceId || exp.id) === expId) {
           return {
@@ -333,7 +350,7 @@ export default function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
-      {/* Toast */}
+      {/* Toast Notification */}
       {toast.visible && (
         <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-slate-900 text-white border border-slate-700 shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5">
           {toast.type === 'success' ? (
@@ -390,7 +407,7 @@ export default function AdminPage() {
           </p>
         </div>
 
-        {/* Trigger Recalculation CTA */}
+        {/* Trigger Recalculation & Refresh CTA */}
         <div className="flex flex-col gap-2 relative z-10 shrink-0">
           <button
             onClick={handleTriggerAnalysis}
@@ -418,15 +435,15 @@ export default function AdminPage() {
           { id: 'companies', label: `Recruiter Hubs (${companies.length})` },
           { id: 'drives', label: `Placement Drives (${drives.length})` },
           { id: 'questions', label: `Question Bank (${questions.length})` },
-          { id: 'moderation', label: `Experience Moderation (${experiences.length})` },
-          { id: 'feedback', label: `Student Feedback (${feedbackList.length})` },
+          { id: 'moderation', label: `Moderation Queue (${experiences.length})` },
+          { id: 'feedback', label: `Feedback & Reports (${feedbackList.length})` }
         ].map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`py-3 px-4 rounded-t-xl transition-all whitespace-nowrap border-b-2 cursor-pointer ${
+            className={`px-4 py-3 border-b-2 font-bold whitespace-nowrap transition-colors cursor-pointer ${
               activeTab === t.id
-                ? 'border-indigo-600 text-indigo-600 bg-white shadow-xs'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
                 : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
             }`}
           >
@@ -465,7 +482,7 @@ export default function AdminPage() {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+            <h3 className="font-semibold text-base text-slate-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               AI Intelligence Pipeline & Security Status
             </h3>
@@ -505,7 +522,7 @@ export default function AdminPage() {
                   value={newCompanyName}
                   onChange={(e) => setNewCompanyName(e.target.value)}
                   placeholder="e.g. Cisco Systems"
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                   required
                 />
               </div>
@@ -516,27 +533,27 @@ export default function AdminPage() {
                   type="text"
                   value={newCompanyTier}
                   onChange={(e) => setNewCompanyTier(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">CTC Package Range</label>
+                <label className="block font-bold text-slate-700 mb-1">CTC Range / Package</label>
                 <input
                   type="text"
                   value={newCompanyCtc}
                   onChange={(e) => setNewCompanyCtc(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Hiring Roles (Comma separated)</label>
+                <label className="block font-bold text-slate-700 mb-1">Target Roles (comma-separated)</label>
                 <input
                   type="text"
                   value={newCompanyRoles}
                   onChange={(e) => setNewCompanyRoles(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -546,7 +563,7 @@ export default function AdminPage() {
                   type="text"
                   value={newCompanyBatches}
                   onChange={(e) => setNewCompanyBatches(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -638,7 +655,7 @@ export default function AdminPage() {
                   type="text"
                   value={driveCtc}
                   onChange={(e) => setDriveCtc(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -649,18 +666,61 @@ export default function AdminPage() {
                     type="text"
                     value={driveDate}
                     onChange={(e) => setDriveDate(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Deadline</label>
+                  <label className="block font-bold text-slate-700 mb-1">App Deadline</label>
                   <input
                     type="text"
                     value={driveDeadline}
                     onChange={(e) => setDriveDeadline(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Venue / Mode</label>
+                  <input
+                    type="text"
+                    value={driveVenue}
+                    onChange={(e) => setDriveVenue(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Min CGPA</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={driveMinCgpa}
+                    onChange={(e) => setDriveMinCgpa(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Reporting Time</label>
+                <input
+                  type="text"
+                  value={driveReportingTime}
+                  onChange={(e) => setDriveReportingTime(e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Drive Instructions</label>
+                <textarea
+                  rows={2}
+                  value={driveInstructions}
+                  onChange={(e) => setDriveInstructions(e.target.value)}
+                  placeholder="Dress code, items to carry..."
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
               </div>
 
               <button
@@ -770,7 +830,7 @@ export default function AdminPage() {
                   type="text"
                   value={qCategory}
                   onChange={(e) => setQCategory(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                   placeholder="e.g. Operating Systems"
                 />
               </div>

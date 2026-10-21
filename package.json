@@ -1,7 +1,8 @@
 {
-  "name": "interview-drive",
+  "name": "placeprep",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.4.0",
+  "homepage": "https://place-prep.vercel.app",
   "type": "module",
   "scripts": {
     "dev": "vite",

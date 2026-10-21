@@ -2,7 +2,18 @@
 
 > **Production-Grade SaaS Architecture • Grounded Placement Intelligence • Live Spring Boot REST API & React 19 Frontend**
 
-PlacePrep is a comprehensive campus placement and hiring platform engineered to bridge the gap between academic theory and real-world recruitment drives. Designed for engineering undergraduates, university placement cells, and corporate recruiters, PlacePrep provides company-specific question banks, grounded historical analytics, active recall workspaces, application tracking, and an end-to-end recruitment pipeline.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FPriyansh1867%2FPlacePrep)
+
+**PlacePrep** is an institutional placement preparation platform engineered to bridge the gap between academic theory and real-world recruitment drives. Designed for engineering undergraduates, university placement cells, and corporate recruiters, PlacePrep provides company-specific question banks, grounded historical analytics, active recall workspaces, automated academic eligibility verification, schedule conflict prevention, application tracking, and an end-to-end recruitment pipeline.
+
+---
+
+## 🌐 Live Vercel Deployment & Repository Links
+
+- **Live Vercel Application**: [https://place-prep.vercel.app](https://place-prep.vercel.app)
+- **Repository Owner**: [@Priyansh1867](https://github.com/Priyansh1867)
+- **GitHub Repository**: [https://github.com/Priyansh1867/PlacePrep](https://github.com/Priyansh1867/PlacePrep)
+- **Vercel Preview Deployments**: Managed via [Vercel GitHub Integration](https://vercel.com/new/import?s=https://github.com/Priyansh1867/PlacePrep)
 
 ---
 
@@ -14,9 +25,9 @@ graph TD
     Proxy["Vite Dev Proxy<br/>/api -> :8080/api"]
     Gateway["Spring Security 6<br/>AuthTokenFilter (pp_ tokens)<br/>BCrypt Password Hashing"]
     
-    Controllers["Spring Boot 3.5 REST Controllers<br/>Auth • User • Company • Drive<br/>Application • Question • Experience<br/>Insights • MockSession • Workflow • Feedback"]
+    Controllers["Spring Boot 3.5 REST Controllers<br/>Auth • User • Company • Drive<br/>Application • Question • Experience<br/>Insights • MockSession • Workflow • Feedback<br/>Eligibility • ScheduleConflict"]
     
-    Services["Business Service Layer<br/>ApplicationService • WorkflowService<br/>InsightsService • ExperienceService<br/>CompanyService • DriveService • TokenService"]
+    Services["Business Service Layer<br/>ApplicationService • WorkflowService<br/>InsightsService • ExperienceService<br/>CompanyService • DriveService • TokenService<br/>EligibilityService • ScheduleConflictService"]
     
     Database[("H2 In-Memory / File Database<br/>Spring Data JPA • Hibernate DDL<br/>Auto-Seeded via DataInitializer")]
 
@@ -116,7 +127,7 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
 
 ---
 
-## 📦 Complete Feature Modules (8 of 8)
+## 📦 Complete Feature Modules
 
 ### 1. Placement Readiness Center (`#dashboard`)
 * Transparent 100-point placement readiness rubric:
@@ -126,10 +137,13 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
   * Tracked Applications: up to 15 points
 * Zero fabricated percentages or fake multipliers. Dynamic quick action shortcuts.
 
-### 2. Placement Drive Tracker (`#drives` & `#applications`)
-* Verified drive schedules (HCLTech, TCS Digital, Infosys, Deloitte, Accenture) with CTC, batch eligibility, and deadlines.
-* Personal application lifecycle tracker (`INTERESTED` → `APPLIED` → `ASSESSMENT` → `INTERVIEW` → `OFFER` → `REJECTED` → `WITHDRAWN`).
-* Real-time KPI metrics and stage notes update modal.
+### 2. Placement Drives & Company Management (`#drives` & `#applications`)
+* **Recruitment Drives Directory**: Active on-campus schedules, verified CTC packages, reporting times, venue passes, and batch eligibility.
+* **Drive Calendar & Logistics**: Venue guidelines, reporting time slots, and pass tickets.
+* **Automated Eligibility Engine**: Instant verification of CGPA, 10th/12th percentages, active backlogs, and degree branch.
+* **Schedule Conflict Radar**: Automated cross-company assessment overlap detection to prevent candidate double-booking.
+* **Candidate Application Lifecycle**: Personal tracking (`INTERESTED` → `APPLIED` → `ASSESSMENT` → `INTERVIEW` → `OFFER` → `REJECTED` → `WITHDRAWN`) with real-time KPI metrics and stage notes update modal.
+* **Placement-Team Round Controls**: TPO configurator for round types (Aptitude, Technical, HR), durations, venues, and cutoffs.
 
 ### 3. DSA & Coding Practice Studio (`#dsa`)
 * Algorithmic coding studio organized by high-frequency interview patterns:
@@ -147,7 +161,7 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
 
 ### 5. Realistic Mock Test Center (`#mock-interview`)
 * Three interview round simulations: Technical, HR (Behavioral / STAR), and Managerial.
-* Realistic question timer, model answer reveal, and session history logging directly to Spring Boot database.
+* Realistic question timer, model answer reveal, voice and text input, and session history logging directly to Spring Boot database.
 
 ### 6. Interview Experience Community (`#experiences`)
 * Student-submitted interview debriefs with verified questions, difficulty ratings, and preparation advice.
@@ -188,18 +202,34 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
 
 ### Placement Drives & Applications
 * `GET /api/drives?batch={batch}` — Catalog of upcoming drives with batch filtering.
+* `GET /api/drives/calendar` — Drive schedule calendar events.
+* `GET /api/drives/{id}` — Placement drive details.
 * `POST /api/drives` *(Admin)* — Announce a new placement drive.
+* `PUT /api/drives/{id}` *(Admin)* — Update drive properties.
+* `PUT /api/drives/{id}/rounds` *(Admin)* — Configure drive interview rounds.
+* `PUT /api/drives/{id}/instructions` *(Admin)* — Update venue and candidate instructions.
 * `DELETE /api/drives/{id}` *(Admin)* — Retire a placement drive.
 * `GET /api/applications/my` — Get authenticated student's tracked applications.
 * `POST /api/applications` — Track drive application with stage status and notes.
+* `POST /api/applications/register` — Register student application pass with eligibility and conflict checking.
+* `GET /api/applications/student/{studentId}` — Get student application passes.
+* `GET /api/applications/drive/{driveId}` — Get applications registered for a drive.
 * `PUT /api/applications/{id}/status` — Update recruitment stage.
 * `DELETE /api/applications/{id}` — Withdraw application.
 * `GET /api/applications/stats` — Summary metrics for student readiness score.
+
+### Eligibility Engine & Conflict Radar
+* `POST /api/eligibility/check` — Verify candidate CGPA, 10th/12th, backlogs, and branch eligibility against drive criteria.
+* `GET /api/eligibility/check-drive/{driveId}` — Student eligibility evaluation for a specific drive.
+* `POST /api/schedules/check-conflict` — Cross-company assessment overlap detection.
+* `GET /api/schedules/conflicts/student` — Retrieve flagged conflicts for a student schedule.
+* `GET /api/schedules/conflicts/drives` — Platform-wide drive clash report.
 
 ### Recruiter Hubs & Questions
 * `GET /api/companies?batch={batch}` — List recruiter hubs.
 * `GET /api/companies/{id}` — Detailed company overview and recruitment process.
 * `POST /api/companies` *(Admin)* — Create company profile.
+* `PUT /api/companies/{id}` *(Admin)* — Update company profile.
 * `DELETE /api/companies/{id}` *(Admin)* — Remove company profile.
 * `GET /api/questions?companyId={id}&round={round}&category={cat}` — Filtered question catalog.
 * `POST /api/questions` *(Admin)* — Add question to verified bank.
@@ -243,4 +273,4 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
 
 ## 📄 License & Attribution
 
-Developed for college campus placement preparation and student readiness assessment. Grounded in authentic hiring transcripts and educational SaaS design standards.
+Developed for college campus placement preparation and student readiness assessment. Created and maintained by **Priyansh Jain** ([@Priyansh1867](https://github.com/Priyansh1867)). Grounded in authentic hiring transcripts and educational SaaS design standards.

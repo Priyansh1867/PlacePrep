@@ -162,29 +162,29 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-150">
       
-      {/* Top Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-8 sm:p-10 shadow-xl relative overflow-hidden">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-indigo-200 mb-3">
-            <Bot className="w-3.5 h-3.5" />
-            <span>Interactive AI Interview Simulator</span>
+      {/* Page Header */}
+      <div className="surface-card p-6 sm:p-8 border-slate-200">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-medium mb-2">
+              <Bot className="w-3.5 h-3.5" />
+              <span>Simulated Interview Panel</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              AI Mock Interview Simulator
+            </h1>
+            <p className="mt-1 text-sm text-slate-500 max-w-2xl">
+              Simulate realistic 1-on-1 placement rounds for top recruiters. Receive instant automated scoring on technical accuracy, depth, and communication clarity.
+            </p>
           </div>
-
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            AI-Powered Mock Interviewer
-          </h1>
-
-          <p className="mt-2 text-sm sm:text-base text-indigo-100 leading-relaxed">
-            Practice realistic 1-on-1 placement interviews. Get instant automated scoring on correctness, communication clarity, and STAR structure.
-          </p>
         </div>
       </div>
 
       {/* SETUP SCREEN */}
       {!sessionActive && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-sm space-y-8">
+        <div className="bg-white surface-card p-6 sm:p-8 border-slate-200 space-y-8">
           <div>
-            <h2 className="font-extrabold text-xl text-slate-900 mb-1">
+            <h2 className="font-semibold text-xl text-slate-900 mb-1">
               Configure Your Mock Interview Round
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
@@ -202,7 +202,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 <button
                   key={c.id}
                   onClick={() => setSelectedCompanyId(c.id)}
-                  className={`p-3.5 rounded-xl border-2 text-left transition-all ${
+                  className={`p-3.5 rounded-lg border-2 text-left transition-all ${
                     selectedCompanyId === c.id
                       ? 'border-indigo-600 bg-indigo-50/70 shadow-sm'
                       : 'border-slate-200 hover:border-indigo-300'
@@ -229,7 +229,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 <button
                   key={r.id}
                   onClick={() => setSelectedRound(r.id)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
                     selectedRound === r.id
                       ? 'border-indigo-600 bg-indigo-50/70 shadow-sm'
                       : 'border-slate-200 hover:border-indigo-300'
@@ -251,7 +251,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
             <button
               onClick={startInterview}
-              className="w-full sm:w-auto px-8 py-3 rounded-xl bg-indigo-600 text-white font-extrabold text-sm hover:bg-indigo-700 active:bg-indigo-800 shadow-md shadow-indigo-600/25 transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-3 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:bg-indigo-800 shadow-xs shadow-indigo-600/25 transition-all flex items-center justify-center gap-2"
             >
               <span>Start Simulated Interview</span>
               <ArrowRight className="w-4 h-4" />
@@ -262,16 +262,16 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
       {/* ACTIVE INTERVIEW SCREEN */}
       {sessionActive && !sessionComplete && currentQuestion && (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden space-y-0">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden space-y-0">
           
           {/* Interview Progress Bar */}
           <div className="p-4 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+              <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
                 <Bot className="w-5 h-5" />
               </div>
               <div>
-                <p className="font-extrabold text-sm text-white">
+                <p className="font-semibold text-sm text-white">
                   {selectedCompany.name} • {selectedRound.toUpperCase()} Round
                 </p>
                 <p className="text-xs text-slate-400">
@@ -296,7 +296,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
           {/* AI Question Bubble */}
           <div className="p-6 sm:p-8 bg-indigo-50/40 border-b border-indigo-100">
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-sm">
+              <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-sm">
                 AI
               </div>
               <div className="space-y-1.5 flex-1">
@@ -308,7 +308,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                     {currentQuestion.category}
                   </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 leading-snug">
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 leading-snug">
                   "{currentQuestion.question}"
                 </h2>
               </div>
@@ -341,7 +341,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 onChange={(e) => setStudentInput(e.target.value)}
                 placeholder="Type your structured answer here. Use STAR framework for behavioral questions or explain logic/complexity for technical rounds..."
                 disabled={currentEvaluation !== null || isEvaluating}
-                className="w-full p-4 border border-slate-300 rounded-2xl text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-slate-50 leading-relaxed font-normal"
+                className="w-full p-4 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-slate-50 leading-relaxed font-normal"
               />
             </div>
 
@@ -355,7 +355,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 <button
                   onClick={handleSubmitAnswer}
                   disabled={!studentInput.trim() || isEvaluating}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm"
+                  className="px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm"
                 >
                   {isEvaluating ? (
                     <>
@@ -374,20 +374,20 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
             {/* AI EVALUATION RESULTS CARD */}
             {currentEvaluation && (
-              <div className="mt-6 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-5 animate-in fade-in duration-200">
+              <div className="mt-6 p-6 rounded-lg bg-slate-50 border border-slate-200 space-y-5 animate-in fade-in duration-200">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                       AI Diagnostic Verdict:
                     </span>
-                    <h3 className="font-extrabold text-lg text-slate-900 mt-0.5">
+                    <h3 className="font-semibold text-lg text-slate-900 mt-0.5">
                       {currentEvaluation.verdict}
                     </h3>
                   </div>
 
                   {/* Scores Badge */}
                   <div className="flex items-center gap-2">
-                    <div className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-center shadow-xs">
+                    <div className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-center shadow-xs">
                       <span className="text-xs font-medium block opacity-80">Score</span>
                       <span className="text-lg font-black leading-none">{currentEvaluation.overallScore}%</span>
                     </div>
@@ -396,7 +396,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
                 {/* Score Breakdown Bars */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <div className="p-3 rounded-lg bg-white border border-slate-200">
                     <div className="flex justify-between font-semibold text-slate-600 mb-1">
                       <span>Correctness & Depth</span>
                       <span className="font-bold text-indigo-600">{currentEvaluation.correctnessScore}%</span>
@@ -406,7 +406,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <div className="p-3 rounded-lg bg-white border border-slate-200">
                     <div className="flex justify-between font-semibold text-slate-600 mb-1">
                       <span>Clarity & Tone</span>
                       <span className="font-bold text-emerald-600">{currentEvaluation.clarityScore}%</span>
@@ -416,7 +416,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <div className="p-3 rounded-lg bg-white border border-slate-200">
                     <div className="flex justify-between font-semibold text-slate-600 mb-1">
                       <span>Structure (STAR / Logic)</span>
                       <span className="font-bold text-purple-600">{currentEvaluation.structureScore}%</span>
@@ -434,7 +434,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
                 {/* Strengths & Improvements */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                  <div className="p-3.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
                     <span className="font-bold text-emerald-800 flex items-center gap-1.5 mb-1.5">
                       <ThumbsUp className="w-3.5 h-3.5" /> Strengths Identified:
                     </span>
@@ -447,7 +447,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                     </ul>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200">
+                  <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200">
                     <span className="font-bold text-amber-800 flex items-center gap-1.5 mb-1.5">
                       <ThumbsDown className="w-3.5 h-3.5" /> High-Impact Improvements:
                     </span>
@@ -462,7 +462,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 </div>
 
                 {/* Model Guidance */}
-                <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <div className="p-4 rounded-lg bg-white border border-slate-200">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                     Ideal Candidate Approach / Benchmark Response:
                   </span>
@@ -475,7 +475,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={handleNextQuestion}
-                    className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm"
+                    className="px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm"
                   >
                     <span>{currentQIndex < questionsList.length - 1 ? 'Next Question' : 'View Session Results'}</span>
                     <ChevronRight className="w-4 h-4" />
@@ -490,12 +490,12 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
       {/* SESSION COMPLETE SUMMARY SCREEN */}
       {sessionComplete && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-xl space-y-6 text-center animate-in zoom-in-95 duration-200">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-10 shadow-xs space-y-6 text-center animate-in zoom-in-95 duration-200">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
             <Award className="w-8 h-8" />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900">
             Mock Interview Completed!
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
@@ -503,7 +503,7 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
           </p>
 
           {/* Average Score */}
-          <div className="inline-block p-6 rounded-2xl bg-slate-50 border border-slate-200 my-4">
+          <div className="inline-block p-6 rounded-lg bg-slate-50 border border-slate-200 my-4">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Overall Performance Score</span>
             <div className="text-4xl font-black text-indigo-600 mt-1">
               {Math.round(sessionEvaluations.reduce((acc, curr) => acc + curr.evaluation.overallScore, 0) / sessionEvaluations.length)}%
@@ -518,14 +518,14 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
                 setSessionActive(false);
                 setSessionComplete(false);
               }}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-colors"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-colors"
             >
               Take Another Mock Round
             </button>
 
             <button
               onClick={onFinish}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/25"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors shadow-xs shadow-indigo-600/25"
             >
               View My Dashboard Analytics
             </button>

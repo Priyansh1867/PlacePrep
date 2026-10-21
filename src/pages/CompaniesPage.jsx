@@ -3,7 +3,6 @@ import {
   Building2, 
   Search, 
   Filter, 
-  Sparkles, 
   GraduationCap, 
   SlidersHorizontal,
   ArrowUpDown,
@@ -29,8 +28,8 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
   const [error, setError] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'upcoming', 'batch-eligible'
-  const [sortBy, setSortBy] = useState('popularity'); // 'popularity', 'recent', 'name'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('popularity');
 
   const loadCompanies = async () => {
     setLoading(true);
@@ -56,7 +55,7 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
 
   const filteredCompanies = useMemo(() => {
     let list = companies.filter(c => {
-      const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchSearch = (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (c.roles || []).some(r => r.toLowerCase().includes(searchQuery.toLowerCase())) ||
                           (c.frequentTopics || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -75,7 +74,7 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
         return (b.popularityScore || 0) - (a.popularityScore || 0);
       }
       if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
       }
       if (sortBy === 'recent') {
         return (b.experienceCount || 0) - (a.experienceCount || 0);
@@ -135,7 +134,7 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
             </span>
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === 'all'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -145,7 +144,7 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
             </button>
             <button
               onClick={() => setStatusFilter('batch-eligible')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === 'batch-eligible'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -155,7 +154,7 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
             </button>
             <button
               onClick={() => setStatusFilter('upcoming')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === 'upcoming'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -171,7 +170,7 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="popularity">Most Frequently Asked</option>
               <option value="recent">Most Peer Experiences</option>
@@ -209,8 +208,10 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCompanies.map(company => (
             <CompanyCard
-              key={company.id}
+              key={company.companyId || company.id}
               company={company}
+              currentBatch={currentBatch}
+              onExplore={onSelectCompany}
               onSelectCompany={onSelectCompany}
             />
           ))}

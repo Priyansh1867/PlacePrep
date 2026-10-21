@@ -11,7 +11,7 @@ export default function Footer({ onNavigate }) {
           {/* Brand Info */}
           <div className="md:col-span-1">
             <div className="mb-3">
-              <PlacePrepLogo className="w-8 h-8" subtitle={null} />
+              <PlacePrepLogo className="h-9 sm:h-10 w-auto" theme="dark" />
             </div>
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
               Empowering college engineering students to crack dream campus placement drives with company-specific interview intelligence and data-grounded insights.

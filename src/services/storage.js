@@ -7,6 +7,20 @@ import {
   INITIAL_EXPERIENCES,
   INITIAL_AI_INSIGHTS
 } from '../data/initialData';
+import {
+  INITIAL_CRT_SESSIONS,
+  INITIAL_STUDENT_CRT_ATTENDANCE,
+  INITIAL_CLASS_ATTENDANCE,
+  INITIAL_RESUME_STATUS,
+  INITIAL_STUDENT_ROUNDS,
+  INITIAL_HACKATHONS,
+  INITIAL_INTERNSHIPS,
+  INITIAL_OFF_CAMPUS_COMPANIES,
+  INITIAL_ELIGIBILITY_CRITERIA_MATRIX,
+  INITIAL_LIVE_SESSIONS,
+  INITIAL_PUSH_NOTIFICATIONS,
+  INITIAL_FEEDBACK_LOOP
+} from '../data/portalWorkflowData';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'placeprep_current_user',
@@ -24,6 +38,20 @@ const STORAGE_KEYS = {
   PLATFORM_FEEDBACK: 'placeprep_feedback_list',
   STUDENT_APPLICATIONS: 'placeprep_student_applications',
   DRIVE_ROUNDS_CONFIG: 'placeprep_rounds_config',
+  PORTAL_MODE: 'placeprep_portal_mode',
+  PORTAL_ROLE: 'placeprep_portal_role',
+  CRT_SESSIONS: 'placeprep_crt_sessions',
+  STUDENT_CRT_ATTENDANCE: 'placeprep_student_crt_attendance',
+  CLASS_ATTENDANCE: 'placeprep_class_attendance',
+  RESUME_STATUS: 'placeprep_resume_status',
+  STUDENT_ROUNDS: 'placeprep_student_rounds',
+  HACKATHONS: 'placeprep_hackathons',
+  INTERNSHIPS: 'placeprep_internships',
+  OFF_CAMPUS: 'placeprep_off_campus',
+  ELIGIBILITY_MATRIX: 'placeprep_eligibility_matrix',
+  LIVE_SESSIONS: 'placeprep_live_sessions',
+  PUSH_NOTIFICATIONS: 'placeprep_push_notifications',
+  FEEDBACK_LOOP: 'placeprep_feedback_loop'
 };
 
 // Safe JSON parser
@@ -648,3 +676,182 @@ export function getDriveRoundsConfig(driveId) {
   return customRounds[driveId] || null;
 }
 
+
+
+// ----------------------------------------------------
+// Unified Portal Architecture (Institute, Placement & Admin)
+// ----------------------------------------------------
+
+export function getPortalMode() {
+  return getStorageItem(STORAGE_KEYS.PORTAL_MODE, 'gateway'); // 'gateway', 'institute', 'placement', 'admin'
+}
+
+export function setPortalMode(mode) {
+  setStorageItem(STORAGE_KEYS.PORTAL_MODE, mode);
+  window.dispatchEvent(new CustomEvent('portal-mode-changed', { detail: mode }));
+}
+
+export function getPortalRole() {
+  return getStorageItem(STORAGE_KEYS.PORTAL_ROLE, 'student');
+}
+
+export function setPortalRole(role) {
+  setStorageItem(STORAGE_KEYS.PORTAL_ROLE, role);
+  window.dispatchEvent(new CustomEvent('portal-role-changed', { detail: role }));
+}
+
+// CRT Sessions
+export function getCrtSessions() {
+  return getStorageItem(STORAGE_KEYS.CRT_SESSIONS, INITIAL_CRT_SESSIONS);
+}
+
+export function addCrtSession(session) {
+  const current = getCrtSessions();
+  const updated = [session, ...current];
+  setStorageItem(STORAGE_KEYS.CRT_SESSIONS, updated);
+  return updated;
+}
+
+// Student CRT Attendance
+export function getStudentCrtAttendance() {
+  return getStorageItem(STORAGE_KEYS.STUDENT_CRT_ATTENDANCE, INITIAL_STUDENT_CRT_ATTENDANCE);
+}
+
+export function updateStudentCrtAttendance(record) {
+  setStorageItem(STORAGE_KEYS.STUDENT_CRT_ATTENDANCE, record);
+  return record;
+}
+
+// Class Attendance
+export function getClassAttendance() {
+  return getStorageItem(STORAGE_KEYS.CLASS_ATTENDANCE, INITIAL_CLASS_ATTENDANCE);
+}
+
+// Resume Status (ATS)
+export function getResumeStatus() {
+  return getStorageItem(STORAGE_KEYS.RESUME_STATUS, INITIAL_RESUME_STATUS);
+}
+
+export function updateResumeStatus(data) {
+  const updated = { ...getResumeStatus(), ...data, updatedAt: new Date().toISOString() };
+  setStorageItem(STORAGE_KEYS.RESUME_STATUS, updated);
+  return updated;
+}
+
+// Student Live Round Status
+export function getStudentRounds() {
+  return getStorageItem(STORAGE_KEYS.STUDENT_ROUNDS, INITIAL_STUDENT_ROUNDS);
+}
+
+export function updateStudentRounds(rounds) {
+  setStorageItem(STORAGE_KEYS.STUDENT_ROUNDS, rounds);
+  return rounds;
+}
+
+// Hackathons
+export function getHackathons() {
+  return getStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+}
+
+export function addHackathon(hackathon) {
+  const current = getHackathons();
+  const updated = [hackathon, ...current];
+  setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  return updated;
+}
+
+// Internships
+export function getInternships() {
+  return getStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+}
+
+export function addInternship(internship) {
+  const current = getInternships();
+  const updated = [internship, ...current];
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  return updated;
+}
+
+// Off-Campus Companies (Final Year Only)
+export function getOffCampusCompanies() {
+  return getStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+}
+
+export function addOffCampusCompany(comp) {
+  const current = getOffCampusCompanies();
+  const updated = [comp, ...current];
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  return updated;
+}
+
+// Eligibility Matrix
+export function getEligibilityMatrix() {
+  return getStorageItem(STORAGE_KEYS.ELIGIBILITY_MATRIX, INITIAL_ELIGIBILITY_CRITERIA_MATRIX);
+}
+
+// Live Sessions
+export function getLiveSessions() {
+  return getStorageItem(STORAGE_KEYS.LIVE_SESSIONS, INITIAL_LIVE_SESSIONS);
+}
+
+export function addLiveSession(session) {
+  const current = getLiveSessions();
+  const updated = [session, ...current];
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+  return updated;
+}
+
+export function rsvpLiveSession(sessionId) {
+  const current = getLiveSessions();
+  const updated = current.map(s => {
+    if (s.id === sessionId) {
+      return { ...s, rsvpsCount: (s.rsvpsCount || 0) + 1, hasRsvp: true };
+    }
+    return s;
+  });
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+  return updated;
+}
+
+// Push Notifications
+export function getPushNotifications() {
+  return getStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, INITIAL_PUSH_NOTIFICATIONS);
+}
+
+export function broadcastPushNotification(notif) {
+  const current = getPushNotifications();
+  const newNotif = {
+    id: `notif-${Date.now()}`,
+    timestamp: 'Just now',
+    date: new Date().toISOString().split('T')[0],
+    read: false,
+    ...notif
+  };
+  const updated = [newNotif, ...current];
+  setStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, updated);
+  window.dispatchEvent(new CustomEvent('push-notification-broadcast', { detail: newNotif }));
+  return updated;
+}
+
+export function markNotificationAsRead(id) {
+  const current = getPushNotifications();
+  const updated = current.map(n => n.id === id ? { ...n, read: true } : n);
+  setStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, updated);
+  return updated;
+}
+
+// Feedback Loop (Feedback -> TPO -> Company)
+export function getFeedbackLoop() {
+  return getStorageItem(STORAGE_KEYS.FEEDBACK_LOOP, INITIAL_FEEDBACK_LOOP);
+}
+
+export function addFeedbackLoopEntry(entry) {
+  const current = getFeedbackLoop();
+  const newEntry = {
+    id: `fbl-${Date.now()}`,
+    ...entry
+  };
+  const updated = [newEntry, ...current];
+  setStorageItem(STORAGE_KEYS.FEEDBACK_LOOP, updated);
+  return updated;
+}

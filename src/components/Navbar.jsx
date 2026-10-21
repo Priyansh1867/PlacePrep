@@ -1,22 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
+  Sparkles, 
   Search, 
   User, 
   Menu, 
   X, 
+  GraduationCap, 
   Building2, 
   Briefcase, 
   BookOpen, 
   MessageSquare, 
   Bot, 
-  ShieldCheck, 
-  ChevronDown, 
-  LogOut, 
-  Sparkles,
-  ClipboardCheck,
-  CheckCircle2,
-  Calendar,
-  Layers
+  ShieldCheck,
+  ChevronDown,
+  LogOut,
+  SlidersHorizontal,
+  ClipboardCheck
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -30,12 +29,8 @@ export default function Navbar({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [user, setUser] = useState(getCurrentUser());
   const [batch, setBatch] = useState(getGraduationBatch());
-
-  const userDropdownRef = useRef(null);
-  const moreDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleBatchChange = (e) => {
@@ -49,206 +44,118 @@ export default function Navbar({
     { id: 'home', label: 'Home', icon: BookOpen },
     { id: 'workflow', label: 'Selection Workflow', icon: ClipboardCheck },
     { id: 'academic-records', label: 'Academic Records', icon: GraduationCap },
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-        setUserDropdownOpen(false);
-      }
-      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) {
-        setMoreDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Primary navigation items (focused, high-frequency)
-  const primaryNavLinks = [
     { id: 'drives', label: 'Placement Drives', icon: Briefcase },
     { id: 'companies', label: 'Companies', icon: Building2 },
-    { id: 'prep', label: 'Question Bank', icon: BookOpen },
-    { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, isNew: true },
-    { id: 'workflow', label: 'Pipeline Workflow', icon: ClipboardCheck },
-  ];
-
-  // Secondary items grouped into clean "Resources" dropdown
-  const secondaryNavLinks = [
-    { id: 'experiences', label: 'Interview Experiences', description: 'Real candidate transcripts & tips', icon: MessageSquare },
-    { id: 'ai-insights', label: 'Company Intelligence', description: 'Data-driven hiring trends & patterns', icon: Sparkles },
-    { id: 'admin', label: 'Placement Cell (Admin)', description: 'TPO drives, rounds & verification', icon: ShieldCheck },
+    { id: 'prep', label: 'Interview Prep', icon: BookOpen },
+    { id: 'experiences', label: 'Experiences', icon: MessageSquare },
+    { id: 'ai-insights', label: 'AI Insights', icon: Sparkles },
+    { id: 'mock-interview', label: 'AI Mock', icon: Bot, isPill: true },
+    { id: 'admin', label: 'Admin', icon: ShieldCheck },
   ];
 
   const handleNavigate = (routeId) => {
     setCurrentRoute(routeId);
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
-    setMoreDropdownOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isSecondaryActive = secondaryNavLinks.some(link => link.id === currentRoute);
-
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Left: Brand Logo */}
-          <div className="flex items-center gap-6">
+          {/* Logo & Branding */}
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => handleNavigate('home')} 
-              className="flex items-center text-left focus:outline-none"
-              title="PlacePrep Home"
+              className="flex items-center text-left group focus:outline-none"
             >
-              <PlacePrepLogo />
+              <PlacePrepLogo className="w-10 h-10" />
             </button>
-
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-1">
-              {primaryNavLinks.map((item) => {
-                const active = currentRoute === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigate(item.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                      active 
-                        ? 'text-indigo-600 bg-indigo-50 font-semibold' 
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    {item.isNew && (
-                      <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] rounded font-semibold">
-                        AI
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-
-              {/* Resources Dropdown */}
-              <div className="relative" ref={moreDropdownRef}>
-                <button
-                  onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                    isSecondaryActive 
-                      ? 'text-indigo-600 bg-indigo-50 font-semibold' 
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>More Tools</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {moreDropdownOpen && (
-                  <div className="absolute left-0 mt-1.5 w-64 rounded-xl bg-white border border-slate-200 shadow-lg py-1.5 z-50">
-                    {secondaryNavLinks.map((subItem) => {
-                      const SubIcon = subItem.icon;
-                      const active = currentRoute === subItem.id;
-                      return (
-                        <button
-                          key={subItem.id}
-                          onClick={() => handleNavigate(subItem.id)}
-                          className={`w-full text-left px-3.5 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors ${
-                            active ? 'bg-indigo-50/70 text-indigo-900' : 'text-slate-700'
-                          }`}
-                        >
-                          <SubIcon className={`w-4 h-4 mt-0.5 shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
-                          <div>
-                            <div className="text-sm font-medium text-slate-900">{subItem.label}</div>
-                            <div className="text-xs text-slate-500 leading-snug">{subItem.description}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </nav>
           </div>
 
-          {/* Right: Quick Search, Batch Switcher, User Menu */}
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center space-x-1">
+            {navLinks.map((item) => {
+              const active = currentRoute === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavigate(item.id)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    active 
+                      ? 'text-indigo-600 bg-indigo-50/80 font-semibold shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`}
+                >
+                  {item.label}
+                  {item.isPill && (
+                    <span className="px-1.5 py-0.2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] rounded-full font-bold">
+                      LIVE
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Right Action Controls */}
           <div className="flex items-center gap-2.5">
-            
-            {/* Quick Search Button (Cmd+K) */}
+            {/* Global Search Button */}
             <button
               onClick={onOpenSearch}
-              className="hidden sm:flex items-center gap-3 px-3 py-1.5 text-xs text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
-              title="Search companies, questions, or drives (Ctrl+K)"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-white hover:border-slate-300 transition-all text-xs font-medium shadow-sm"
+              title="Search companies, questions & drives (Ctrl+K)"
             >
-              <div className="flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-slate-400" />
-                <span>Search everything...</span>
-              </div>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-medium bg-white text-slate-500 border border-slate-200 rounded shadow-2xs">
-                ⌘K
-              </kbd>
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <span>Search...</span>
+              <kbd className="px-1.5 py-0.5 bg-slate-200/80 text-slate-600 rounded text-[10px] font-mono">⌘K</kbd>
             </button>
 
-            {/* Batch Selector Pill */}
+            {/* Batch Selector Badge */}
             <button
               onClick={onOpenBatchModal}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 transition-all text-xs font-semibold shadow-sm"
               title="Change Graduation Batch"
             >
-              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+              <GraduationCap className="w-4 h-4 text-indigo-600" />
               <span>Batch {batch}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <SlidersHorizontal className="w-3 h-3 text-indigo-500 opacity-70" />
             </button>
 
-            {/* User Profile / Dashboard Menu */}
-            <div className="relative" ref={userDropdownRef}>
+            {/* Student Profile / Auth */}
+            <div className="relative">
               <button
-                onClick={() => {
-                  if (!user) {
-                    onOpenAuthModal();
-                  } else {
-                    setUserDropdownOpen(!userDropdownOpen);
-                  }
-                }}
-                className={`flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                  user 
-                    ? 'border-slate-200 hover:bg-slate-50 text-slate-700' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-xs'
-                }`}
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-2 p-1 pl-2 pr-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-sm transition-all focus:outline-none"
               >
-                {user ? (
-                  <>
-                    <div className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 font-semibold flex items-center justify-center text-xs">
-                      {user.name ? user.name.charAt(0) : 'U'}
-                    </div>
-                    <span className="hidden md:inline font-medium text-slate-800">{user.name.split(' ')[0]}</span>
-                    <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:inline" />
-                  </>
-                ) : (
-                  <>
-                    <User className="w-4 h-4" />
-                    <span>Sign In</span>
-                  </>
-                )}
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-inner">
+                  {user?.name ? user.name[0].toUpperCase() : 'P'}
+                </div>
+                <span className="hidden md:inline font-semibold text-slate-800">
+                  {user?.name?.split(' ')[0] || 'Student'}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
-              {/* User Account Dropdown */}
-              {userDropdownOpen && user && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white border border-slate-200 shadow-xl py-2 z-50">
-                  <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-xs font-medium text-slate-500">Signed in as</p>
-                    <p className="text-sm font-semibold text-slate-900 truncate">{user.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{user.email || user.college}</p>
-                    <span className="inline-block mt-1 px-1.5 py-0.2 bg-slate-100 text-slate-700 text-[10px] rounded font-medium">
-                      {user.role === 'admin' ? 'Placement Admin / TPO' : `Student • ${batch} Batch`}
-                    </span>
+              {userDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in-50 zoom-in-95">
+                  <div className="px-4 py-2.5 border-b border-slate-100">
+                    <p className="text-xs font-semibold text-slate-900">{user?.name || 'Priyansh Jain'}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{user?.email || 'priyansh@example.com'}</p>
+                    <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                      ✓ Active Student • {batch} Batch
+                    </div>
                   </div>
 
                   <div className="py-1">
                     <button
                       onClick={() => handleNavigate('dashboard')}
-                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
                     >
-                      <User className="w-3.5 h-3.5 text-slate-400" />
-                      <span>My Placement Dashboard</span>
+                      <User className="w-3.5 h-3.5 text-indigo-600" />
+                      My Placement Dashboard
                     </button>
                     <button
                       onClick={() => handleNavigate('academic-records')}
@@ -263,82 +170,91 @@ export default function Navbar({
                         onOpenBatchModal();
                       }}
                       className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
-                      onClick={() => handleNavigate('drives')}
-                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                      <span>My Registered Drive Passes</span>
+                      <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+                      Change Graduation Batch
                     </button>
                     <button
                       onClick={() => handleNavigate('admin')}
-                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Placement Cell Controls</span>
+                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                      Admin Control Panel
                     </button>
                   </div>
 
                   <div className="border-t border-slate-100 pt-1">
                     <button
                       onClick={() => {
-                        localStorage.removeItem('placeprep_current_user');
-                        setUser(null);
                         setUserDropdownOpen(false);
-                        window.location.reload();
+                        onOpenAuthModal();
                       }}
-                      className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-medium"
                     >
                       <LogOut className="w-3.5 h-3.5 text-rose-500" />
-                      <span>Sign Out</span>
+                      Switch Account / Re-login
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Mobile Hamburger Toggle */}
+            {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-              aria-label="Toggle menu"
+              className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
-
           </div>
-
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
+        <div className="lg:hidden border-b border-slate-200 bg-white px-4 pt-2 pb-4 space-y-1 shadow-lg">
           <button
-            onClick={() => { onOpenSearch(); setMobileMenuOpen(false); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg mb-2"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onOpenSearch();
+            }}
+            className="w-full mb-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-xs font-medium"
           >
             <Search className="w-4 h-4 text-slate-400" />
-            <span>Search companies, questions, or drives...</span>
+            <span>Search companies, questions & drives...</span>
           </button>
 
-          <div className="space-y-1">
-            {[...primaryNavLinks, ...secondaryNavLinks].map((item) => {
-              const active = currentRoute === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavigate(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
-                    active ? 'text-indigo-600 bg-indigo-50 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 text-slate-400" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {navLinks.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleNavigate(item.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between ${
+                currentRoute === item.id 
+                  ? 'bg-indigo-50 text-indigo-700 font-semibold' 
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </div>
+              {item.isPill && (
+                <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] rounded-full font-bold">
+                  AI
+                </span>
+              )}
+            </button>
+          ))}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleNavigate('dashboard');
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-600 bg-indigo-50/50 flex items-center gap-2 mt-2"
+          >
+            <User className="w-4 h-4" />
+            <span>My Student Dashboard</span>
+          </button>
         </div>
       )}
     </header>

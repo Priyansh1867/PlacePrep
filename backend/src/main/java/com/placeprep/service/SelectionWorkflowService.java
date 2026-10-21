@@ -267,7 +267,7 @@ public class SelectionWorkflowService {
 
     private Map<String, Object> issueOffer(
             String applicationId,
-            Map<String, Object> offer,
+            OfferIssueDto offer,
             String defaultCtc,
             String defaultJoining,
             String defaultDetails
@@ -281,9 +281,9 @@ public class SelectionWorkflowService {
             throw new IllegalArgumentException("Cannot offer rejected candidate: " + applicationId);
         }
 
-        String ctc = offer.get("ctc") != null ? offer.get("ctc").toString() : defaultCtc;
-        String joining = offer.get("joiningDate") != null ? offer.get("joiningDate").toString() : defaultJoining;
-        String details = offer.get("offerDetails") != null ? offer.get("offerDetails").toString() : defaultDetails;
+        String ctc = offer != null && offer.getCtc() != null ? offer.getCtc() : defaultCtc;
+        String joining = offer != null && offer.getJoiningDate() != null ? offer.getJoiningDate() : defaultJoining;
+        String details = offer != null && offer.getOfferDetails() != null ? offer.getOfferDetails() : defaultDetails;
 
         sr.setPipelineStatus(PIPELINE_OFFERED);
         sr.setOfferCtc(ctc);

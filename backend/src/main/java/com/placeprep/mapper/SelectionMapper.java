@@ -5,25 +5,9 @@ import com.placeprep.dto.selection.DriveRoundDefinitionDto;
 import com.placeprep.model.CandidateEvaluation;
 import com.placeprep.model.DriveRound;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 public final class SelectionMapper {
 
     private SelectionMapper() {
-    }
-
-    public static List<Map<String, Object>> toRoundDefMaps(List<DriveRoundDefinitionDto> rounds) {
-        return rounds.stream().map(dto -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("roundNumber", dto.getRoundNumber());
-            map.put("name", dto.getName());
-            map.put("type", dto.getType());
-            map.put("cutoffScore", dto.getCutoffScore());
-            return map;
-        }).collect(Collectors.toList());
     }
 
     public static CandidateEvaluation toEntity(CandidateEvaluationRequest request) {

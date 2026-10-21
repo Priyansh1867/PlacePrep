@@ -23,7 +23,8 @@ import {
   Star,
   UserCheck,
   Shield,
-  Briefcase
+  Briefcase,
+  RefreshCw
 } from 'lucide-react';
 import {
   SELECTION_ROUNDS,
@@ -92,12 +93,14 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
   const [activeFeedbackRole, setActiveFeedbackRole] = useState('All');
   const [feedbackSuccessMsg, setFeedbackSuccessMsg] = useState('');
 
-  // Check backend connectivity on mount and sync candidates if backend has records
-  useEffect(() => {
-    let isMounted = true;
-    WorkflowApi.getCandidates().then(serverCandidates => {
-      if (isMounted && Array.isArray(serverCandidates) && serverCandidates.length > 0) {
-        // Map backend candidate models to frontend pipeline structure
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+
+  // Sync candidates directly with Spring Boot REST backend
+  const fetchCandidatesFromBackend = async () => {
+    setLoadingCandidates(true);
+    try {
+      const serverCandidates = await WorkflowApi.getCandidates();
+      if (Array.isArray(serverCandidates) && serverCandidates.length > 0) {
         const mapped = serverCandidates.map(c => ({
           id: c.candidateId,
           name: c.name,
@@ -121,10 +124,15 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
         }));
         setCandidates(mapped);
       }
-    }).catch(() => {
-      // Offline fallback already loaded via localStorage/initialData
-    });
-    return () => { isMounted = false; };
+    } catch (err) {
+      console.warn('Backend candidates sync offline, using local pipeline storage:', err);
+    } finally {
+      setLoadingCandidates(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidatesFromBackend();
   }, []);
 
   // Persist state changes
@@ -140,8 +148,9 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
     localStorage.setItem('placeprep_stakeholder_feedback', JSON.stringify(stakeholderFeedback));
   }, [stakeholderFeedback]);
 
-  // Candidate status actions
-  const handleUpdateStatus = (candidateId, newStatus, nextRound = null) => {
+  // Candidate status actions with async backend synchronization
+  const handleUpdateStatus = async (candidateId, newStatus, nextRound = null) => {
+    const targetCandidate = candidates.find(c => c.id === candidateId);
     setCandidates(prev => prev.map(cand => {
       if (cand.id !== candidateId) return cand;
       const updated = {
@@ -155,15 +164,23 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
       return updated;
     }));
 
-    // Async sync to Spring Boot REST backend
-    if (newStatus === 'Advanced' && nextRound) {
-      WorkflowApi.advanceCandidate(candidateId, nextRound);
-    } else if (newStatus === 'Eliminated') {
-      WorkflowApi.eliminateCandidate(candidateId, 'Eliminated via pipeline evaluation');
-    } else if (newStatus === 'Selected') {
-      WorkflowApi.selectCandidate(candidateId);
-    } else if (newStatus === 'Shortlisted') {
-      WorkflowApi.shortlistCandidate(candidateId);
+    try {
+      if (newStatus === 'Advanced' && nextRound) {
+        await WorkflowApi.advanceCandidate(candidateId, nextRound);
+        setFeedbackSuccessMsg(`Candidate "${targetCandidate?.name || candidateId}" advanced to ${nextRound} in Spring Boot database.`);
+      } else if (newStatus === 'Eliminated') {
+        await WorkflowApi.eliminateCandidate(candidateId, 'Eliminated via pipeline evaluation');
+        setFeedbackSuccessMsg(`Candidate "${targetCandidate?.name || candidateId}" marked as Eliminated in database.`);
+      } else if (newStatus === 'Selected') {
+        await WorkflowApi.selectCandidate(candidateId);
+        setFeedbackSuccessMsg(`Candidate "${targetCandidate?.name || candidateId}" selected with final offer in Spring Boot database!`);
+      } else if (newStatus === 'Shortlisted') {
+        await WorkflowApi.shortlistCandidate(candidateId);
+        setFeedbackSuccessMsg(`Candidate "${targetCandidate?.name || candidateId}" shortlisted for next evaluation.`);
+      }
+      setTimeout(() => setFeedbackSuccessMsg(''), 4500);
+    } catch (err) {
+      console.warn('Backend sync deferred to local storage:', err);
     }
   };
 
@@ -181,7 +198,7 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
     setIsEvaluationModalOpen(true);
   };
 
-  const handleSubmitEvaluation = (e) => {
+  const handleSubmitEvaluation = async (e) => {
     e.preventDefault();
     if (!selectedCandidateForEval) return;
 
@@ -206,15 +223,21 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
     setEvaluatorRecords([newRecord, ...evaluatorRecords]);
 
     // Send evaluation to backend API
-    WorkflowApi.submitEvaluation(selectedCandidateForEval.id, {
-      evaluatorName: evalForm.evaluatorName,
-      problemSolving: Number(evalForm.problemSolving),
-      technicalDepth: Number(evalForm.technicalDepth),
-      communication: Number(evalForm.communication),
-      culturalFit: Number(evalForm.culturalFit),
-      recommendation: evalForm.recommendation,
-      feedbackNotes: evalForm.feedbackNotes
-    });
+    try {
+      await WorkflowApi.submitEvaluation(selectedCandidateForEval.id, {
+        evaluatorName: evalForm.evaluatorName,
+        problemSolving: Number(evalForm.problemSolving),
+        technicalDepth: Number(evalForm.technicalDepth),
+        communication: Number(evalForm.communication),
+        culturalFit: Number(evalForm.culturalFit),
+        recommendation: evalForm.recommendation,
+        feedbackNotes: evalForm.feedbackNotes
+      });
+      setFeedbackSuccessMsg(`Evaluation rubrics submitted for ${selectedCandidateForEval.name} and saved to backend.`);
+      setTimeout(() => setFeedbackSuccessMsg(''), 4500);
+    } catch (err) {
+      console.warn('Evaluation backend sync error:', err);
+    }
 
     // Update candidate status based on recommendation
     if (evalForm.recommendation === 'Advance to Next Round') {
@@ -415,15 +438,25 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
                 ))}
               </div>
 
-              <div className="relative w-full md:w-72">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search candidate, college, company..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
-                />
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="relative w-full md:w-72">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search candidate, college, company..."
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  />
+                </div>
+                <button
+                  onClick={fetchCandidatesFromBackend}
+                  disabled={loadingCandidates}
+                  className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                  title="Reload candidate records from Spring Boot backend"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingCandidates ? 'animate-spin text-indigo-600' : ''}`} />
+                </button>
               </div>
             </div>
 

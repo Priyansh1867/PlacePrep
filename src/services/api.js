@@ -1,114 +1,403 @@
-// PlacePrep - REST API Client for Java Fullstack Spring Boot Backend
-// Connects with http://localhost:8080/api/* with robust fallback to client-side data
+// PlacePrep REST API Client
+// Connects with Spring Boot backend at http://localhost:8080/api/*
+// Attaches auth tokens and provides clean, explicit error handling.
 
 const API_BASE = '/api';
 
-async function fetchJson(endpoint, options = {}) {
+export function getAuthToken() {
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      },
-      ...options
-    });
-    if (!res.ok) {
-      throw new Error(`API error ${res.status}: ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (err) {
-    console.warn(`[PlacePrep API] Fallback active for ${endpoint}:`, err.message);
+    return localStorage.getItem('placeprep_auth_token') || null;
+  } catch {
     return null;
   }
 }
 
+export function setAuthToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem('placeprep_auth_token', token);
+    } else {
+      localStorage.removeItem('placeprep_auth_token');
+    }
+  } catch (e) {
+    console.error('Error saving auth token:', e);
+  }
+}
+
+export async function request(endpoint, options = {}) {
+  const token = getAuthToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    let errorDetail = `Request failed with status ${response.status}`;
+    try {
+      const errJson = await response.json();
+      if (errJson && errJson.error) {
+        errorDetail = errJson.error;
+      }
+    } catch {
+      // response body was not JSON
+    }
+    const err = new Error(errorDetail);
+    err.status = response.status;
+    throw err;
+  }
+
+  // Handle empty responses (like 204 No Content)
+  if (response.status === 204) {
+    return null;
+  }
+
+  return await response.json();
+}
+
+// 1. Authentication API
+export const AuthApi = {
+  async register(data) {
+    const res = await request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    if (res && res.token) setAuthToken(res.token);
+    return res;
+  },
+
+  async login(credentials) {
+    const res = await request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials)
+    });
+    if (res && res.token) setAuthToken(res.token);
+    return res;
+  },
+
+  async demoLogin(role = 'student') {
+    const res = await request('/auth/demo-login', {
+      method: 'POST',
+      body: JSON.stringify({ role })
+    });
+    if (res && res.token) setAuthToken(res.token);
+    return res;
+  },
+
+  async getMe() {
+    return await request('/auth/me');
+  },
+
+  logout() {
+    setAuthToken(null);
+  }
+};
+
+// 2. User & Student Dashboard API
+export const UserApi = {
+  async getMe() {
+    return await request('/users/me');
+  },
+
+  async updateBatch(batch) {
+    return await request('/users/me/batch', {
+      method: 'PUT',
+      body: JSON.stringify({ batch })
+    });
+  },
+
+  async getSavedQuestions() {
+    return await request('/users/me/saved-questions');
+  },
+
+  async toggleSavedQuestion(questionId) {
+    return await request(`/users/me/toggle-saved-question/${encodeURIComponent(questionId)}`, {
+      method: 'POST'
+    });
+  },
+
+  async togglePracticedQuestion(questionId) {
+    return await request(`/users/me/toggle-practiced-question/${encodeURIComponent(questionId)}`, {
+      method: 'POST'
+    });
+  },
+
+  async toggleRevisionQuestion(questionId) {
+    return await request(`/users/me/toggle-revision-question/${encodeURIComponent(questionId)}`, {
+      method: 'POST'
+    });
+  },
+
+  async toggleSavedCompany(companyId) {
+    return await request(`/users/me/toggle-saved-company/${encodeURIComponent(companyId)}`, {
+      method: 'POST'
+    });
+  },
+
+  async getDashboard() {
+    return await request('/users/me/dashboard');
+  }
+};
+
+// 3. Companies API
+export const CompanyApi = {
+  async getAll(batch = null) {
+    const qs = batch && batch !== 'all' ? `?batch=${encodeURIComponent(batch)}` : '';
+    return await request(`/companies${qs}`);
+  },
+
+  async getById(id) {
+    return await request(`/companies/${encodeURIComponent(id)}`);
+  },
+
+  async create(company) {
+    return await request('/companies', {
+      method: 'POST',
+      body: JSON.stringify(company)
+    });
+  },
+
+  async update(id, company) {
+    return await request(`/companies/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(company)
+    });
+  },
+
+  async delete(id) {
+    return await request(`/companies/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  }
+};
+
+// 4. Placement Drives API
+export const DriveApi = {
+  async getAll(batch = null) {
+    const qs = batch && batch !== 'all' ? `?batch=${encodeURIComponent(batch)}` : '';
+    return await request(`/drives${qs}`);
+  },
+
+  async getById(driveId) {
+    return await request(`/drives/${encodeURIComponent(driveId)}`);
+  },
+
+  async create(drive) {
+    return await request('/drives', {
+      method: 'POST',
+      body: JSON.stringify(drive)
+    });
+  },
+
+  async update(driveId, drive) {
+    return await request(`/drives/${encodeURIComponent(driveId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(drive)
+    });
+  },
+
+  async delete(driveId) {
+    return await request(`/drives/${encodeURIComponent(driveId)}`, {
+      method: 'DELETE'
+    });
+  }
+};
+
+// 5. Personal Application Tracker API
+export const ApplicationApi = {
+  async getMyApplications() {
+    return await request('/applications/my');
+  },
+
+  async trackApplication(applicationData) {
+    return await request('/applications', {
+      method: 'POST',
+      body: JSON.stringify(applicationData)
+    });
+  },
+
+  async updateStatus(applicationId, status, notes = '') {
+    return await request(`/applications/${applicationId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes })
+    });
+  },
+
+  async withdraw(applicationId) {
+    return await request(`/applications/${applicationId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getStats() {
+    return await request('/applications/stats');
+  }
+};
+
+// 6. Interview Questions API
+export const QuestionApi = {
+  async getAll(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return await request(`/questions${qs ? `?${qs}` : ''}`);
+  },
+
+  async getByCompanyAndRound(companyId, round) {
+    return await request(`/questions/company/${encodeURIComponent(companyId)}/round/${encodeURIComponent(round)}`);
+  },
+
+  async getCategories() {
+    return await request('/questions/categories');
+  },
+
+  async getById(id) {
+    return await request(`/questions/${encodeURIComponent(id)}`);
+  },
+
+  async create(question) {
+    return await request('/questions', {
+      method: 'POST',
+      body: JSON.stringify(question)
+    });
+  },
+
+  async update(id, question) {
+    return await request(`/questions/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(question)
+    });
+  },
+
+  async delete(id) {
+    return await request(`/questions/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  }
+};
+
+// 7. Interview Experiences API
+export const ExperienceApi = {
+  async getAll(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return await request(`/experiences${qs ? `?${qs}` : ''}`);
+  },
+
+  async create(experience) {
+    return await request('/experiences', {
+      method: 'POST',
+      body: JSON.stringify(experience)
+    });
+  },
+
+  async vote(experienceId) {
+    return await request(`/experiences/${encodeURIComponent(experienceId)}/vote`, {
+      method: 'POST'
+    });
+  },
+
+  async report(experienceId, reason = '') {
+    return await request(`/experiences/${encodeURIComponent(experienceId)}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
+  async moderate(experienceId, status) {
+    return await request(`/experiences/${encodeURIComponent(experienceId)}/moderate`, {
+      method: 'POST',
+      body: JSON.stringify({ status })
+    });
+  }
+};
+
+// 8. Grounded AI Insights API
+export const InsightsApi = {
+  async getOverview() {
+    return await request('/insights/overview');
+  },
+
+  async getByCompany(companyId) {
+    return await request(`/insights/${encodeURIComponent(companyId)}`);
+  }
+};
+
+// 9. Mock Interview Sessions API
+export const MockSessionApi = {
+  async getMySessions() {
+    return await request('/mock-sessions/my');
+  },
+
+  async saveSession(session) {
+    return await request('/mock-sessions', {
+      method: 'POST',
+      body: JSON.stringify(session)
+    });
+  }
+};
+
+// 10. Selection Pipeline Workflow API
 export const WorkflowApi = {
-  // Get all candidates
   async getCandidates(companyId = null, round = null) {
     const params = new URLSearchParams();
     if (companyId) params.append('companyId', companyId);
     if (round) params.append('round', round);
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return await fetchJson(`/workflow/candidates${queryString}`);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return await request(`/workflow/candidates${qs}`);
   },
 
-  // Advance candidate
   async advanceCandidate(candidateId, nextRound) {
-    return await fetchJson(`/workflow/candidates/${candidateId}/advance?nextRound=${nextRound}`, {
+    return await request(`/workflow/candidates/${encodeURIComponent(candidateId)}/advance?nextRound=${encodeURIComponent(nextRound)}`, {
       method: 'POST'
     });
   },
 
-  // Eliminate candidate
   async eliminateCandidate(candidateId, reason = '') {
-    return await fetchJson(`/workflow/candidates/${candidateId}/eliminate?reason=${encodeURIComponent(reason)}`, {
+    return await request(`/workflow/candidates/${encodeURIComponent(candidateId)}/eliminate?reason=${encodeURIComponent(reason)}`, {
       method: 'POST'
     });
   },
 
-  // Shortlist candidate
   async shortlistCandidate(candidateId) {
-    return await fetchJson(`/workflow/candidates/${candidateId}/shortlist`, {
+    return await request(`/workflow/candidates/${encodeURIComponent(candidateId)}/shortlist`, {
       method: 'POST'
     });
   },
 
-  // Select candidate (Final Offer)
   async selectCandidate(candidateId) {
-    return await fetchJson(`/workflow/candidates/${candidateId}/select`, {
+    return await request(`/workflow/candidates/${encodeURIComponent(candidateId)}/select`, {
       method: 'POST'
     });
   },
 
-  // Submit evaluation rubric & notes
   async submitEvaluation(candidateId, evaluationData) {
-    return await fetchJson(`/workflow/candidates/${candidateId}/evaluate`, {
+    return await request(`/workflow/candidates/${encodeURIComponent(candidateId)}/evaluate`, {
       method: 'POST',
       body: JSON.stringify(evaluationData)
     });
   },
 
-  // Submit Stakeholder Feedback (Student, TPO, Faculty, Company)
   async submitStakeholderFeedback(feedback) {
-    return await fetchJson(`/feedback`, {
+    return await request('/feedback', {
       method: 'POST',
       body: JSON.stringify(feedback)
     });
-  },
-
-  // Get Stakeholder Feedbacks
-  async getStakeholderFeedbacks() {
-    return await fetchJson(`/feedback`);
   }
 };
 
-export const CompanyApi = {
+// 11. Feedback API
+export const FeedbackApi = {
   async getAll() {
-    return await fetchJson(`/companies`);
+    return await request('/feedback');
   },
-  async getById(id) {
-    return await fetchJson(`/companies/${id}`);
-  }
-};
 
-export const QuestionApi = {
-  async getAll(params = {}) {
-    const qs = new URLSearchParams(params).toString();
-    return await fetchJson(`/questions${qs ? `?${qs}` : ''}`);
-  },
-  async getByCompanyAndRound(companyId, round) {
-    return await fetchJson(`/questions/company/${companyId}/round/${round}`);
-  }
-};
-
-export const DriveApi = {
-  async getAll() {
-    return await fetchJson(`/drives`);
-  }
-};
-
-export const InsightsApi = {
-  async getOverview() {
-    return await fetchJson(`/insights/overview`);
+  async submit(feedback) {
+    return await request('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(feedback)
+    });
   }
 };

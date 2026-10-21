@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, 
   Search, 
@@ -8,36 +8,68 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   CheckCircle2,
-  Calendar
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 import CompanyCard from '../components/CompanyCard';
-import { getCompanies, getGraduationBatch } from '../services/storage';
+import { CompanyApi } from '../services/api';
+import { getInitialCompanies, getGraduationBatch } from '../services/storage';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Input from '../components/ui/Input';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
   const currentBatch = getGraduationBatch();
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'upcoming', 'batch-eligible'
   const [sortBy, setSortBy] = useState('popularity'); // 'popularity', 'recent', 'name'
 
-  const allCompanies = getCompanies();
+  const loadCompanies = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await CompanyApi.getAll(currentBatch);
+      if (data && data.length > 0) {
+        setCompanies(data);
+      } else {
+        setCompanies(getInitialCompanies());
+      }
+    } catch (err) {
+      console.warn('Backend unavailable, falling back to cached companies:', err);
+      setCompanies(getInitialCompanies());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCompanies();
+  }, [currentBatch]);
 
   const filteredCompanies = useMemo(() => {
-    let list = allCompanies.filter(c => {
+    let list = companies.filter(c => {
       const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.roles.some(r => r.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                          c.frequentTopics.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+                          (c.roles || []).some(r => r.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (c.frequentTopics || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
       let matchStatus = true;
       if (statusFilter === 'upcoming') {
         matchStatus = c.verifiedUpcomingDrive === true;
       } else if (statusFilter === 'batch-eligible') {
-        matchStatus = c.eligibleBatches?.includes(currentBatch);
+        matchStatus = (c.eligibleBatches || []).includes(currentBatch);
       }
 
       return matchSearch && matchStatus;
     });
 
-    // Sorting
     list.sort((a, b) => {
       if (sortBy === 'popularity') {
         return (b.popularityScore || 0) - (a.popularityScore || 0);
@@ -52,138 +84,138 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
     });
 
     return list;
-  }, [allCompanies, searchQuery, statusFilter, sortBy, currentBatch]);
+  }, [companies, searchQuery, statusFilter, sortBy, currentBatch]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      
-      {/* Top Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-8 sm:p-10 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-indigo-200 mb-3">
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Personalized Company Hub</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
+      {/* Page Header */}
+      <PageHeader
+        badge="Company Intelligence"
+        badgeIcon={Building2}
+        title={`Companies Recruiting Batch ${currentBatch}`}
+        description="Explore dedicated preparation hubs with verified question frequencies, actual interview stages, and company-specific AI insights."
+        actions={
+          <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center gap-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-indigo-600" />
+              <div className="text-left">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Batch</span>
+                <span className="font-extrabold text-slate-900 text-sm">{currentBatch}</span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenBatchModal}
+            >
+              Change
+            </Button>
           </div>
-
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            Companies Recruiting Batch {currentBatch}
-          </h1>
-
-          <p className="mt-2 text-sm sm:text-base text-indigo-100 leading-relaxed">
-            Explore dedicated preparation hubs with verified question frequencies, actual interview stages, and company-specific AI insights.
-          </p>
-        </div>
-
-        {/* Batch Status Switcher Card */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 sm:p-5 text-white shrink-0 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2">
-            <GraduationCap className="w-5 h-5 text-indigo-300" />
-            <span className="font-bold text-sm">Graduation Batch:</span>
-            <span className="font-extrabold text-indigo-200 text-sm bg-white/15 px-2.5 py-0.5 rounded-lg">
-              {currentBatch}
-            </span>
-          </div>
-          <p className="text-[11px] text-indigo-200 mb-3 max-w-[220px]">
-            Showing eligibility data verified for {currentBatch} campus placement tracks.
-          </p>
-          <button
-            onClick={onOpenBatchModal}
-            className="w-full py-2 px-3 rounded-xl bg-white text-indigo-900 font-bold text-xs hover:bg-indigo-50 transition-colors shadow-sm"
-          >
-            Change Graduation Batch
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filter and Search Controls */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+      <Card className="p-4 sm:p-5 border-slate-200">
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          
-          {/* Search Bar */}
-          <div className="relative w-full lg:w-96">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-            <input
+          {/* Search Box */}
+          <div className="w-full lg:w-96">
+            <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search companies (e.g. HCLTech, TCS, Deloitte)..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              placeholder="Search by company name, role, or core skill..."
+              leftIcon={Search}
             />
           </div>
 
-          {/* Status & Eligibility Filters */}
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto text-xs">
+          {/* Quick Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto text-xs pb-1 lg:pb-0">
             <span className="text-slate-400 font-semibold mr-1 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" /> Filter:
             </span>
-            {[
-              { id: 'all', label: 'All Companies' },
-              { id: 'batch-eligible', label: `Batch ${currentBatch} Eligible` },
-              { id: 'upcoming', label: 'Verified Upcoming Drives' },
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setStatusFilter(f.id)}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                  statusFilter === f.id
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                statusFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              All Companies ({companies.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('batch-eligible')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                statusFilter === 'batch-eligible'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Batch {currentBatch} Eligible
+            </button>
+            <button
+              onClick={() => setStatusFilter('upcoming')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                statusFilter === 'upcoming'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Active Drives
+            </button>
+          </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
-
-            {/* Sort Selector */}
-            <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none"
-              >
-                <option value="popularity">Sort: Most Popular</option>
-                <option value="recent">Sort: Most Experiences</option>
-                <option value="name">Sort: A-Z Alphabetical</option>
-              </select>
-            </div>
+          {/* Sorting Dropdown */}
+          <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+            <ArrowUpDown className="w-4 h-4 text-slate-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="popularity">Most Frequently Asked</option>
+              <option value="recent">Most Peer Experiences</option>
+              <option value="name">Alphabetical (A-Z)</option>
+            </select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Grid of Company Cards */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-          <span>Showing {filteredCompanies.length} companies</span>
-          <span className="text-[11px] text-slate-400 italic">
-            *Eligibility data is displayed only when verified from legitimate campus reports.
-          </span>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-72 rounded-2xl" />
+          <Skeleton className="h-72 rounded-2xl" />
+          <Skeleton className="h-72 rounded-2xl" />
         </div>
-
-        {filteredCompanies.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
-            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-bold text-slate-800 text-base">No companies match your filters</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Try switching the filter to "All Companies" or search for a different company name.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCompanies.map((company) => (
-              <CompanyCard
-                key={company.id}
-                company={company}
-                currentBatch={currentBatch}
-                onExplore={onSelectCompany}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
+      ) : filteredCompanies.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title="No companies found"
+          description={`No recruiting companies matched "${searchQuery}". Try searching for another keyword or reset filters.`}
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+              }}
+            >
+              Reset Filters
+            </Button>
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCompanies.map(company => (
+            <CompanyCard
+              key={company.id}
+              company={company}
+              onSelectCompany={onSelectCompany}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

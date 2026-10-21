@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   ChevronLeft, 
@@ -14,13 +14,14 @@ import {
   ArrowRight, 
   Star, 
   Bot, 
-  ShieldCheck,
-  FileCheck,
-  AlertCircle,
-  HelpCircle,
-  Flame,
-  Bookmark
+  ShieldCheck, 
+  FileCheck, 
+  AlertCircle, 
+  HelpCircle, 
+  Flame, 
+  Bookmark 
 } from 'lucide-react';
+import { QuestionApi } from '../services/api';
 import { 
   getInterviewQuestions, 
   getPracticedQuestions, 
@@ -39,11 +40,39 @@ export default function CompanyHubPage({
 }) {
   const [activeTab, setActiveTab] = useState('rounds'); // 'rounds', 'overview', 'questions', 'insights'
   const [selectedRoundFilter, setSelectedRoundFilter] = useState('all');
+  const [allCompanyQuestions, setAllCompanyQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
   const currentBatch = getGraduationBatch();
   const savedCompanies = getSavedCompanies();
-  const isSaved = savedCompanies.includes(company.id);
+  const [isSaved, setIsSaved] = useState(savedCompanies.includes(company?.id));
 
-  const allCompanyQuestions = getInterviewQuestions().filter(q => q.companyId === company.id);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCompanyQuestions = async () => {
+      setLoadingQuestions(true);
+      try {
+        const data = await QuestionApi.getAll({ companyId: company?.id });
+        if (isMounted) {
+          if (data && data.length > 0) {
+            setAllCompanyQuestions(data);
+          } else {
+            setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === company?.id));
+          }
+        }
+      } catch (e) {
+        if (isMounted) {
+          setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === company?.id));
+        }
+      } finally {
+        if (isMounted) setLoadingQuestions(false);
+      }
+    };
+    if (company?.id) {
+      fetchCompanyQuestions();
+    }
+    return () => { isMounted = false; };
+  }, [company?.id]);
+
   const practicedIds = getPracticedQuestions();
 
   const technicalQuestions = allCompanyQuestions.filter(q => q.round === 'technical');
@@ -53,6 +82,11 @@ export default function CompanyHubPage({
   const filteredQuestions = selectedRoundFilter === 'all' 
     ? allCompanyQuestions 
     : allCompanyQuestions.filter(q => q.round === selectedRoundFilter);
+
+  const handleToggleSave = () => {
+    toggleSavedCompany(company.id);
+    setIsSaved(prev => !prev);
+  };
 
   // Subtopics for the 3 main rounds as specified in prompt
   const roundDetails = [
@@ -131,7 +165,7 @@ export default function CompanyHubPage({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => toggleSavedCompany(company.id)}
+            onClick={handleToggleSave}
             className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
               isSaved
                 ? 'bg-indigo-50 border-indigo-200 text-indigo-700'

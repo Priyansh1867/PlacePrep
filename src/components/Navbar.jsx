@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Sparkles, 
   Search, 
   User, 
   Menu, 
   X, 
-  GraduationCap, 
   Building2, 
   Briefcase, 
   BookOpen, 
   MessageSquare, 
   Bot, 
-  ShieldCheck,
-  ChevronDown,
-  LogOut,
-  SlidersHorizontal,
+  ShieldCheck, 
+  ChevronDown, 
+  LogOut, 
+  Sparkles,
   ClipboardCheck,
-  Activity
+  CheckCircle2,
+  Calendar,
+  Layers
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -30,8 +30,12 @@ export default function Navbar({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [user, setUser] = useState(getCurrentUser());
   const [batch, setBatch] = useState(getGraduationBatch());
+
+  const userDropdownRef = useRef(null);
+  const moreDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleBatchChange = (e) => {
@@ -41,215 +45,284 @@ export default function Navbar({
     return () => window.removeEventListener('batch-changed', handleBatchChange);
   }, []);
 
-  const navLinks = [
-    { id: 'home', label: 'Home', icon: BookOpen },
-    { id: 'workflow', label: 'Workflow', icon: ClipboardCheck },
-    { id: 'drives', label: 'Drives', icon: Briefcase },
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setUserDropdownOpen(false);
+      }
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) {
+        setMoreDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Primary navigation items (focused, high-frequency)
+  const primaryNavLinks = [
+    { id: 'drives', label: 'Placement Drives', icon: Briefcase },
     { id: 'companies', label: 'Companies', icon: Building2 },
-    { id: 'prep', label: 'Questions', icon: BookOpen },
-    { id: 'experiences', label: 'Experiences', icon: MessageSquare },
-    { id: 'ai-insights', label: 'Insights', icon: Sparkles },
-    { id: 'mock-interview', label: 'AI Mock', icon: Bot, isPill: true },
-    { id: 'admin', label: 'Admin', icon: ShieldCheck },
+    { id: 'prep', label: 'Question Bank', icon: BookOpen },
+    { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, isNew: true },
+    { id: 'workflow', label: 'Pipeline Workflow', icon: ClipboardCheck },
+  ];
+
+  // Secondary items grouped into clean "Resources" dropdown
+  const secondaryNavLinks = [
+    { id: 'experiences', label: 'Interview Experiences', description: 'Real candidate transcripts & tips', icon: MessageSquare },
+    { id: 'ai-insights', label: 'Company Intelligence', description: 'Data-driven hiring trends & patterns', icon: Sparkles },
+    { id: 'admin', label: 'Placement Cell (Admin)', description: 'TPO drives, rounds & verification', icon: ShieldCheck },
   ];
 
   const handleNavigate = (routeId) => {
     setCurrentRoute(routeId);
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
+    setMoreDropdownOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const isSecondaryActive = secondaryNavLinks.some(link => link.id === currentRoute);
+
   return (
-    <header className="sticky top-0 z-40 bg-[#030712]/80 backdrop-blur-xl border-b border-slate-800/80 transition-all">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Logo & Branding */}
-          <div className="flex items-center gap-3">
+          {/* Left: Brand Logo */}
+          <div className="flex items-center gap-6">
             <button 
               onClick={() => handleNavigate('home')} 
-              className="flex items-center text-left group focus:outline-none"
+              className="flex items-center text-left focus:outline-none"
+              title="PlacePrep Home"
             >
-              <PlacePrepLogo className="w-9 h-9" />
+              <PlacePrepLogo />
             </button>
-          </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-1 p-1 bg-slate-900/60 rounded-xl border border-slate-800/60 backdrop-blur-md">
-            {navLinks.map((item) => {
-              const active = currentRoute === item.id;
-              return (
+            {/* Desktop Navigation Links */}
+            <nav className="hidden lg:flex items-center space-x-1">
+              {primaryNavLinks.map((item) => {
+                const active = currentRoute === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavigate(item.id)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      active 
+                        ? 'text-indigo-600 bg-indigo-50 font-semibold' 
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    {item.isNew && (
+                      <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] rounded font-semibold">
+                        AI
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Resources Dropdown */}
+              <div className="relative" ref={moreDropdownRef}>
                 <button
-                  key={item.id}
-                  onClick={() => handleNavigate(item.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    active 
-                      ? 'text-white bg-indigo-500/20 border border-indigo-500/40 font-semibold shadow-[0_0_15px_rgba(99,102,241,0.25)]'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                  onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    isSecondaryActive 
+                      ? 'text-indigo-600 bg-indigo-50 font-semibold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <item.icon className={`w-3.5 h-3.5 ${active ? 'text-indigo-400' : 'text-slate-400'}`} />
-                  {item.label}
-                  {item.isPill && (
-                    <span className="px-1.5 py-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[9px] rounded-full font-bold shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                      LIVE
-                    </span>
-                  )}
+                  <span>More Tools</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-              );
-            })}
-          </nav>
 
-          {/* Right Action Controls */}
+                {moreDropdownOpen && (
+                  <div className="absolute left-0 mt-1.5 w-64 rounded-xl bg-white border border-slate-200 shadow-lg py-1.5 z-50">
+                    {secondaryNavLinks.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      const active = currentRoute === subItem.id;
+                      return (
+                        <button
+                          key={subItem.id}
+                          onClick={() => handleNavigate(subItem.id)}
+                          className={`w-full text-left px-3.5 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors ${
+                            active ? 'bg-indigo-50/70 text-indigo-900' : 'text-slate-700'
+                          }`}
+                        >
+                          <SubIcon className={`w-4 h-4 mt-0.5 shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">{subItem.label}</div>
+                            <div className="text-xs text-slate-500 leading-snug">{subItem.description}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </nav>
+          </div>
+
+          {/* Right: Quick Search, Batch Switcher, User Menu */}
           <div className="flex items-center gap-2.5">
-            {/* Global Search Button */}
+            
+            {/* Quick Search Button (Cmd+K) */}
             <button
               onClick={onOpenSearch}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/70 text-slate-400 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-800/60 transition-all text-xs font-medium shadow-inner"
-              title="Search companies, questions & drives (Ctrl+K)"
+              className="hidden sm:flex items-center gap-3 px-3 py-1.5 text-xs text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+              title="Search companies, questions, or drives (Ctrl+K)"
             >
-              <Search className="w-3.5 h-3.5 text-slate-400" />
-              <span>Search...</span>
-              <kbd className="px-1.5 py-0.5 bg-slate-800/80 text-slate-400 rounded text-[10px] font-mono border border-slate-700/60">⌘K</kbd>
+              <div className="flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-slate-400" />
+                <span>Search everything...</span>
+              </div>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-medium bg-white text-slate-500 border border-slate-200 rounded shadow-2xs">
+                ⌘K
+              </kbd>
             </button>
 
-            {/* Batch Selector Badge */}
+            {/* Batch Selector Pill */}
             <button
               onClick={onOpenBatchModal}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-900/60 hover:border-indigo-400/50 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(99,102,241,0.2)]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
               title="Change Graduation Batch"
             >
-              <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
+              <Calendar className="w-3.5 h-3.5 text-slate-500" />
               <span>Batch {batch}</span>
-              <SlidersHorizontal className="w-3 h-3 text-indigo-400 opacity-70" />
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
-            {/* Student Profile / Auth */}
-            <div className="relative">
+            {/* User Profile / Dashboard Menu */}
+            <div className="relative" ref={userDropdownRef}>
               <button
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs font-medium shadow-sm transition-all focus:outline-none hover:border-slate-700"
+                onClick={() => {
+                  if (!user) {
+                    onOpenAuthModal();
+                  } else {
+                    setUserDropdownOpen(!userDropdownOpen);
+                  }
+                }}
+                className={`flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                  user 
+                    ? 'border-slate-200 hover:bg-slate-50 text-slate-700' 
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-xs'
+                }`}
               >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-500 text-white flex items-center justify-center font-bold text-xs shadow-inner">
-                  {user?.name ? user.name[0].toUpperCase() : 'P'}
-                </div>
-                <span className="hidden md:inline font-semibold text-slate-200">
-                  {user?.name?.split(' ')[0] || 'Student'}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                {user ? (
+                  <>
+                    <div className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 font-semibold flex items-center justify-center text-xs">
+                      {user.name ? user.name.charAt(0) : 'U'}
+                    </div>
+                    <span className="hidden md:inline font-medium text-slate-800">{user.name.split(' ')[0]}</span>
+                    <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:inline" />
+                  </>
+                ) : (
+                  <>
+                    <User className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </>
+                )}
               </button>
 
-              {userDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-[#0B0F19]/95 backdrop-blur-2xl border border-slate-800 shadow-2xl shadow-black py-2 z-50 animate-in fade-in-50 zoom-in-95">
-                  <div className="px-4 py-2.5 border-b border-slate-800/80">
-                    <p className="text-xs font-semibold text-slate-100">{user?.name || 'Priyansh Jain'}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{user?.email || 'priyansh@example.com'}</p>
-                    <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/30">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      Active Student • {batch} Batch
-                    </div>
+              {/* User Account Dropdown */}
+              {userDropdownOpen && user && (
+                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white border border-slate-200 shadow-xl py-2 z-50">
+                  <div className="px-4 py-2 border-b border-slate-100">
+                    <p className="text-xs font-medium text-slate-500">Signed in as</p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">{user.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{user.email || user.college}</p>
+                    <span className="inline-block mt-1 px-1.5 py-0.2 bg-slate-100 text-slate-700 text-[10px] rounded font-medium">
+                      {user.role === 'admin' ? 'Placement Admin / TPO' : `Student • ${batch} Batch`}
+                    </span>
                   </div>
 
                   <div className="py-1">
                     <button
                       onClick={() => handleNavigate('dashboard')}
-                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800/70 hover:text-white flex items-center gap-2 font-medium transition-colors"
+                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      <User className="w-3.5 h-3.5 text-indigo-400" />
-                      My Placement Dashboard
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <span>My Placement Dashboard</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setUserDropdownOpen(false);
-                        onOpenBatchModal();
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800/70 hover:text-white flex items-center gap-2 font-medium transition-colors"
+                      onClick={() => handleNavigate('drives')}
+                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-                      Change Graduation Batch
+                      <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                      <span>My Registered Drive Passes</span>
                     </button>
                     <button
                       onClick={() => handleNavigate('admin')}
-                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800/70 hover:text-white flex items-center gap-2 font-medium transition-colors"
+                      className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                      Admin Control Panel
+                      <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Placement Cell Controls</span>
                     </button>
                   </div>
 
-                  <div className="border-t border-slate-800/80 pt-1">
+                  <div className="border-t border-slate-100 pt-1">
                     <button
                       onClick={() => {
+                        localStorage.removeItem('placeprep_current_user');
+                        setUser(null);
                         setUserDropdownOpen(false);
-                        onOpenAuthModal();
+                        window.location.reload();
                       }}
-                      className="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-500/10 flex items-center gap-2 font-medium transition-colors"
+                      className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                     >
-                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                      Switch Account / Re-login
+                      <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Mobile Hamburger Button */}
+            {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none"
+              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+              aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+
           </div>
+
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-slate-800 bg-[#0B0F19]/95 backdrop-blur-2xl px-4 pt-2 pb-4 space-y-1 shadow-2xl">
+        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
           <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              onOpenSearch();
-            }}
-            className="w-full mb-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 text-xs font-medium"
+            onClick={() => { onOpenSearch(); setMobileMenuOpen(false); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg mb-2"
           >
             <Search className="w-4 h-4 text-slate-400" />
-            <span>Search companies, questions & drives...</span>
+            <span>Search companies, questions, or drives...</span>
           </button>
 
-          {navLinks.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavigate(item.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between ${
-                currentRoute === item.id 
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold' 
-                  : 'text-slate-300 hover:bg-slate-800/60'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <item.icon className="w-4 h-4 text-slate-400" />
-                <span>{item.label}</span>
-              </div>
-              {item.isPill && (
-                <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] rounded-full font-bold">
-                  AI
-                </span>
-              )}
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              handleNavigate('dashboard');
-            }}
-            className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-400 bg-indigo-950/40 border border-indigo-500/30 flex items-center gap-2 mt-2"
-          >
-            <User className="w-4 h-4" />
-            <span>My Student Dashboard</span>
-          </button>
+          <div className="space-y-1">
+            {[...primaryNavLinks, ...secondaryNavLinks].map((item) => {
+              const active = currentRoute === item.id;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavigate(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                    active ? 'text-indigo-600 bg-indigo-50 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 text-slate-400" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </header>

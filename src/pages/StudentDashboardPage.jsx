@@ -73,31 +73,31 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
       {/* Student Welcome Hero - Next-Gen Dark Tech */}
-      <div className="rounded-3xl bg-gradient-to-r from-[#0B0F19] via-slate-900 to-indigo-950 text-white p-6 sm:p-10 shadow-2xl border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="surface-card p-6 sm:p-8 border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
         {/* Corner glow */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex items-center gap-5 relative z-10">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-indigo-500 via-indigo-600 to-cyan-500 text-white font-mono font-black text-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 border border-white/20 shrink-0">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-50 text-indigo-700 font-bold text-xl flex items-center justify-center border border-indigo-100 shrink-0">
             {user?.name ? user.name[0].toUpperCase() : 'P'}
           </div>
 
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-sans">
                 {user?.name || 'Priyansh Jain'}
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 text-xs font-mono font-bold border border-indigo-500/30">
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-300 text-xs font-mono font-bold border border-indigo-200">
                 Batch {currentBatch} Candidate
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 font-mono">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 font-mono">
               {user?.college || 'SRM Institute of Science & Tech'} • {user?.branch || 'Computer Science & Engineering'}
             </p>
 
             <div className="mt-3 flex flex-wrap gap-2 text-xs font-mono">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 text-slate-300 border border-slate-800 shadow-inner">
+              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 shadow-inner">
                 Active Targets: {savedCompanies.map(c => c.name).join(', ') || 'HCLTech, TCS, Infosys'}
               </span>
             </div>
@@ -105,14 +105,14 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         </div>
 
         {/* Continue Prep CTA */}
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-4 sm:p-5 text-white shrink-0 relative z-10 shadow-xl">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400 block mb-1">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 shrink-0 relative z-10 shadow-xl">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-600 block mb-1">
             Active Study Pipeline
           </span>
-          <p className="text-sm font-extrabold text-white">
+          <p className="text-sm font-extrabold text-slate-900">
             HCLTech Specialist Track
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5 mb-3 font-mono">
+          <p className="text-[11px] text-slate-500 mt-0.5 mb-3 font-mono">
             Next: Floyd Cycle detection & SQL Joins
           </p>
           <button
@@ -120,7 +120,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
               const hcl = companies.find(c => c.id === 'hcltech');
               if (hcl) onSelectCompany(hcl);
             }}
-            className="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs shadow-[0_0_15px_rgba(99,102,241,0.35)] transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-slate-900 font-mono font-bold text-xs shadow-[0_0_15px_rgba(99,102,241,0.35)] transition-all flex items-center justify-center gap-1.5"
           >
             <span>Resume Module</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -130,42 +130,42 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
       {/* Quick Progress Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-5 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="surface-card p-5 shadow-xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider">Practiced</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
           </div>
-          <p className="text-2xl font-black text-white font-mono">{practicedQuestions.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1 font-mono">Verified questions logged</p>
+          <p className="text-2xl font-black text-slate-900 font-mono">{practicedQuestions.length}</p>
+          <p className="text-[11px] text-slate-500 mt-1 font-mono">Verified questions logged</p>
         </div>
 
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-5 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="surface-card p-5 shadow-xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider">Bookmarked</span>
-            <Bookmark className="w-4 h-4 text-indigo-400" />
+            <Bookmark className="w-4 h-4 text-indigo-600" />
           </div>
-          <p className="text-2xl font-black text-indigo-400 font-mono">{savedQuestions.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1 font-mono">High-yield revision set</p>
+          <p className="text-2xl font-black text-indigo-600 font-mono">{savedQuestions.length}</p>
+          <p className="text-[11px] text-slate-500 mt-1 font-mono">High-yield revision set</p>
         </div>
 
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-5 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="surface-card p-5 shadow-xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider">Revision List</span>
-            <RotateCcw className="w-4 h-4 text-purple-400" />
+            <RotateCcw className="w-4 h-4 text-purple-700" />
           </div>
-          <p className="text-2xl font-black text-purple-400 font-mono">{revisionQuestions.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1 font-mono">Flagged interview prompts</p>
+          <p className="text-2xl font-black text-purple-700 font-mono">{revisionQuestions.length}</p>
+          <p className="text-[11px] text-slate-500 mt-1 font-mono">Flagged interview prompts</p>
         </div>
 
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-5 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="surface-card p-5 shadow-xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider">AI Mock Score</span>
-            <Bot className="w-4 h-4 text-amber-400" />
+            <Bot className="w-4 h-4 text-amber-700" />
           </div>
-          <p className="text-2xl font-black text-amber-400 font-mono">
+          <p className="text-2xl font-black text-amber-700 font-mono">
             {mockSessions.length > 0 ? `${mockSessions[0].score}%` : '85%'}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1 font-mono">Latest rubric evaluation</p>
+          <p className="text-[11px] text-slate-500 mt-1 font-mono">Latest rubric evaluation</p>
         </div>
       </div>
 
@@ -173,13 +173,13 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left 2 Cols: Category Mastery & Strengths */}
-        <div className="lg:col-span-2 glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-6 shadow-xl space-y-6">
+        <div className="lg:col-span-2 surface-card p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-white flex items-center gap-2 font-sans">
-              <BarChart3 className="w-5 h-5 text-indigo-400" />
+            <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2 font-sans">
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
               Preparation Analytics & Mastery
             </h2>
-            <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
               Overall Readiness: {progressPercent}%
             </span>
           </div>
@@ -187,54 +187,54 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           {/* Technical vs HR vs Managerial Progress */}
           <div className="space-y-4 font-mono text-xs">
             <div>
-              <div className="flex justify-between font-bold text-slate-300 mb-1.5">
+              <div className="flex justify-between font-bold text-slate-700 mb-1.5">
                 <span>Technical Interview Practice (DSA, OOP, SQL, OS)</span>
-                <span className="text-indigo-400">{technicalCount} Practiced</span>
+                <span className="text-indigo-600">{technicalCount} Practiced</span>
               </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-200">
                 <div className="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" style={{ width: `${Math.min(technicalCount * 25, 100)}%` }} />
               </div>
             </div>
 
             <div>
-              <div className="flex justify-between font-bold text-slate-300 mb-1.5">
+              <div className="flex justify-between font-bold text-slate-700 mb-1.5">
                 <span>HR Round Preparation (Intro, Culture, Motivation)</span>
-                <span className="text-emerald-400">{hrCount} Practiced</span>
+                <span className="text-emerald-700">{hrCount} Practiced</span>
               </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-200">
                 <div className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" style={{ width: `${Math.min(hrCount * 33, 100)}%` }} />
               </div>
             </div>
 
             <div>
-              <div className="flex justify-between font-bold text-slate-300 mb-1.5">
+              <div className="flex justify-between font-bold text-slate-700 mb-1.5">
                 <span>Managerial Round (STAR Scenarios, Conflict Resolution)</span>
-                <span className="text-purple-400">{managerialCount} Practiced</span>
+                <span className="text-purple-700">{managerialCount} Practiced</span>
               </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-200">
                 <div className="h-full bg-purple-500 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.5)]" style={{ width: `${Math.min(managerialCount * 35, 100)}%` }} />
               </div>
             </div>
           </div>
 
           {/* Strong vs Weak Topics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800 text-xs">
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-200 text-xs">
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
               <span className="font-extrabold text-emerald-300 block mb-2 flex items-center gap-1.5 font-mono">
-                <TrendingUp className="w-4 h-4 text-emerald-400" /> Strong Topics (Verified Clear):
+                <TrendingUp className="w-4 h-4 text-emerald-700" /> Strong Topics (Verified Clear):
               </span>
-              <ul className="space-y-1.5 text-slate-300 font-mono text-[11px]">
+              <ul className="space-y-1.5 text-slate-700 font-mono text-[11px]">
                 <li>• DBMS Normalization & SQL Queries (88% Accuracy)</li>
                 <li>• Floyd Cycle Detection & Linked Lists (85% Accuracy)</li>
                 <li>• Self Introduction Present-Past-Future Structure</li>
               </ul>
             </div>
 
-            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
               <span className="font-extrabold text-amber-300 block mb-2 flex items-center gap-1.5 font-mono">
-                <Flame className="w-4 h-4 text-amber-400" /> Priority Focus (High-Yield):
+                <Flame className="w-4 h-4 text-amber-700" /> Priority Focus (High-Yield):
               </span>
-              <ul className="space-y-1.5 text-slate-300 font-mono text-[11px]">
+              <ul className="space-y-1.5 text-slate-700 font-mono text-[11px]">
                 <li>• Deadlock Coffman Conditions in OS</li>
                 <li>• Quantifying results in STAR behavioral responses</li>
                 <li>• Dynamic Programming & Sliding Window optimizations</li>
@@ -244,27 +244,27 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         </div>
 
         {/* Right 1 Col: Mock Interview Session History */}
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-6 shadow-xl space-y-4 flex flex-col justify-between">
+        <div className="surface-card p-6 shadow-xl space-y-4 flex flex-col justify-between">
           <div>
-            <h2 className="font-extrabold text-base text-white flex items-center gap-2 mb-3 font-sans">
+            <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2 mb-3 font-sans">
               <Bot className="w-5 h-5 text-cyan-400" />
               AI Mock Session History
             </h2>
 
             {mockSessions.length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center font-mono text-xs text-slate-400 my-4">
+              <div className="p-4 rounded-xl bg-slate-50 border-slate-200 border border-slate-200 text-center font-mono text-xs text-slate-500 my-4">
                 No mock interviews logged yet. Run a simulated round to view performance feedback.
               </div>
             ) : (
               <div className="space-y-3">
                 {mockSessions.map((session, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs font-mono">
-                    <div className="flex justify-between font-bold text-white">
+                  <div key={idx} className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-200 text-xs font-mono">
+                    <div className="flex justify-between font-bold text-slate-900">
                       <span>{session.companyName}</span>
-                      <span className="text-indigo-400 font-extrabold">{session.score}%</span>
+                      <span className="text-indigo-600 font-extrabold">{session.score}%</span>
                     </div>
-                    <p className="text-slate-400 text-[11px] mt-0.5">{session.round} • {session.date}</p>
-                    <p className="text-slate-300 text-[11px] mt-2 italic line-clamp-2">
+                    <p className="text-slate-500 text-[11px] mt-0.5">{session.round} • {session.date}</p>
+                    <p className="text-slate-700 text-[11px] mt-2 italic line-clamp-2">
                       "{session.feedbackSummary}"
                     </p>
                   </div>
@@ -275,7 +275,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
           <button
             onClick={() => onNavigate('mock-interview')}
-            className="w-full py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-1.5 shadow-sm"
+            className="w-full py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-300 font-mono font-bold text-xs hover:bg-indigo-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1.5 shadow-sm"
           >
             <Bot className="w-4 h-4" />
             <span>Launch New Simulated Round</span>
@@ -288,15 +288,15 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Saved Companies */}
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-6 shadow-xl space-y-4">
+        <div className="surface-card p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-white flex items-center gap-2 font-sans">
-              <Building2 className="w-5 h-5 text-indigo-400" />
+            <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2 font-sans">
+              <Building2 className="w-5 h-5 text-indigo-600" />
               My Saved Companies ({savedCompanies.length})
             </h2>
             <button
               onClick={() => onNavigate('companies')}
-              className="text-xs font-mono font-bold text-indigo-400 hover:text-indigo-300"
+              className="text-xs font-mono font-bold text-indigo-600 hover:text-indigo-300"
             >
               Browse All
             </button>
@@ -307,30 +307,30 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
               <div
                 key={c.id}
                 onClick={() => onSelectCompany(c)}
-                className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-indigo-500/50 hover:bg-slate-900/80 transition-all cursor-pointer flex items-center justify-between group"
+                className="p-3.5 rounded-xl border border-slate-200 bg-slate-900/50 hover:border-indigo-500/50 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                     <img src={c.logo} alt={c.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-white group-hover:text-indigo-400 transition-colors">
+                    <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
                       {c.name}
                     </h3>
-                    <p className="text-[11px] font-mono text-slate-400">{c.ctcRange} • {c.experienceCount}+ candidate logs</p>
+                    <p className="text-[11px] font-mono text-slate-500">{c.ctcRange} • {c.experienceCount}+ candidate logs</p>
                   </div>
                 </div>
 
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-600 group-hover:translate-x-1 transition-transform" />
               </div>
             ))}
           </div>
         </div>
 
         {/* Upcoming Drives for Batch */}
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-6 shadow-xl space-y-4">
+        <div className="surface-card p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-white flex items-center gap-2 font-sans">
+            <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2 font-sans">
               <Briefcase className="w-5 h-5 text-cyan-400" />
               Scheduled Drives for Batch {currentBatch}
             </h2>
@@ -346,20 +346,20 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
             {batchDrives.slice(0, 3).map(drive => (
               <div
                 key={drive.id}
-                className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/50 flex items-center justify-between text-xs font-mono"
+                className="p-3.5 rounded-xl border border-slate-200 bg-slate-900/50 flex items-center justify-between text-xs font-mono"
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white">{drive.companyName}</span>
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="font-bold text-slate-900">{drive.companyName}</span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       Confirmed
                     </span>
                   </div>
-                  <p className="text-slate-400 mt-0.5">{drive.role} • CTC: {drive.ctc}</p>
+                  <p className="text-slate-500 mt-0.5">{drive.role} • CTC: {drive.ctc}</p>
                 </div>
 
                 <div className="text-right">
-                  <span className="font-bold text-indigo-400">{drive.driveDate}</span>
+                  <span className="font-bold text-indigo-600">{drive.driveDate}</span>
                   <span className="block text-[10px] text-slate-500">Closes: {drive.deadline}</span>
                 </div>
               </div>
@@ -371,20 +371,20 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
       {/* MY REGISTERED PLACEMENT DRIVES & INTERVIEW STATUS */}
       {myApplications.length > 0 && (
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-6 shadow-xl space-y-4">
+        <div className="surface-card p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-extrabold text-base text-white flex items-center gap-2 font-sans">
-                <Briefcase className="w-5 h-5 text-indigo-400" />
+              <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2 font-sans">
+                <Briefcase className="w-5 h-5 text-indigo-600" />
                 My Registered Placement Drives & Scheduled Passes ({myApplications.length})
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Active candidate registration passes, scheduled interview stages, and reporting guidelines.
               </p>
             </div>
             <button
               onClick={() => onNavigate('drives')}
-              className="text-xs font-mono font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
+              className="text-xs font-mono font-bold text-indigo-600 hover:text-indigo-300 hover:underline"
             >
               Manage in Placement Suite →
             </button>
@@ -394,41 +394,41 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
             {myApplications.map((app) => (
               <div
                 key={app.applicationId}
-                className="p-4 rounded-xl border border-slate-800/80 bg-slate-900/60 space-y-3 hover:border-slate-700 transition-colors"
+                className="p-4 rounded-xl border border-slate-200 bg-slate-50 border-slate-200 space-y-3 hover:border-slate-700 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-extrabold text-sm text-white">{app.companyName}</h3>
-                    <p className="text-xs text-slate-400">{app.role}</p>
+                    <h3 className="font-extrabold text-sm text-slate-900">{app.companyName}</h3>
+                    <p className="text-xs text-slate-500">{app.role}</p>
                   </div>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${
                     app.status === 'INTERVIEW_SCHEDULED'
-                      ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   }`}>
                     {app.status.replace('_', ' ')}
                   </span>
                 </div>
 
                 {app.conflictFlagged && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-[11px] text-amber-300 flex items-center gap-1.5 font-medium">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-lg text-[11px] text-amber-300 flex items-center gap-1.5 font-medium">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                     <span>Schedule Conflict: Overlaps with another interview round.</span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 font-mono">
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 border-slate-200 p-2.5 rounded-lg border border-slate-200 font-mono">
                   <div>
                     <span className="text-slate-500 block font-semibold text-[10px]">STAGE</span>
-                    <span className="font-bold text-slate-200">{app.currentRound || 'Technical Round'}</span>
+                    <span className="font-bold text-slate-800">{app.currentRound || 'Technical Round'}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 block font-semibold text-[10px]">SCHEDULED SLOT</span>
-                    <span className="font-bold text-indigo-400">{app.scheduledDate} ({app.scheduledTime || '10:00 AM'})</span>
+                    <span className="font-bold text-indigo-600">{app.scheduledDate} ({app.scheduledTime || '10:00 AM'})</span>
                   </div>
                 </div>
 
-                <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span className="truncate">{app.venue || 'Campus Auditorium Hall A'}</span>
                 </div>
@@ -440,9 +440,9 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
       {/* SAVED QUESTIONS & REVISION LIST */}
       {savedQuestions.length > 0 && (
-        <div className="glass-card bg-[#0B0F19]/90 rounded-2xl border border-slate-800/90 p-6 shadow-xl space-y-4">
-          <h2 className="font-extrabold text-base text-white flex items-center gap-2 font-sans">
-            <Bookmark className="w-5 h-5 text-indigo-400" />
+        <div className="surface-card p-6 shadow-xl space-y-4">
+          <h2 className="font-extrabold text-base text-slate-900 flex items-center gap-2 font-sans">
+            <Bookmark className="w-5 h-5 text-indigo-600" />
             Bookmarked Revision Vault ({savedQuestions.length})
           </h2>
 
@@ -451,22 +451,22 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
               <div
                 key={q.id}
                 onClick={() => onSelectQuestion(q)}
-                className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-indigo-500/50 cursor-pointer transition-all flex items-center justify-between group"
+                className="p-3.5 rounded-xl border border-slate-200 bg-slate-900/50 hover:border-indigo-500/50 cursor-pointer transition-all flex items-center justify-between group"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-mono font-extrabold uppercase px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 rounded">
+                    <span className="text-[10px] font-mono font-extrabold uppercase px-1.5 py-0.5 bg-indigo-50 text-indigo-300 border border-indigo-200 rounded">
                       {q.companyId}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-400">
+                    <span className="text-[10px] font-mono text-slate-500">
                       {q.category}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-200 line-clamp-1 group-hover:text-indigo-400 transition-colors">
+                  <p className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
                     {q.question}
                   </p>
                 </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0 ml-2 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-600 shrink-0 ml-2 group-hover:translate-x-1 transition-transform" />
               </div>
             ))}
           </div>

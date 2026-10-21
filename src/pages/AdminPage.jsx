@@ -185,21 +185,21 @@ export default function AdminPage() {
       
       {/* Toast */}
       {successToast && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-slate-900 text-white border border-slate-700 shadow-2xl flex items-center gap-3">
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-lg bg-slate-900 text-white border border-slate-700 shadow-2xl flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-xs font-semibold">{successToast}</span>
         </div>
       )}
 
       {/* Admin Top Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white p-8 sm:p-10 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="rounded-lg bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white p-8 sm:p-10 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold mb-3">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span>Authorized Administration Portal</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
             PlacePrep AI – Admin Control Panel
           </h1>
 
@@ -212,7 +212,7 @@ export default function AdminPage() {
         <button
           onClick={handleTriggerAnalysis}
           disabled={recalculating}
-          className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-2 shrink-0"
+          className="px-5 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-lg transition-all flex items-center justify-center gap-2 shrink-0"
         >
           <RefreshCw className={`w-4 h-4 ${recalculating ? 'animate-spin' : ''}`} />
           <span>{recalculating ? 'Recalculating Intelligence...' : 'Trigger AI Analysis Recalculation'}</span>
@@ -247,48 +247,48 @@ export default function AdminPage() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div className="p-5 rounded-lg bg-white border border-slate-200 shadow-sm">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Recruiters</span>
               <p className="text-3xl font-black text-slate-900 mt-1">{companies.length}</p>
               <p className="text-xs text-emerald-600 font-semibold mt-1">✓ Active in database</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div className="p-5 rounded-lg bg-white border border-slate-200 shadow-sm">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Verified Drives</span>
               <p className="text-3xl font-black text-indigo-600 mt-1">{drives.length}</p>
               <p className="text-xs text-indigo-500 font-semibold mt-1">Confirmed campus dates</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div className="p-5 rounded-lg bg-white border border-slate-200 shadow-sm">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Question Bank</span>
               <p className="text-3xl font-black text-purple-600 mt-1">{questions.length}</p>
               <p className="text-xs text-purple-500 font-semibold mt-1">Technical, HR & Managerial</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div className="p-5 rounded-lg bg-white border border-slate-200 shadow-sm">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Candidate Logs</span>
               <p className="text-3xl font-black text-emerald-600 mt-1">{experiences.length}</p>
               <p className="text-xs text-slate-400 font-semibold mt-1">Historical debriefs</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+          <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
+            <h3 className="font-semibold text-base text-slate-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               AI Intelligence Pipeline Status
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block font-bold">Data Freshness:</span>
-                <span className="font-extrabold text-slate-900 text-sm mt-0.5 block">October 2026 (Real-time)</span>
+                <span className="font-semibold text-slate-900 text-sm mt-0.5 block">October 2026 (Real-time)</span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block font-bold">Recency Weight Factor:</span>
-                <span className="font-extrabold text-indigo-600 text-sm mt-0.5 block">1.4x for 2025-2026 Drives</span>
+                <span className="font-semibold text-indigo-600 text-sm mt-0.5 block">1.4x for 2025-2026 Drives</span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block font-bold">Moderation Gate:</span>
-                <span className="font-extrabold text-emerald-600 text-sm mt-0.5 block">Automated + Manual Review</span>
+                <span className="font-semibold text-emerald-600 text-sm mt-0.5 block">Automated + Manual Review</span>
               </div>
             </div>
           </div>
@@ -298,8 +298,8 @@ export default function AdminPage() {
       {/* TAB 2: COMPANIES */}
       {activeTab === 'companies' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="font-extrabold text-base text-slate-900 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-semibold text-base text-slate-900 mb-4 flex items-center gap-2">
               <Plus className="w-4 h-4 text-indigo-600" /> Add New Company Profile
             </h3>
             <form onSubmit={handleCreateCompany} className="space-y-3.5 text-xs">
@@ -310,7 +310,7 @@ export default function AdminPage() {
                   value={newCompanyName}
                   onChange={(e) => setNewCompanyName(e.target.value)}
                   placeholder="e.g. Cisco Systems"
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                   required
                 />
               </div>
@@ -321,7 +321,7 @@ export default function AdminPage() {
                   type="text"
                   value={newCompanyTier}
                   onChange={(e) => setNewCompanyTier(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -331,7 +331,7 @@ export default function AdminPage() {
                   type="text"
                   value={newCompanyCtc}
                   onChange={(e) => setNewCompanyCtc(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -341,7 +341,7 @@ export default function AdminPage() {
                   type="text"
                   value={newCompanyRoles}
                   onChange={(e) => setNewCompanyRoles(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -351,26 +351,26 @@ export default function AdminPage() {
                   type="text"
                   value={newCompanyBatches}
                   onChange={(e) => setNewCompanyBatches(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm"
+                className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm"
               >
                 Create Company Profile
               </button>
             </form>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-            <h3 className="font-extrabold text-base text-slate-900 mb-2">Existing Companies</h3>
+          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-3">
+            <h3 className="font-semibold text-base text-slate-900 mb-2">Existing Companies</h3>
             <div className="space-y-2">
               {companies.map(c => (
-                <div key={c.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <div key={c.id} className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-extrabold text-slate-900">{c.name}</span>
+                    <span className="font-semibold text-slate-900">{c.name}</span>
                     <span className="text-slate-500 ml-2">({c.tier} • {c.ctcRange})</span>
                     <p className="text-[11px] text-slate-400 mt-0.5">Batches: {c.eligibleBatches?.join(', ')}</p>
                   </div>
@@ -387,8 +387,8 @@ export default function AdminPage() {
       {/* TAB 3: PLACEMENT DRIVES */}
       {activeTab === 'drives' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="font-extrabold text-base text-slate-900 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-semibold text-base text-slate-900 mb-4 flex items-center gap-2">
               <Plus className="w-4 h-4 text-indigo-600" /> Announce Placement Drive
             </h3>
             <form onSubmit={handleCreateDrive} className="space-y-3.5 text-xs">
@@ -397,7 +397,7 @@ export default function AdminPage() {
                 <select
                   value={driveCompany}
                   onChange={(e) => setDriveCompany(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 >
                   {companies.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -411,7 +411,7 @@ export default function AdminPage() {
                   type="text"
                   value={driveRole}
                   onChange={(e) => setDriveRole(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -421,7 +421,7 @@ export default function AdminPage() {
                   type="text"
                   value={driveCtc}
                   onChange={(e) => setDriveCtc(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -432,7 +432,7 @@ export default function AdminPage() {
                     type="text"
                     value={driveDate}
                     onChange={(e) => setDriveDate(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                   />
                 </div>
                 <div>
@@ -441,7 +441,7 @@ export default function AdminPage() {
                     type="text"
                     value={driveDeadline}
                     onChange={(e) => setDriveDeadline(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                   />
                 </div>
               </div>
@@ -454,7 +454,7 @@ export default function AdminPage() {
                     value={driveVenue}
                     onChange={(e) => setDriveVenue(e.target.value)}
                     placeholder="e.g. Auditorium Hall B"
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                   />
                 </div>
                 <div>
@@ -464,7 +464,7 @@ export default function AdminPage() {
                     value={driveReportingTime}
                     onChange={(e) => setDriveReportingTime(e.target.value)}
                     placeholder="e.g. 08:30 AM"
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-lg"
                   />
                 </div>
               </div>
@@ -476,7 +476,7 @@ export default function AdminPage() {
                   step="0.1"
                   value={driveMinCgpa}
                   onChange={(e) => setDriveMinCgpa(parseFloat(e.target.value) || 6.0)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
@@ -487,26 +487,26 @@ export default function AdminPage() {
                   value={driveInstructions}
                   onChange={(e) => setDriveInstructions(e.target.value)}
                   placeholder="Dress code, items to carry..."
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm"
+                className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm"
               >
                 Publish Drive Schedule
               </button>
             </form>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-            <h3 className="font-extrabold text-base text-slate-900 mb-2">Active Placement Drives</h3>
+          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-3">
+            <h3 className="font-semibold text-base text-slate-900 mb-2">Active Placement Drives</h3>
             <div className="space-y-2">
               {drives.map(d => (
-                <div key={d.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <div key={d.id} className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-extrabold text-slate-900">{d.companyName}</span>
+                    <span className="font-semibold text-slate-900">{d.companyName}</span>
                     <span className="text-slate-600 ml-2 font-medium">• {d.role} ({d.ctc})</span>
                     <p className="text-[11px] text-slate-500 mt-0.5">Date: {d.driveDate} • Deadline: {d.deadline}</p>
                   </div>
@@ -522,8 +522,8 @@ export default function AdminPage() {
 
       {/* TAB 4: ADD QUESTION */}
       {activeTab === 'questions' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
+          <h3 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
             <Plus className="w-5 h-5 text-indigo-600" />
             Add Verified Interview Question to Bank
           </h3>
@@ -535,7 +535,7 @@ export default function AdminPage() {
                 <select
                   value={qCompany}
                   onChange={(e) => setQCompany(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 >
                   {companies.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -548,7 +548,7 @@ export default function AdminPage() {
                 <select
                   value={qRound}
                   onChange={(e) => setQRound(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 >
                   <option value="technical">Technical Round</option>
                   <option value="hr">HR Round</option>
@@ -562,7 +562,7 @@ export default function AdminPage() {
                   type="text"
                   value={qCategory}
                   onChange={(e) => setQCategory(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                   placeholder="e.g. Operating Systems"
                 />
               </div>
@@ -572,7 +572,7 @@ export default function AdminPage() {
                 <select
                   value={qDifficulty}
                   onChange={(e) => setQDifficulty(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
                 >
                   <option value="Easy">Easy</option>
                   <option value="Medium">Medium</option>
@@ -588,7 +588,7 @@ export default function AdminPage() {
                 value={qText}
                 onChange={(e) => setQText(e.target.value)}
                 placeholder="e.g. What is the difference between synchronous and asynchronous execution in Node.js?"
-                className="w-full p-2.5 border border-slate-300 rounded-xl text-sm"
+                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm"
                 required
               />
             </div>
@@ -600,7 +600,7 @@ export default function AdminPage() {
                 value={qApproach}
                 onChange={(e) => setQApproach(e.target.value)}
                 placeholder="Explain the Event Loop, Call Stack, Callback Queue..."
-                className="w-full p-2.5 border border-slate-300 rounded-xl"
+                className="w-full p-2.5 border border-slate-300 rounded-lg"
               />
             </div>
 
@@ -611,13 +611,13 @@ export default function AdminPage() {
                 value={qAnswer}
                 onChange={(e) => setQAnswer(e.target.value)}
                 placeholder="Provide a comprehensive explanation suitable for an interview panel..."
-                className="w-full p-2.5 border border-slate-300 rounded-xl"
+                className="w-full p-2.5 border border-slate-300 rounded-lg"
               />
             </div>
 
             <button
               type="submit"
-              className="py-2.5 px-6 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm"
+              className="py-2.5 px-6 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm"
             >
               Add Question to Bank
             </button>
@@ -627,13 +627,13 @@ export default function AdminPage() {
 
       {/* TAB 5: MODERATION */}
       {activeTab === 'moderation' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-base text-slate-900">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
+          <h3 className="font-semibold text-base text-slate-900">
             Submitted Interview Experiences Awaiting Moderation
           </h3>
           <div className="space-y-3">
             {experiences.map(exp => (
-              <div key={exp.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+              <div key={exp.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-900">{exp.companyName}</span>
@@ -658,8 +658,8 @@ export default function AdminPage() {
 
       {/* TAB 6: FEEDBACK */}
       {activeTab === 'feedback' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-base text-slate-900">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
+          <h3 className="font-semibold text-base text-slate-900">
             Student Feedback & Question Reports
           </h3>
           {feedbackList.length === 0 ? (
@@ -667,7 +667,7 @@ export default function AdminPage() {
           ) : (
             <div className="space-y-3">
               {feedbackList.map(fb => (
-                <div key={fb.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <div key={fb.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs">
                   <div className="flex justify-between font-bold text-slate-800 mb-1">
                     <span>{fb.category}</span>
                     <span className="text-slate-400">{fb.date?.split('T')[0]}</span>

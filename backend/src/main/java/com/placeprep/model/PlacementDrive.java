@@ -42,6 +42,10 @@ public class PlacementDrive {
 
     private boolean verifiedBadge;
 
+    private String driveType = "ON_CAMPUS"; // ON_CAMPUS, OFF_CAMPUS, INTERNSHIP
+
+    private boolean isOffCampus = false;
+
     private String registrationLink;
 
     private String venue;
@@ -309,5 +313,21 @@ public class PlacementDrive {
 
     public void setRounds(List<String> rounds) {
         this.rounds = rounds;
+    }
+
+    public String getDriveType() {
+        return driveType;
+    }
+
+    public void setDriveType(String driveType) {
+        this.driveType = driveType;
+    }
+
+    public boolean isOffCampus() {
+        return isOffCampus;
+    }
+
+    public void setOffCampus(boolean offCampus) {
+        isOffCampus = offCampus;
     }
 }

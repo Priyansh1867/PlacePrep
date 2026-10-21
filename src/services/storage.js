@@ -130,6 +130,8 @@ export function getCompanies() {
   return [...INITIAL_COMPANIES, ...custom];
 }
 
+export const getInitialCompanies = getCompanies;
+
 export function getCompanyBySlugOrId(identifier) {
   const all = getCompanies();
   return all.find(c => c.id === identifier || c.slug === identifier) || all[0];

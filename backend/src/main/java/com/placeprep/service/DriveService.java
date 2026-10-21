@@ -29,60 +29,35 @@ public class DriveService {
     }
 
     public List<PlacementDrive> getAll(String batch) {
-        if (batch != null && !batch.trim().isEmpty() && !"all".equalsIgnoreCase(batch.trim())) {
+        if (batch != null && !batch.trim().isEmpty() && !batch.equalsIgnoreCase("all")) {
             return placementDriveRepository.findByEligibleBatch(batch.trim());
         }
         return placementDriveRepository.findAll();
+    }
+
+    public PlacementDrive getByDriveId(String driveId) {
+        List<PlacementDrive> all = placementDriveRepository.findAll();
+        for (PlacementDrive d : all) {
+            if (d.getDriveId().equalsIgnoreCase(driveId)) {
+                return d;
+            }
+        }
+        return null;
     }
 
     public List<PlacementDrive> getByCompanyId(String companyId) {
         return placementDriveRepository.findByCompanyId(companyId);
     }
 
-    public PlacementDrive getByDriveId(String driveId) {
-        return placementDriveRepository.findByDriveId(driveId)
-                .or(() -> {
-                    if (driveId.startsWith("drv-")) {
-                        return placementDriveRepository.findByDriveId("drive-" + driveId.substring(4));
-                    } else if (driveId.startsWith("drive-")) {
-                        return placementDriveRepository.findByDriveId("drv-" + driveId.substring(6));
-                    }
-                    return Optional.empty();
-                })
-                .orElseThrow(() -> new IllegalArgumentException("Drive not found with driveId: " + driveId));
-    }
-
     public PlacementDrive create(PlacementDrive drive) {
-        if (drive.getDriveId() == null || drive.getDriveId().trim().isEmpty()) {
-            drive.setDriveId("drive-" + System.currentTimeMillis());
-        }
         return placementDriveRepository.save(drive);
-    }
-
-    public PlacementDrive update(String driveId, PlacementDrive updated) {
-        PlacementDrive existing = getByDriveId(driveId);
-        if (updated.getRole() != null) existing.setRole(updated.getRole());
-        if (updated.getCompanyName() != null) existing.setCompanyName(updated.getCompanyName());
-        if (updated.getCompanyId() != null) existing.setCompanyId(updated.getCompanyId());
-        if (updated.getCtc() != null) existing.setCtc(updated.getCtc());
-        if (updated.getDriveDate() != null) existing.setDriveDate(updated.getDriveDate());
-        if (updated.getDeadline() != null) existing.setDeadline(updated.getDeadline());
-        if (updated.getStatus() != null) existing.setStatus(updated.getStatus());
-        if (updated.getRegistrationLink() != null) existing.setRegistrationLink(updated.getRegistrationLink());
-        if (updated.getEligibleBatches() != null) existing.setEligibleBatches(updated.getEligibleBatches());
-        if (updated.getLocations() != null) existing.setLocations(updated.getLocations());
-        if (updated.getRounds() != null) existing.setRounds(updated.getRounds());
-        existing.setVerifiedBadge(updated.isVerifiedBadge());
-        return placementDriveRepository.save(existing);
-    }
-
-    public void delete(String driveId) {
-        PlacementDrive existing = getByDriveId(driveId);
-        placementDriveRepository.delete(existing);
     }
 
     public PlacementDrive updateRounds(String driveId, List<String> rounds, String roundConfigsJson) {
         PlacementDrive drive = getByDriveId(driveId);
+        if (drive == null) {
+            throw new IllegalArgumentException("Placement Drive not found: " + driveId);
+        }
         if (rounds != null) {
             drive.setRounds(rounds);
         }
@@ -94,6 +69,9 @@ public class DriveService {
 
     public PlacementDrive updateInstructions(String driveId, String venue, String reportingTime, String instructions) {
         PlacementDrive drive = getByDriveId(driveId);
+        if (drive == null) {
+            throw new IllegalArgumentException("Placement Drive not found: " + driveId);
+        }
         if (venue != null) drive.setVenue(venue);
         if (reportingTime != null) drive.setReportingTime(reportingTime);
         if (instructions != null) drive.setInstructions(instructions);

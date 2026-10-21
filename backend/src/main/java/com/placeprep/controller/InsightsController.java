@@ -3,12 +3,17 @@ package com.placeprep.controller;
 import com.placeprep.service.InsightsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/insights")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class InsightsController {
 
     @Autowired
@@ -21,13 +26,9 @@ public class InsightsController {
         this.insightsService = insightsService;
     }
 
-    @GetMapping("/overview")
-    public ResponseEntity<Map<String, Object>> getOverview() {
-        return ResponseEntity.ok(insightsService.getOverviewInsights());
-    }
-
     @GetMapping("/{companyId}")
     public ResponseEntity<Map<String, Object>> getInsights(@PathVariable String companyId) {
-        return ResponseEntity.ok(insightsService.getInsights(companyId));
+        Map<String, Object> insights = insightsService.getInsights(companyId);
+        return ResponseEntity.ok(insights);
     }
 }

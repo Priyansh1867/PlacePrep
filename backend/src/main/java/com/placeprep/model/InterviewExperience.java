@@ -55,12 +55,6 @@ public class InterviewExperience {
 
     private boolean isAnonymous;
 
-    private String moderationStatus = "APPROVED"; // APPROVED, PENDING, REJECTED
-
-    private boolean reported = false;
-
-    private String reportReason;
-
     @ElementCollection
     @CollectionTable(name = "experience_rounds_faced", joinColumns = @JoinColumn(name = "experience_id"))
     @Column(name = "round_faced")
@@ -250,29 +244,5 @@ public class InterviewExperience {
 
     public void setQuestionsEncountered(List<String> questionsEncountered) {
         this.questionsEncountered = questionsEncountered;
-    }
-
-    public String getModerationStatus() {
-        return moderationStatus;
-    }
-
-    public void setModerationStatus(String moderationStatus) {
-        this.moderationStatus = moderationStatus;
-    }
-
-    public boolean isReported() {
-        return reported;
-    }
-
-    public void setReported(boolean reported) {
-        this.reported = reported;
-    }
-
-    public String getReportReason() {
-        return reportReason;
-    }
-
-    public void setReportReason(String reportReason) {
-        this.reportReason = reportReason;
     }
 }

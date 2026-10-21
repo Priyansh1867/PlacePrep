@@ -123,18 +123,6 @@ public class PlacementDrive {
         this.rounds = rounds != null ? rounds : new ArrayList<>();
     }
 
-    public PlacementDrive(Long id, String driveId, String companyId, String companyName,
-                          String role, String ctc, String driveDate, String deadline,
-                          String status, boolean verifiedBadge, String registrationLink,
-                          List<String> eligibleBatches, List<String> locations, List<String> rounds) {
-        this(id, driveId, companyId, companyName, role, ctc, driveDate, "09:00 AM",
-             deadline, status, verifiedBadge, registrationLink,
-             "Main Campus Placement Auditorium", "08:30 AM",
-             "Carry printed copies of resume, government ID, and college ID card.",
-             6.0, 60.0, 60.0, 0, null,
-             eligibleBatches, locations, new ArrayList<>(), rounds);
-    }
-
     public Long getId() {
         return id;
     }

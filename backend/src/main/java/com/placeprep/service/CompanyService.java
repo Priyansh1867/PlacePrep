@@ -25,7 +25,7 @@ public class CompanyService {
     }
 
     public List<Company> getAll(String batch) {
-        if (batch != null && !batch.trim().isEmpty() && !"all".equalsIgnoreCase(batch.trim())) {
+        if (batch != null && !batch.trim().isEmpty()) {
             return companyRepository.findByEligibleBatch(batch.trim());
         }
         return companyRepository.findAll();
@@ -37,34 +37,19 @@ public class CompanyService {
     }
 
     public Company create(Company company) {
-        if (company.getCompanyId() == null || company.getCompanyId().trim().isEmpty()) {
-            String slug = company.getName().toLowerCase().replaceAll("[^a-z0-9]+", "-");
-            company.setCompanyId(slug);
-            company.setSlug(slug);
-        }
         return companyRepository.save(company);
     }
 
-    public Company update(String companyId, Company updated) {
+    public Company update(String companyId, Company updatedData) {
         Company existing = getByCompanyId(companyId);
-        if (updated.getName() != null) existing.setName(updated.getName());
-        if (updated.getTier() != null) existing.setTier(updated.getTier());
-        if (updated.getCtcRange() != null) existing.setCtcRange(updated.getCtcRange());
-        if (updated.getEligibilityCriteria() != null) existing.setEligibilityCriteria(updated.getEligibilityCriteria());
-        if (updated.getDriveStatus() != null) existing.setDriveStatus(updated.getDriveStatus());
-        if (updated.getUpcomingDriveDate() != null) existing.setUpcomingDriveDate(updated.getUpcomingDriveDate());
-        if (updated.getEligibleBatches() != null) existing.setEligibleBatches(updated.getEligibleBatches());
-        if (updated.getRoles() != null) existing.setRoles(updated.getRoles());
-        if (updated.getFrequentTopics() != null) existing.setFrequentTopics(updated.getFrequentTopics());
-        if (updated.getHeadquarters() != null) existing.setHeadquarters(updated.getHeadquarters());
-        if (updated.getIndustry() != null) existing.setIndustry(updated.getIndustry());
-        if (updated.getRecruitmentProcessJson() != null) existing.setRecruitmentProcessJson(updated.getRecruitmentProcessJson());
-        existing.setVerifiedUpcomingDrive(updated.isVerifiedUpcomingDrive());
+        if (updatedData.getName() != null) existing.setName(updatedData.getName());
+        if (updatedData.getTier() != null) existing.setTier(updatedData.getTier());
+        if (updatedData.getCtcRange() != null) existing.setCtcRange(updatedData.getCtcRange());
+        if (updatedData.getEligibilityCriteria() != null) existing.setEligibilityCriteria(updatedData.getEligibilityCriteria());
+        if (updatedData.getUpcomingDriveDate() != null) existing.setUpcomingDriveDate(updatedData.getUpcomingDriveDate());
+        if (updatedData.getDriveStatus() != null) existing.setDriveStatus(updatedData.getDriveStatus());
+        if (updatedData.getRoles() != null && !updatedData.getRoles().isEmpty()) existing.setRoles(updatedData.getRoles());
+        if (updatedData.getEligibleBatches() != null && !updatedData.getEligibleBatches().isEmpty()) existing.setEligibleBatches(updatedData.getEligibleBatches());
         return companyRepository.save(existing);
-    }
-
-    public void delete(String companyId) {
-        Company existing = getByCompanyId(companyId);
-        companyRepository.delete(existing);
     }
 }

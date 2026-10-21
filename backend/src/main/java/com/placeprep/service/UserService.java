@@ -56,8 +56,12 @@ public class UserService {
             throw new IllegalArgumentException("Email and password are required");
         }
         String cleanEmail = email.trim().toLowerCase();
-        return userRepository.findByEmailAndPassword(cleanEmail, password)
+        User user = userRepository.findByEmailAndPassword(cleanEmail, password)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+            throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+        }
+        return user;
     }
 
     public User demoLogin() {
@@ -184,5 +188,69 @@ public class UserService {
         data.put("savedCompaniesCount", user.getSavedCompanyIds() != null ? user.getSavedCompanyIds().size() : 0);
         data.put("user", user);
         return data;
+    }
+
+    public List<User> getAllUsers(String role, String search) {
+        List<User> all = userRepository.findAll();
+        return all.stream()
+                .filter(u -> role == null || role.trim().isEmpty() || role.equalsIgnoreCase(u.getRole()))
+                .filter(u -> search == null || search.trim().isEmpty() ||
+                        (u.getName() != null && u.getName().toLowerCase().contains(search.toLowerCase())) ||
+                        (u.getEmail() != null && u.getEmail().toLowerCase().contains(search.toLowerCase())) ||
+                        (u.getRollNumber() != null && u.getRollNumber().toLowerCase().contains(search.toLowerCase())))
+                .toList();
+    }
+
+    public User updateUserRole(Long userId, String newRole) {
+        User user = getUserById(userId);
+        if (newRole == null || newRole.trim().isEmpty()) {
+            throw new IllegalArgumentException("Role cannot be empty");
+        }
+        user.setRole(newRole.trim().toLowerCase());
+        return userRepository.save(user);
+    }
+
+    public User updateUserStatus(Long userId, String newStatus) {
+        User user = getUserById(userId);
+        if (newStatus == null || newStatus.trim().isEmpty()) {
+            throw new IllegalArgumentException("Status cannot be empty");
+        }
+        user.setStatus(newStatus.trim().toUpperCase());
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long userId) {
+        User user = getUserById(userId);
+        userRepository.delete(user);
+    }
+
+    public String generatePasswordResetToken(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("No user found with email: " + email));
+        String token = java.util.UUID.randomUUID().toString();
+        user.setResetPasswordToken(token);
+        user.setResetPasswordExpiry(java.time.LocalDateTime.now().plusHours(2).toString());
+        userRepository.save(user);
+        return token;
+    }
+
+    public boolean resetPassword(String token, String newPassword) {
+        if (token == null || newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Token and new password are required");
+        }
+        List<User> users = userRepository.findAll();
+        for (User u : users) {
+            if (token.equals(u.getResetPasswordToken())) {
+                u.setPassword(newPassword.trim());
+                u.setResetPasswordToken(null);
+                u.setResetPasswordExpiry(null);
+                userRepository.save(u);
+                return true;
+            }
+        }
+        throw new IllegalArgumentException("Invalid or expired password reset token");
     }
 }

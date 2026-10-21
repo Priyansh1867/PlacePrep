@@ -26,3 +26,9 @@ dist-ssr
 # Java / Maven
 target/
 backend/target/
+*.iml
+
+# Project documents and diagrams
+Responsibilities.md
+*.excalidraw
+

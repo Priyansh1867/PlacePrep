@@ -45,6 +45,17 @@ public class User {
     @Column(nullable = false)
     private String role = "student";
 
+    @Column(nullable = false)
+    private String status = "ACTIVE";
+
+    private String phone;
+
+    private String rollNumber;
+
+    private String resetPasswordToken;
+
+    private String resetPasswordExpiry;
+
     @ElementCollection
     @CollectionTable(name = "user_saved_company_ids", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "company_id")

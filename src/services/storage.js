@@ -1,4 +1,4 @@
-// PlacePrep Client Storage & Offline Synchronization Helper
+// PlacePrep AI - Persistent Storage and State Management Layer
 import {
   INITIAL_BATCHES,
   INITIAL_COMPANIES,
@@ -7,7 +7,20 @@ import {
   INITIAL_EXPERIENCES,
   INITIAL_AI_INSIGHTS
 } from '../data/initialData';
-import { setAuthToken } from './api';
+import {
+  INITIAL_CRT_SESSIONS,
+  INITIAL_STUDENT_CRT_ATTENDANCE,
+  INITIAL_CLASS_ATTENDANCE,
+  INITIAL_RESUME_STATUS,
+  INITIAL_STUDENT_ROUNDS,
+  INITIAL_HACKATHONS,
+  INITIAL_INTERNSHIPS,
+  INITIAL_OFF_CAMPUS_COMPANIES,
+  INITIAL_ELIGIBILITY_CRITERIA_MATRIX,
+  INITIAL_LIVE_SESSIONS,
+  INITIAL_PUSH_NOTIFICATIONS,
+  INITIAL_FEEDBACK_LOOP
+} from '../data/portalWorkflowData';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'placeprep_current_user',
@@ -17,13 +30,31 @@ const STORAGE_KEYS = {
   PRACTICED_QUESTIONS: 'placeprep_practiced_questions',
   REVISION_LIST: 'placeprep_revision_list',
   SAVED_COMPANIES: 'placeprep_saved_companies',
+  CUSTOM_COMPANIES: 'placeprep_custom_companies',
+  CUSTOM_QUESTIONS: 'placeprep_custom_questions',
+  CUSTOM_EXPERIENCES: 'placeprep_custom_experiences',
+  CUSTOM_DRIVES: 'placeprep_custom_drives',
   MOCK_INTERVIEW_SESSIONS: 'placeprep_mock_sessions',
   PLATFORM_FEEDBACK: 'placeprep_feedback_list',
-  THEME_PREFERENCE: 'placeprep_theme',
   STUDENT_APPLICATIONS: 'placeprep_student_applications',
-  DRIVE_ROUNDS_CONFIG: 'placeprep_rounds_config'
+  DRIVE_ROUNDS_CONFIG: 'placeprep_rounds_config',
+  PORTAL_MODE: 'placeprep_portal_mode',
+  PORTAL_ROLE: 'placeprep_portal_role',
+  CRT_SESSIONS: 'placeprep_crt_sessions',
+  STUDENT_CRT_ATTENDANCE: 'placeprep_student_crt_attendance',
+  CLASS_ATTENDANCE: 'placeprep_class_attendance',
+  RESUME_STATUS: 'placeprep_resume_status',
+  STUDENT_ROUNDS: 'placeprep_student_rounds',
+  HACKATHONS: 'placeprep_hackathons',
+  INTERNSHIPS: 'placeprep_internships',
+  OFF_CAMPUS: 'placeprep_off_campus',
+  ELIGIBILITY_MATRIX: 'placeprep_eligibility_matrix',
+  LIVE_SESSIONS: 'placeprep_live_sessions',
+  PUSH_NOTIFICATIONS: 'placeprep_push_notifications',
+  FEEDBACK_LOOP: 'placeprep_feedback_loop'
 };
 
+// Safe JSON parser
 function getStorageItem(key, defaultValue) {
   try {
     const item = localStorage.getItem(key);
@@ -36,19 +67,26 @@ function getStorageItem(key, defaultValue) {
 
 function setStorageItem(key, value) {
   try {
-    if (value === null || value === undefined) {
-      localStorage.removeItem(key);
-    } else {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
+    localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
     console.error(`Error saving ${key} to localStorage:`, err);
   }
 }
 
-// User Profile & Authentication State
+// User Profile
 export function getCurrentUser() {
-  return getStorageItem(STORAGE_KEYS.CURRENT_USER, null);
+  return getStorageItem(STORAGE_KEYS.CURRENT_USER, {
+    id: 'user-demo-01',
+    name: 'Priyansh Jain',
+    email: 'priyansh.jain@example.edu',
+    college: 'Delhi Technological University (DTU)',
+    branch: 'Computer Science and Engineering',
+    graduationBatch: '2028',
+    role: 'student', // 'student' or 'admin'
+    targetCompanies: ['hcltech', 'tcs', 'accenture'],
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
+    createdAt: new Date().toISOString()
+  });
 }
 
 export function setCurrentUser(user) {
@@ -56,16 +94,9 @@ export function setCurrentUser(user) {
   if (user && user.graduationBatch) {
     setGraduationBatch(user.graduationBatch);
   }
-  window.dispatchEvent(new CustomEvent('auth-state-changed', { detail: user }));
 }
 
-export function clearCurrentUser() {
-  setStorageItem(STORAGE_KEYS.CURRENT_USER, null);
-  setAuthToken(null);
-  window.dispatchEvent(new CustomEvent('auth-state-changed', { detail: null }));
-}
-
-// Graduation Batch Personalization
+// Batch Management
 export function getGraduationBatch() {
   const directBatch = getStorageItem(STORAGE_KEYS.GRADUATION_BATCH, null);
   if (directBatch) return directBatch;
@@ -81,6 +112,7 @@ export function setGraduationBatch(batchId) {
     user.graduationBatch = batchId;
     setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
   }
+  // Dispatch custom window event so UI reacts instantaneously
   window.dispatchEvent(new CustomEvent('batch-changed', { detail: batchId }));
 }
 
@@ -92,194 +124,210 @@ export function setOnboardingCompleted(completed) {
   setStorageItem(STORAGE_KEYS.ONBOARDING_DONE, completed);
 }
 
-// Static Seed Data Getters (Used as fallback/offline references)
-export function getInitialCompanies() {
-  return INITIAL_COMPANIES;
+// Companies
+export function getCompanies() {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_COMPANIES, []);
+  return [...INITIAL_COMPANIES, ...custom];
 }
 
-export function getInitialDrives() {
-  return INITIAL_UPCOMING_DRIVES;
+export function getCompanyBySlugOrId(identifier) {
+  const all = getCompanies();
+  return all.find(c => c.id === identifier || c.slug === identifier) || all[0];
 }
 
-export function getInitialQuestions() {
-  return INITIAL_QUESTIONS;
+export function addCompany(newCompany) {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_COMPANIES, []);
+  custom.unshift(newCompany);
+  setStorageItem(STORAGE_KEYS.CUSTOM_COMPANIES, custom);
+  return newCompany;
 }
 
-export function getInitialExperiences() {
-  return INITIAL_EXPERIENCES;
+// Placement Drives
+export function getUpcomingDrives() {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_DRIVES, []);
+  return [...INITIAL_UPCOMING_DRIVES, ...custom];
 }
 
-// Offline / Local Session Caches
-export function getSavedQuestionIdsLocal() {
-  const user = getCurrentUser();
-  return user?.savedQuestionIds || getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, []);
-}
-
-export function getPracticedQuestionIdsLocal() {
-  const user = getCurrentUser();
-  return user?.practicedQuestionIds || getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, []);
-}
-
-export function getRevisionQuestionIdsLocal() {
-  const user = getCurrentUser();
-  return user?.revisionQuestionIds || getStorageItem(STORAGE_KEYS.REVISION_LIST, []);
-}
-
-export function getSavedCompanyIdsLocal() {
-  const user = getCurrentUser();
-  return user?.savedCompanyIds || getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, []);
-}
-
-export function getMockSessionsLocal() {
-  return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, []);
-}
-
-export function saveMockSessionLocal(session) {
-  const list = getMockSessionsLocal();
-  list.unshift({ ...session, id: session.id || `mock-${Date.now()}` });
-  setStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, list);
-}
-
-// Backward-compatible aliases for components transitioning to REST API
-export const getCompanies = getInitialCompanies;
-export const getUpcomingDrives = getInitialDrives;
-export const getInterviewQuestions = getInitialQuestions;
-export const getInterviewExperiences = getInitialExperiences;
-export const getMockSessions = getMockSessionsLocal;
-
-export function getSavedQuestions() {
-  return getSavedQuestionIdsLocal();
-}
-
-export function toggleSavedQuestion(id) {
-  const list = getSavedQuestionIdsLocal();
-  const index = list.indexOf(id);
-  let updated;
-  if (index >= 0) {
-    updated = list.filter(item => item !== id);
-  } else {
-    updated = [...list, id];
-  }
-  setStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, updated);
-  return index < 0;
-}
-
-export function getPracticedQuestions() {
-  return getPracticedQuestionIdsLocal();
-}
-
-export function togglePracticedQuestion(id) {
-  const list = getPracticedQuestionIdsLocal();
-  const index = list.indexOf(id);
-  let updated;
-  if (index >= 0) {
-    updated = list.filter(item => item !== id);
-  } else {
-    updated = [...list, id];
-  }
-  setStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, updated);
-  return index < 0;
-}
-
-export function getRevisionList() {
-  return getRevisionQuestionIdsLocal();
-}
-
-export function toggleRevisionQuestion(id) {
-  const list = getRevisionQuestionIdsLocal();
-  const index = list.indexOf(id);
-  let updated;
-  if (index >= 0) {
-    updated = list.filter(item => item !== id);
-  } else {
-    updated = [...list, id];
-  }
-  setStorageItem(STORAGE_KEYS.REVISION_LIST, updated);
-  return index < 0;
-}
-
-export function getSavedCompanies() {
-  return getSavedCompanyIdsLocal();
-}
-
-export function toggleSavedCompany(id) {
-  const list = getSavedCompanyIdsLocal();
-  const index = list.indexOf(id);
-  let updated;
-  if (index >= 0) {
-    updated = list.filter(item => item !== id);
-  } else {
-    updated = [...list, id];
-  }
-  setStorageItem(STORAGE_KEYS.SAVED_COMPANIES, updated);
-  return index < 0;
-}
-
-export function addInterviewExperience(experience) {
-  const current = getStorageItem('placeprep_custom_experiences', []);
-  const newExp = {
-    ...experience,
-    id: experience.id || `exp-user-${Date.now()}`,
-    createdAt: new Date().toISOString()
-  };
-  current.unshift(newExp);
-  setStorageItem('placeprep_custom_experiences', current);
-  return newExp;
-}
-
-export function submitPlatformFeedback(feedback) {
-  const current = getStorageItem(STORAGE_KEYS.PLATFORM_FEEDBACK, []);
-  current.unshift({
-    ...feedback,
-    id: `fb-${Date.now()}`,
-    submittedAt: new Date().toISOString()
-  });
-  setStorageItem(STORAGE_KEYS.PLATFORM_FEEDBACK, current);
-  return true;
-}
-
-export function getAiInsights(companyId) {
-  if (!companyId) return INITIAL_AI_INSIGHTS;
-  return INITIAL_AI_INSIGHTS[companyId] || INITIAL_AI_INSIGHTS.hcltech || null;
-}
-
-export const saveMockSession = saveMockSessionLocal;
-
-export function addCompany(company) {
-  const current = getStorageItem('placeprep_custom_companies', []);
-  const newComp = { ...company, id: company.id || `comp-${Date.now()}` };
-  current.unshift(newComp);
-  setStorageItem('placeprep_custom_companies', current);
-  return newComp;
-}
-
-export function addDrive(drive) {
-  const current = getStorageItem('placeprep_custom_drives', []);
-  const newDrive = { ...drive, id: drive.id || `drive-${Date.now()}` };
-  current.unshift(newDrive);
-  setStorageItem('placeprep_custom_drives', current);
+export function addDrive(newDrive) {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_DRIVES, []);
+  custom.unshift(newDrive);
+  setStorageItem(STORAGE_KEYS.CUSTOM_DRIVES, custom);
   return newDrive;
 }
 
-export function addInterviewQuestion(question) {
-  const current = getStorageItem('placeprep_custom_questions', []);
-  const newQ = { ...question, id: question.id || `q-${Date.now()}` };
-  current.unshift(newQ);
-  setStorageItem('placeprep_custom_questions', current);
-  return newQ;
+// Interview Questions
+export function getInterviewQuestions() {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_QUESTIONS, []);
+  return [...INITIAL_QUESTIONS, ...custom];
 }
 
+export function addInterviewQuestion(newQuestion) {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_QUESTIONS, []);
+  custom.unshift(newQuestion);
+  setStorageItem(STORAGE_KEYS.CUSTOM_QUESTIONS, custom);
+  return newQuestion;
+}
+
+// Questions Practiced / Saved / Revision
+export function getPracticedQuestions() {
+  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, ['hcl-tech-01', 'hcl-hr-01']);
+}
+
+export function togglePracticedQuestion(questionId) {
+  const list = getPracticedQuestions();
+  let updated;
+  if (list.includes(questionId)) {
+    updated = list.filter(id => id !== questionId);
+  } else {
+    updated = [...list, questionId];
+  }
+  setStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, updated);
+  window.dispatchEvent(new CustomEvent('practice-status-changed', { detail: { questionId, updated } }));
+  return updated.includes(questionId);
+}
+
+export function getSavedQuestions() {
+  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, ['hcl-tech-02', 'hcl-tech-03']);
+}
+
+export function toggleSavedQuestion(questionId) {
+  const list = getSavedQuestions();
+  let updated;
+  if (list.includes(questionId)) {
+    updated = list.filter(id => id !== questionId);
+  } else {
+    updated = [...list, questionId];
+  }
+  setStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, updated);
+  window.dispatchEvent(new CustomEvent('saved-status-changed', { detail: { questionId, updated } }));
+  return updated.includes(questionId);
+}
+
+export function getRevisionList() {
+  return getStorageItem(STORAGE_KEYS.REVISION_LIST, ['hcl-mgr-01']);
+}
+
+export function toggleRevisionQuestion(questionId) {
+  const list = getRevisionList();
+  let updated;
+  if (list.includes(questionId)) {
+    updated = list.filter(id => id !== questionId);
+  } else {
+    updated = [...list, questionId];
+  }
+  setStorageItem(STORAGE_KEYS.REVISION_LIST, updated);
+  window.dispatchEvent(new CustomEvent('revision-status-changed', { detail: { questionId, updated } }));
+  return updated.includes(questionId);
+}
+
+// Saved Companies
+export function getSavedCompanies() {
+  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, ['hcltech', 'tcs']);
+}
+
+export function toggleSavedCompany(companyId) {
+  const list = getSavedCompanies();
+  let updated;
+  if (list.includes(companyId)) {
+    updated = list.filter(id => id !== companyId);
+  } else {
+    updated = [...list, companyId];
+  }
+  setStorageItem(STORAGE_KEYS.SAVED_COMPANIES, updated);
+  return updated.includes(companyId);
+}
+
+// Interview Experiences
+export function getInterviewExperiences() {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, []);
+  return [...custom, ...INITIAL_EXPERIENCES];
+}
+
+export function addInterviewExperience(newExp) {
+  const custom = getStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, []);
+  const prepared = {
+    ...newExp,
+    id: `exp-${Date.now()}`,
+    verified: true,
+    helpfulVotes: 1,
+    createdAt: new Date().toISOString()
+  };
+  custom.unshift(prepared);
+  setStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, custom);
+  window.dispatchEvent(new CustomEvent('experience-added', { detail: prepared }));
+  return prepared;
+}
+
+// AI Insights
+export function getAiInsights(companyId) {
+  if (INITIAL_AI_INSIGHTS[companyId]) {
+    return INITIAL_AI_INSIGHTS[companyId];
+  }
+  // Fallback intelligent generator for any company
+  const company = getCompanyBySlugOrId(companyId);
+  return {
+    companyId,
+    dataFreshness: 'October 2026',
+    totalSamplesAnalyzed: company?.experienceCount || 45,
+    confidenceScore: '92%',
+    verifiedSourcesBadge: `Campus Drive Logs (${company?.name})`,
+    frequentQuestions: [
+      { question: 'Data Structures: HashMaps, Arrays & Two Pointers', frequency: '42% of technical tests', trend: '+14% recent', category: 'DSA' },
+      { question: 'Core Fundamentals: OOPs Polymorphism & Inheritance', frequency: '36% of interviews', trend: 'Consistent', category: 'OOP' },
+      { question: 'Behavioral: Challenging team scenario & resolution', frequency: '85% of HR rounds', trend: 'Universal', category: 'HR' }
+    ],
+    trendingTopics: [
+      { topic: 'Cloud & System Reliability', change: '+35% increase in 2026', reason: 'High client shift towards cloud architectures' },
+      { topic: 'Hands-on live coding over pure theoretical MCQs', change: '+40% increase', reason: 'Evaluates hands-on implementation ability' }
+    ],
+    historicalVsRecentAnalysis: {
+      olderTrends: 'Earlier drives emphasized static textbook theory and rote-learned definitions.',
+      recentTrends: 'Recent interviews focus heavily on project architectural decisions, clean code, and practical problem solving.',
+      keyTakeaway: 'Ensure you can explain your GitHub projects and commit histories fluently.'
+    },
+    preparationPriority: [
+      { priority: 'High Priority (Must-Do)', topics: ['Data Structures (Arrays, Strings, Maps)', 'OOP Concepts in chosen language', 'Top 5 STAR behavioral responses'] },
+      { priority: 'Medium Priority (Concept Reinforcement)', topics: ['DBMS Normalization & SQL Queries', 'Operating Systems Core Concepts'] },
+      { priority: 'Additional Practice', topics: ['System Design Overview', 'Aptitude & Speed Math'] }
+    ],
+    disclaimer: 'Note: AI insights are synthesized from historical reports and candidate experiences.'
+  };
+}
+
+// Mock Interview Session Storage
+export function getMockSessions() {
+  return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, [
+    {
+      id: 'mock-01',
+      companyId: 'hcltech',
+      companyName: 'HCLTech',
+      round: 'Technical Interview',
+      date: '2026-10-10',
+      score: 84,
+      correctness: 86,
+      clarity: 82,
+      structure: 85,
+      questionsAnswered: 3,
+      feedbackSummary: 'Strong technical explanation of Floyd\'s cycle detection and SQL joins. Work on structuring your STAR answer for project challenges.'
+    }
+  ]);
+}
+
+export function saveMockSession(session) {
+  const list = getMockSessions();
+  list.unshift({ ...session, id: `mock-${Date.now()}` });
+  setStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, list);
+}
+
+// Platform Feedback
 export function getPlatformFeedback() {
   return getStorageItem(STORAGE_KEYS.PLATFORM_FEEDBACK, []);
 }
 
-// Theme preference
-export function getThemePreference() {
-  return getStorageItem(STORAGE_KEYS.THEME_PREFERENCE, 'light');
-}
-
-export function setThemePreference(theme) {
-  setStorageItem(STORAGE_KEYS.THEME_PREFERENCE, theme);
+export function submitPlatformFeedback(fb) {
+  const list = getPlatformFeedback();
+  list.unshift({ ...fb, id: `fb-${Date.now()}`, date: new Date().toISOString() });
+  setStorageItem(STORAGE_KEYS.PLATFORM_FEEDBACK, list);
 }
 
 // ----------------------------------------------------
@@ -629,3 +677,181 @@ export function getDriveRoundsConfig(driveId) {
 }
 
 
+
+// ----------------------------------------------------
+// Unified Portal Architecture (Institute, Placement & Admin)
+// ----------------------------------------------------
+
+export function getPortalMode() {
+  return getStorageItem(STORAGE_KEYS.PORTAL_MODE, 'gateway'); // 'gateway', 'institute', 'placement', 'admin'
+}
+
+export function setPortalMode(mode) {
+  setStorageItem(STORAGE_KEYS.PORTAL_MODE, mode);
+  window.dispatchEvent(new CustomEvent('portal-mode-changed', { detail: mode }));
+}
+
+export function getPortalRole() {
+  return getStorageItem(STORAGE_KEYS.PORTAL_ROLE, 'student');
+}
+
+export function setPortalRole(role) {
+  setStorageItem(STORAGE_KEYS.PORTAL_ROLE, role);
+  window.dispatchEvent(new CustomEvent('portal-role-changed', { detail: role }));
+}
+
+// CRT Sessions
+export function getCrtSessions() {
+  return getStorageItem(STORAGE_KEYS.CRT_SESSIONS, INITIAL_CRT_SESSIONS);
+}
+
+export function addCrtSession(session) {
+  const current = getCrtSessions();
+  const updated = [session, ...current];
+  setStorageItem(STORAGE_KEYS.CRT_SESSIONS, updated);
+  return updated;
+}
+
+// Student CRT Attendance
+export function getStudentCrtAttendance() {
+  return getStorageItem(STORAGE_KEYS.STUDENT_CRT_ATTENDANCE, INITIAL_STUDENT_CRT_ATTENDANCE);
+}
+
+export function updateStudentCrtAttendance(record) {
+  setStorageItem(STORAGE_KEYS.STUDENT_CRT_ATTENDANCE, record);
+  return record;
+}
+
+// Class Attendance
+export function getClassAttendance() {
+  return getStorageItem(STORAGE_KEYS.CLASS_ATTENDANCE, INITIAL_CLASS_ATTENDANCE);
+}
+
+// Resume Status (ATS)
+export function getResumeStatus() {
+  return getStorageItem(STORAGE_KEYS.RESUME_STATUS, INITIAL_RESUME_STATUS);
+}
+
+export function updateResumeStatus(data) {
+  const updated = { ...getResumeStatus(), ...data, updatedAt: new Date().toISOString() };
+  setStorageItem(STORAGE_KEYS.RESUME_STATUS, updated);
+  return updated;
+}
+
+// Student Live Round Status
+export function getStudentRounds() {
+  return getStorageItem(STORAGE_KEYS.STUDENT_ROUNDS, INITIAL_STUDENT_ROUNDS);
+}
+
+export function updateStudentRounds(rounds) {
+  setStorageItem(STORAGE_KEYS.STUDENT_ROUNDS, rounds);
+  return rounds;
+}
+
+// Hackathons
+export function getHackathons() {
+  return getStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+}
+
+export function addHackathon(hackathon) {
+  const current = getHackathons();
+  const updated = [hackathon, ...current];
+  setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  return updated;
+}
+
+// Internships
+export function getInternships() {
+  return getStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+}
+
+export function addInternship(internship) {
+  const current = getInternships();
+  const updated = [internship, ...current];
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  return updated;
+}
+
+// Off-Campus Companies (Final Year Only)
+export function getOffCampusCompanies() {
+  return getStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+}
+
+export function addOffCampusCompany(comp) {
+  const current = getOffCampusCompanies();
+  const updated = [comp, ...current];
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  return updated;
+}
+
+// Eligibility Matrix
+export function getEligibilityMatrix() {
+  return getStorageItem(STORAGE_KEYS.ELIGIBILITY_MATRIX, INITIAL_ELIGIBILITY_CRITERIA_MATRIX);
+}
+
+// Live Sessions
+export function getLiveSessions() {
+  return getStorageItem(STORAGE_KEYS.LIVE_SESSIONS, INITIAL_LIVE_SESSIONS);
+}
+
+export function addLiveSession(session) {
+  const current = getLiveSessions();
+  const updated = [session, ...current];
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+  return updated;
+}
+
+export function rsvpLiveSession(sessionId) {
+  const current = getLiveSessions();
+  const updated = current.map(s => {
+    if (s.id === sessionId) {
+      return { ...s, rsvpsCount: (s.rsvpsCount || 0) + 1, hasRsvp: true };
+    }
+    return s;
+  });
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+  return updated;
+}
+
+// Push Notifications
+export function getPushNotifications() {
+  return getStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, INITIAL_PUSH_NOTIFICATIONS);
+}
+
+export function broadcastPushNotification(notif) {
+  const current = getPushNotifications();
+  const newNotif = {
+    id: `notif-${Date.now()}`,
+    timestamp: 'Just now',
+    date: new Date().toISOString().split('T')[0],
+    read: false,
+    ...notif
+  };
+  const updated = [newNotif, ...current];
+  setStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, updated);
+  window.dispatchEvent(new CustomEvent('push-notification-broadcast', { detail: newNotif }));
+  return updated;
+}
+
+export function markNotificationAsRead(id) {
+  const current = getPushNotifications();
+  const updated = current.map(n => n.id === id ? { ...n, read: true } : n);
+  setStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, updated);
+  return updated;
+}
+
+// Feedback Loop (Feedback -> TPO -> Company)
+export function getFeedbackLoop() {
+  return getStorageItem(STORAGE_KEYS.FEEDBACK_LOOP, INITIAL_FEEDBACK_LOOP);
+}
+
+export function addFeedbackLoopEntry(entry) {
+  const current = getFeedbackLoop();
+  const newEntry = {
+    id: `fbl-${Date.now()}`,
+    ...entry
+  };
+  const updated = [newEntry, ...current];
+  setStorageItem(STORAGE_KEYS.FEEDBACK_LOOP, updated);
+  return updated;
+}

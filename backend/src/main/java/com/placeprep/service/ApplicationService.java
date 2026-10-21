@@ -35,6 +35,12 @@ public class ApplicationService {
     @Autowired(required = false)
     private ScheduleConflictService conflictService;
 
+    @Autowired
+    private StudentAcademicRecordService academicRecordService;
+
+    @Autowired
+    private SelectionWorkflowService selectionWorkflowService;
+
     public ApplicationService() {
     }
 
@@ -174,6 +180,28 @@ public class ApplicationService {
             }
         }
 
+        StudentAcademicRecordService.ApplicationAcademicSnapshot academics =
+                new StudentAcademicRecordService.ApplicationAcademicSnapshot();
+        academics.cgpa = app.getCgpa();
+        academics.tenth = app.getTenthPercentage();
+        academics.twelfth = app.getTwelfthPercentage();
+        academics.backlogs = app.getActiveBacklogs();
+        academics.branch = app.getBranch();
+        academics.batch = app.getGraduationBatch();
+        academicRecordService.enrichApplicationFromVerifiedRecord(
+                app.getStudentId(),
+                app.getStudentEmail(),
+                academics
+        );
+        if (academics.verified) {
+            if (academics.cgpa != null) app.setCgpa(academics.cgpa);
+            if (academics.tenth != null) app.setTenthPercentage(academics.tenth);
+            if (academics.twelfth != null) app.setTwelfthPercentage(academics.twelfth);
+            if (academics.backlogs != null) app.setActiveBacklogs(academics.backlogs);
+            if (academics.branch != null) app.setBranch(academics.branch);
+            if (academics.batch != null) app.setGraduationBatch(academics.batch);
+        }
+
         if (drive != null) {
             if (app.getCompanyName() == null) app.setCompanyName(drive.getCompanyName());
             if (app.getCompanyId() == null) app.setCompanyId(drive.getCompanyId());
@@ -228,77 +256,3 @@ public class ApplicationService {
             }
         }
 
-        return studentApplicationRepository.save(app);
-    }
-
-    public List<StudentApplication> getStudentApplications(String studentId) {
-        if (studentApplicationRepository == null) return List.of();
-        return studentApplicationRepository.findByStudentId(studentId);
-    }
-
-    public List<StudentApplication> getDriveApplications(String driveId) {
-        if (studentApplicationRepository == null) return List.of();
-        return studentApplicationRepository.findByDriveId(driveId);
-    }
-
-    public List<StudentApplication> getAllApplications() {
-        if (studentApplicationRepository == null) return List.of();
-        return studentApplicationRepository.findAll();
-    }
-
-    public Optional<StudentApplication> getByApplicationId(String applicationId) {
-        if (studentApplicationRepository == null) return Optional.empty();
-        return studentApplicationRepository.findByApplicationId(applicationId);
-    }
-
-    public StudentApplication updateStatus(
-            String applicationId,
-            String newStatus,
-            String currentRound,
-            String scheduledDate,
-            String scheduledTime,
-            String scheduledEndTime,
-            String venue,
-            String instructions
-    ) {
-        if (studentApplicationRepository == null) {
-            throw new IllegalStateException("StudentApplicationRepository unavailable");
-        }
-        Optional<StudentApplication> opt = studentApplicationRepository.findByApplicationId(applicationId);
-        if (!opt.isPresent()) {
-            throw new IllegalArgumentException("Application not found: " + applicationId);
-        }
-
-        StudentApplication app = opt.get();
-        if (newStatus != null) app.setStatus(newStatus);
-        if (currentRound != null) app.setCurrentRound(currentRound);
-        if (scheduledDate != null) app.setScheduledDate(scheduledDate);
-        if (scheduledTime != null) app.setScheduledTime(scheduledTime);
-        if (scheduledEndTime != null) app.setScheduledEndTime(scheduledEndTime);
-        if (venue != null) app.setVenue(venue);
-        if (instructions != null) app.setCandidateInstructions(instructions);
-
-        // Re-check conflict if scheduledDate is modified
-        if (conflictService != null && scheduledDate != null && scheduledTime != null) {
-            Map<String, Object> conflictReport = conflictService.checkStudentInterviewConflict(
-                    app.getStudentId(),
-                    app.getCompanyId(),
-                    app.getDriveId(),
-                    app.getCurrentRound(),
-                    scheduledDate,
-                    scheduledTime,
-                    scheduledEndTime != null ? scheduledEndTime : "05:00 PM"
-            );
-            boolean hasConflict = Boolean.TRUE.equals(conflictReport.get("hasConflict"));
-            app.setConflictFlagged(hasConflict);
-            if (hasConflict) {
-                List<?> conflicts = (List<?>) conflictReport.get("conflicts");
-                app.setConflictReason(conflicts != null && !conflicts.isEmpty() ? conflicts.get(0).toString() : "Time conflict");
-            } else {
-                app.setConflictReason(null);
-            }
-        }
-
-        return studentApplicationRepository.save(app);
-    }
-}

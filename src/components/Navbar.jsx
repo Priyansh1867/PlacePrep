@@ -1,393 +1,396 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Search,
-  Menu,
-  X,
-  GraduationCap,
+import React, { useState, useEffect } from 'react';
+import { 
+  Sparkles, 
+  Search, 
+  User, 
+  Menu, 
+  X, 
+  GraduationCap, 
+  Building2, 
+  Briefcase, 
+  BookOpen, 
+  MessageSquare, 
+  Bot, 
+  ShieldCheck,
   ChevronDown,
   LogOut,
-  ShieldCheck,
-  User as UserIcon,
-  Sparkles,
-  LayoutDashboard,
-  Building2,
-  Code2,
-  Binary,
-  Briefcase,
-  FileCheck2,
-  MessageSquare,
-  Bot,
-  RotateCcw,
+  SlidersHorizontal,
   ClipboardCheck,
-  HelpCircle,
-  BookOpen,
-  Calendar
+  School,
+  Bell,
+  Layers,
+  LogIn,
+  Compass,
+  ArrowRight
 } from 'lucide-react';
+import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
-import Badge from './ui/Badge';
 
-export default function Navbar({
-  currentRoute,
-  setCurrentRoute,
-  onOpenSearch,
-  onOpenBatchModal,
+export default function Navbar({ 
+  currentRoute, 
+  setCurrentRoute, 
+  onOpenSearch, 
+  onOpenBatchModal, 
   onOpenAuthModal,
-  user,
-  batch,
-  onLogout,
-  onDemoLogin
+  onOpenNotifications,
+  onNavigateAuth
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
-
-  const userDropdownRef = useRef(null);
-  const moreDropdownRef = useRef(null);
+  const [exploreDropdownOpen, setExploreDropdownOpen] = useState(false);
+  const [user, setUser] = useState(getCurrentUser());
+  const [batch, setBatch] = useState(getGraduationBatch());
+  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-        setUserDropdownOpen(false);
-      }
-      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) {
-        setMoreDropdownOpen(false);
-      }
+    const handleBatchChange = (e) => {
+      setBatch(e.detail || getGraduationBatch());
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('batch-changed', handleBatchChange);
+    return () => window.removeEventListener('batch-changed', handleBatchChange);
   }, []);
 
-  // Primary navigation items (focused, high-frequency)
-  const primaryNavLinks = [
-    { id: 'drives', label: 'Placement Drives', icon: Briefcase },
-    { id: 'companies', label: 'Companies', icon: Building2 },
-    { id: 'prep', label: 'Question Bank', icon: BookOpen },
-    { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, isNew: true },
-    { id: 'workflow', label: 'Pipeline Workflow', icon: ClipboardCheck },
-  ];
-
-  // Secondary items grouped into clean "Resources" dropdown
-  const secondaryNavLinks = [
-    { id: 'experiences', label: 'Interview Experiences', description: 'Real candidate transcripts & tips', icon: MessageSquare },
-    { id: 'ai-insights', label: 'Company Intelligence', description: 'Data-driven hiring trends & patterns', icon: Sparkles },
-    ...(user?.role === 'admin'
-      ? [{ id: 'admin', label: 'Placement Cell (Admin)', description: 'TPO drives, rounds & verification', icon: ShieldCheck }]
-      : [])
-  ];
+  useEffect(() => {
+    const handlePush = () => {
+      const notifs = getPushNotifications();
+      setUnreadNotifCount(notifs.filter(n => !n.read).length);
+    };
+    window.addEventListener('push-notification-broadcast', handlePush);
+    return () => window.removeEventListener('push-notification-broadcast', handlePush);
+  }, []);
 
   const handleNavigate = (routeId) => {
     setCurrentRoute(routeId);
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
-    setMoreDropdownOpen(false);
+    setExploreDropdownOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const mobileNavLinks = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'companies', label: 'Companies', icon: Building2 },
-    { id: 'dsa', label: 'DSA Practice', icon: Code2 },
-    { id: 'core-cs', label: 'Core CS', icon: Binary },
-    { id: 'aptitude', label: 'Aptitude & Reasoning', icon: BookOpen },
-    { id: 'prep', label: 'Question Bank', icon: HelpCircle },
-    { id: 'mock-interview', label: 'AI Mock Coach', icon: Bot },
-    { id: 'drives', label: 'Placement Drives', icon: Briefcase },
-    { id: 'applications', label: 'My Applications', icon: FileCheck2 },
-    { id: 'experiences', label: 'Experiences', icon: MessageSquare },
-    { id: 'workflow', label: 'Candidate Pipeline', icon: ClipboardCheck },
-    { id: 'ai-insights', label: 'Readiness Analytics', icon: Sparkles },
-    { id: 'revision', label: 'Revision List', icon: RotateCcw }
+  const moreModules = [
+    { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
+    { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
+    { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },
+    { id: 'drives', label: 'Placement Drives', desc: 'Campus drive schedules, packages & criteria', icon: Briefcase },
+    { id: 'prep', label: 'Question Bank', desc: 'Technical, Aptitude & Company rounds', icon: BookOpen },
+    { id: 'experiences', label: 'Interview Experiences', desc: 'Senior student placement debriefs', icon: MessageSquare },
+    { id: 'mock-interview', label: 'AI Mock Interview', desc: 'Real-time voice & text interview simulation', icon: Bot, isNew: true },
   ];
 
-  if (user?.role === 'admin') {
-    mobileNavLinks.push({ id: 'admin', label: 'Admin Console', icon: ShieldCheck });
-  }
-
-  const isSecondaryActive = secondaryNavLinks.some(link => link.id === currentRoute);
-
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 transition-all select-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-3">
+    <header className="sticky top-3 z-50 px-3 sm:px-6 max-w-6xl mx-auto w-full transition-all">
+      {/* Remii-Style Floating Glass Island Navbar */}
+      <div className="rounded-2xl border border-black/[0.07] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(17,20,57,0.06),0_2px_8px_rgba(17,20,57,0.03)] px-4 py-2.5 flex items-center justify-between">
+        
+        {/* Left: Official PlacePrep Logo */}
+        <div className="flex items-center gap-6 shrink-0">
+          <button 
+            onClick={() => handleNavigate('gateway')} 
+            className="flex items-center gap-2 text-left group focus:outline-none cursor-pointer hover:opacity-95 transition-opacity"
+          >
+            <PlacePrepLogo className="h-7 sm:h-8 w-auto" theme="light" />
+          </button>
+        </div>
+
+        {/* Center: Remii-Style Minimalist Floating Links */}
+        <nav className="hidden md:flex items-center gap-1 text-xs font-medium text-slate-600">
           
-          {/* Left: Mobile Menu Toggle & Brand Logo */}
-          <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => handleNavigate('gateway')}
+            className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
+              currentRoute === 'gateway' || currentRoute === 'home'
+                ? 'bg-[#111439] text-white font-semibold shadow-xs'
+                : 'hover:text-[#111439] hover:bg-black/[0.04]'
+            }`}
+          >
+            Overview
+          </button>
+
+          <button
+            onClick={() => handleNavigate('institute-portal')}
+            className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === 'institute-portal'
+                ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                : 'hover:text-[#111439] hover:bg-black/[0.04]'
+            }`}
+          >
+            <School className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Institute</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+              Campus
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleNavigate('placement-portal')}
+            className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === 'placement-portal'
+                ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+                : 'hover:text-[#111439] hover:bg-black/[0.04]'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Placement</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">
+              Corporate
+            </span>
+          </button>
+
+          {/* More Modules Dropdown */}
+          <div className="relative">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none"
-              aria-label="Toggle navigation menu"
+              onClick={() => setExploreDropdownOpen(!exploreDropdownOpen)}
+              className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
+                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview'].includes(currentRoute)
+                  ? 'bg-black/[0.06] text-[#111439] font-semibold'
+                  : 'hover:text-[#111439] hover:bg-black/[0.04]'
+              }`}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <Compass className="w-3.5 h-3.5 text-slate-500" />
+              <span>Modules</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
-            <button
-              onClick={() => handleNavigate('home')}
-              className="flex items-center gap-2 text-left group focus:outline-none"
-              title="PlacePrep Home"
-            >
-              <PlacePrepLogo className="w-8 h-8" />
-              <span className="font-extrabold text-base text-[#0F172A]">
-                Place<span className="text-[#4F46E5]">Prep</span>
-              </span>
-            </button>
-          </div>
-
-          {/* Center-Left: Desktop Navigation Links (when landing page or space allows) */}
-          {currentRoute === 'home' && (
-            <nav className="hidden lg:flex items-center space-x-1">
-              {primaryNavLinks.map((item) => {
-                const active = currentRoute === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigate(item.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                      active 
-                        ? 'text-indigo-600 bg-indigo-50 font-semibold' 
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    {item.isNew && (
-                      <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] rounded font-semibold">
-                        AI
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-
-              {/* Resources Dropdown */}
-              <div className="relative" ref={moreDropdownRef}>
-                <button
-                  onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                    isSecondaryActive 
-                      ? 'text-indigo-600 bg-indigo-50 font-semibold' 
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>More Tools</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {moreDropdownOpen && (
-                  <div className="absolute left-0 mt-1.5 w-64 rounded-xl bg-white border border-slate-200 shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    {secondaryNavLinks.map((subItem) => {
-                      const SubIcon = subItem.icon;
-                      const active = currentRoute === subItem.id;
-                      return (
-                        <button
-                          key={subItem.id}
-                          onClick={() => handleNavigate(subItem.id)}
-                          className={`w-full text-left px-3.5 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors ${
-                            active ? 'bg-indigo-50/70 text-indigo-900' : 'text-slate-700'
-                          }`}
-                        >
-                          <SubIcon className={`w-4 h-4 mt-0.5 shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
-                          <div>
-                            <div className="text-sm font-medium text-slate-900">{subItem.label}</div>
-                            <div className="text-xs text-slate-500 leading-snug">{subItem.description}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </nav>
-          )}
-
-          {/* Center: Global Search Bar */}
-          <div className="flex-1 max-w-md mx-2">
-            <button
-              onClick={onOpenSearch}
-              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-300 text-xs text-slate-400 transition-all shadow-2xs group focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title="Search companies, questions, or drives (Ctrl+K)"
-            >
-              <div className="flex items-center gap-2 text-slate-500">
-                <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                <span className="truncate">Search companies, questions, drives...</span>
-              </div>
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md border border-slate-200 bg-white text-[10px] font-mono text-slate-500">
-                Ctrl+K
-              </kbd>
-            </button>
-          </div>
-
-          {/* Right: Batch Pill, Demo Switcher & User Profile */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Batch Selector Badge */}
-            <button
-              onClick={onOpenBatchModal}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-[#0F172A] hover:text-[#4F46E5] text-xs font-bold transition-all border border-slate-200/80"
-              title="Change target graduation batch"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-[#4F46E5]" />
-              <span>Batch {batch}</span>
-            </button>
-
-            {/* User Profile or Sign In */}
-            {user ? (
-              <div id="user-profile-menu" className="relative" ref={userDropdownRef}>
-                <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors focus:outline-none"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
-                    {user.name ? user.name[0].toUpperCase() : 'U'}
-                  </div>
-                  <span className="text-xs font-bold text-[#0F172A] hidden md:inline truncate max-w-[100px]">
-                    {user.name ? user.name.split(' ')[0] : 'User'}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-4 py-2.5 border-b border-slate-100">
-                      <p className="text-xs font-bold text-[#0F172A] truncate">{user.name}</p>
-                      <p className="text-[11px] text-[#64748B] truncate">{user.email || user.college}</p>
-                      <div className="mt-1.5 flex items-center gap-1.5">
-                        <Badge variant={user.role === 'admin' ? 'danger' : 'primary'} size="sm">
-                          {user.role === 'admin' ? 'Admin / Officer' : 'Student'}
-                        </Badge>
-                        <span className="text-[11px] text-slate-400">Batch {batch}</span>
-                      </div>
-                    </div>
-
-                    <div className="py-1">
-                      <button
-                        onClick={() => handleNavigate('dashboard')}
-                        className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left"
-                      >
-                        <LayoutDashboard className="w-4 h-4 text-slate-400" />
-                        <span>Student Dashboard</span>
-                      </button>
-                      <button
-                        onClick={() => handleNavigate('applications')}
-                        className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left"
-                      >
-                        <FileCheck2 className="w-4 h-4 text-slate-400" />
-                        <span>My Applications & Passes</span>
-                      </button>
-                      <button
-                        onClick={onOpenBatchModal}
-                        className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left"
-                      >
-                        <GraduationCap className="w-4 h-4 text-slate-400" />
-                        <span>Change Graduation Batch</span>
-                      </button>
-                      {user.role === 'admin' && (
-                        <button
-                          onClick={() => handleNavigate('admin')}
-                          className="w-full px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50 flex items-center gap-2 text-left"
-                        >
-                          <ShieldCheck className="w-4 h-4 text-red-600" />
-                          <span>Admin Console</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {onDemoLogin && (
-                      <div className="border-t border-slate-100 pt-1">
-                        <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Switch Demo Role
-                        </div>
-                        <button
-                          onClick={() => {
-                            onDemoLogin('student');
-                            setUserDropdownOpen(false);
-                          }}
-                          className="w-full px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 text-left"
-                        >
-                          Login as Demo Student
-                        </button>
-                        <button
-                          onClick={() => {
-                            onDemoLogin('admin');
-                            setUserDropdownOpen(false);
-                          }}
-                          className="w-full px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 text-left"
-                        >
-                          Login as Placement Officer (Admin)
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="border-t border-slate-100 pt-1">
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false);
-                          if (onLogout) onLogout();
-                        }}
-                        className="w-full px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 text-left"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button
-                onClick={onOpenAuthModal}
-                className="px-3.5 py-1.5 rounded-xl bg-[#4F46E5] text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-2xs"
+            {exploreDropdownOpen && (
+              <div 
+                className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 rounded-2xl bg-white/95 backdrop-blur-xl border border-black/[0.08] shadow-[0_16px_40px_rgba(17,20,57,0.12)] p-2 z-50 animate-in fade-in-50 zoom-in-95"
+                onMouseLeave={() => setExploreDropdownOpen(false)}
               >
-                Sign In
-              </button>
+                <div className="px-3 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-black/[0.04] mb-1">
+                  All Specialized Engines
+                </div>
+                <div className="space-y-1">
+                  {moreModules.map(mod => {
+                    const Icon = mod.icon;
+                    const isActive = currentRoute === mod.id;
+                    return (
+                      <button
+                        key={mod.id}
+                        onClick={() => handleNavigate(mod.id)}
+                        className={`w-full text-left p-2.5 rounded-xl transition flex items-start gap-3 cursor-pointer ${
+                          isActive ? 'bg-indigo-50/80 text-indigo-900' : 'hover:bg-black/[0.03] text-slate-700'
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-[#111439]">{mod.label}</span>
+                            {mod.isNew && (
+                              <span className="px-1.5 py-0.2 bg-indigo-600 text-white text-[9px] font-bold rounded-full">
+                                AI
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-tight mt-0.5">{mod.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 
+          <button
+            onClick={() => handleNavigate('admin')}
+            className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === 'admin'
+                ? 'bg-purple-600 text-white font-semibold shadow-xs'
+                : 'hover:text-[#111439] hover:bg-black/[0.04]'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />
+            <span>Admin</span>
+          </button>
+        </nav>
+
+        {/* Right: Tools & Profile */}
+        <div className="flex items-center gap-2 shrink-0">
+          
+          {/* Search Trigger */}
+          <button
+            onClick={onOpenSearch}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-black/[0.06] bg-black/[0.02] hover:bg-black/[0.05] text-slate-500 hover:text-[#111439] transition-all text-xs cursor-pointer"
+            title="Search (Ctrl+K)"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline text-[11px] text-slate-400 font-mono">⌘K</span>
+          </button>
+
+          {/* Notifications Bell */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative flex items-center justify-center w-8 h-8 rounded-xl border border-black/[0.06] bg-black/[0.02] hover:bg-black/[0.05] text-slate-600 hover:text-[#111439] transition cursor-pointer"
+            title="Campus Notifications"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            {unreadNotifCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            )}
+            {unreadNotifCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500" />
+            )}
+          </button>
+
+          {/* Batch Selector */}
+          <button
+            onClick={onOpenBatchModal}
+            className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/[0.02] border border-black/[0.06] text-[#111439] hover:bg-black/[0.05] transition text-xs font-semibold cursor-pointer"
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+            <span>{batch}</span>
+          </button>
+
+          {/* User Profile / Login Pill */}
+          <div className="relative">
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className="flex items-center gap-1.5 p-1 pl-1.5 pr-2.5 rounded-full border border-black/[0.08] bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition cursor-pointer"
+            >
+              <div className="w-6 h-6 rounded-full bg-[#111439] text-white flex items-center justify-center font-bold text-[11px]">
+                {user?.name ? user.name[0].toUpperCase() : 'P'}
+              </div>
+              <span className="hidden sm:inline font-semibold text-[#111439] text-xs">
+                {user?.name?.split(' ')[0] || 'User'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
+            {userDropdownOpen && (
+              <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-white/95 backdrop-blur-xl border border-black/[0.08] shadow-[0_16px_40px_rgba(17,20,57,0.12)] py-2 z-50 animate-in fade-in-50 zoom-in-95 text-xs">
+                <div className="px-4 py-3 border-b border-black/[0.05]">
+                  <p className="font-semibold text-[#111439]">{user?.name || 'Priyansh Jain'}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{user?.email || 'priyansh.jain@example.edu'}</p>
+                  <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold uppercase">
+                    Role: {user?.role || 'STUDENT'} • {batch}
+                  </div>
+                </div>
+
+                <div className="py-1">
+                  <button
+                    onClick={() => handleNavigate('institute-portal')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <School className="w-3.5 h-3.5 text-indigo-600" />
+                    Institute Dashboard
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('placement-portal')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+                    Placement Dashboard
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('dashboard')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <User className="w-3.5 h-3.5 text-indigo-600" />
+                    My Student Profile
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('admin')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                    Super Admin Panel
+                  </button>
+                </div>
+
+                <div className="border-t border-black/[0.05] pt-1">
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onNavigateAuth('institute');
+                    }}
+                    className="w-full text-left px-4 py-2 text-indigo-600 hover:bg-indigo-50/50 flex items-center gap-2 font-semibold cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    Switch Persona / Sign In
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-1.5 rounded-xl text-slate-600 hover:text-[#111439] hover:bg-black/[0.04] focus:outline-none cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 max-h-[80vh] overflow-y-auto animate-in slide-in-from-top-3">
-          <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-100">
+        <div className="md:hidden mt-2 rounded-2xl border border-black/[0.08] bg-white/95 backdrop-blur-xl p-4 shadow-xl text-xs space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => {
-                onOpenBatchModal();
-                setMobileMenuOpen(false);
-              }}
-              className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5"
+              onClick={() => handleNavigate('gateway')}
+              className={`p-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 ${
+                currentRoute === 'gateway' ? 'bg-[#111439] text-white' : 'bg-slate-100 text-slate-700'
+              }`}
             >
-              <GraduationCap className="w-4 h-4 text-indigo-600" />
-              <span>Batch {batch}</span>
+              <Layers className="w-4 h-4" />
+              <span>Overview</span>
             </button>
             <button
-              onClick={() => {
-                onOpenSearch();
-                setMobileMenuOpen(false);
-              }}
-              className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5"
+              onClick={() => handleNavigate('institute-portal')}
+              className={`p-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 ${
+                currentRoute === 'institute-portal' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700'
+              }`}
             >
-              <Search className="w-4 h-4 text-slate-500" />
-              <span>Search</span>
+              <School className="w-4 h-4" />
+              <span>Institute</span>
+            </button>
+            <button
+              onClick={() => handleNavigate('placement-portal')}
+              className={`p-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 ${
+                currentRoute === 'placement-portal' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              <span>Placement</span>
+            </button>
+            <button
+              onClick={() => handleNavigate('admin')}
+              className={`p-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 ${
+                currentRoute === 'admin' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-800'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Admin</span>
             </button>
           </div>
 
-          <div className="space-y-1">
-            {mobileNavLinks.map((item) => {
-              const isActive = currentRoute === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavigate(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-[#4F46E5] font-bold'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#4F46E5]' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+          <div className="pt-2 border-t border-black/[0.05] space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase px-2 mb-1">More Engines</p>
+            {moreModules.map(mod => (
+              <button
+                key={mod.id}
+                onClick={() => handleNavigate(mod.id)}
+                className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium"
+              >
+                <mod.icon className="w-4 h-4 text-indigo-500" />
+                <span>{mod.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="pt-2 border-t border-black/[0.05]">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onNavigateAuth('institute');
+              }}
+              className="w-full text-center py-2.5 rounded-xl bg-[#111439] text-white font-semibold cursor-pointer"
+            >
+              Sign In / Switch Portal
+            </button>
           </div>
         </div>
       )}

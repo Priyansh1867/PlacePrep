@@ -88,4 +88,36 @@ public class AuthController {
                     .body(Collections.singletonMap("error", "Failed to retrieve user: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
+        try {
+            String email = body != null ? body.get("email") : null;
+            String token = userService.generatePasswordResetToken(email);
+            Map<String, Object> resp = new java.util.HashMap<>();
+            resp.put("message", "Password reset token generated successfully");
+            resp.put("resetToken", token);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        try {
+            String token = body != null ? body.get("token") : null;
+            String newPassword = body != null ? body.get("newPassword") : null;
+            userService.resetPassword(token, newPassword);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Password reset successfully. You can now login."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error: " + e.getMessage()));
+        }
+    }
 }

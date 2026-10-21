@@ -36,3 +36,6 @@ backend/target/
 *.sln
 *.sw?
 
+# Project documents and diagrams
+Responsibilities.md
+*.excalidraw

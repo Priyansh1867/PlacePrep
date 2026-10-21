@@ -22,6 +22,9 @@ public class EligibilityService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private StudentAcademicRecordService academicRecordService;
+
     public EligibilityService() {
     }
 
@@ -173,20 +176,37 @@ public class EligibilityService {
             throw new IllegalArgumentException("Placement Drive not found: " + driveId);
         }
 
-        // Try finding user
         Optional<User> userOpt = userRepository.findByEmail(studentEmailOrId);
-        Double cgpa = 8.4;
-        Double tenth = 88.0;
-        Double twelfth = 85.5;
-        Integer backlogs = 0;
-        String branch = "Computer Science and Engineering";
-        String batch = "2028";
 
-        if (userOpt.isPresent()) {
+        Double cgpa = null;
+        Double tenth = null;
+        Double twelfth = null;
+        Integer backlogs = null;
+        String branch = null;
+        String batch = null;
+
+        Optional<com.placeprep.model.StudentAcademicRecord> verified =
+                academicRecordService.findForStudent(studentEmailOrId);
+        if (verified.isPresent() && verified.get().isVerified()) {
+            com.placeprep.model.StudentAcademicRecord r = verified.get();
+            cgpa = r.getCgpa();
+            tenth = r.getTenthPercentage();
+            twelfth = r.effectiveTwelfthOrDiploma();
+            backlogs = r.getActiveBacklogs();
+            branch = r.getBranch();
+            batch = r.getGraduationBatch();
+        } else if (userOpt.isPresent()) {
             User u = userOpt.get();
-            if (u.getBranch() != null) branch = u.getBranch();
-            if (u.getGraduationBatch() != null) batch = u.getGraduationBatch();
+            cgpa = u.getCgpa();
+            tenth = u.getTenthPercentage();
+            twelfth = u.getTwelfthPercentage();
+            backlogs = u.getActiveBacklogs();
+            branch = u.getBranch();
+            batch = u.getGraduationBatch();
         }
+
+        if (cgpa == null) cgpa = 0.0;
+        if (backlogs == null) backlogs = 0;
 
         return evaluateEligibility(cgpa, tenth, twelfth, backlogs, branch, batch, drive);
     }

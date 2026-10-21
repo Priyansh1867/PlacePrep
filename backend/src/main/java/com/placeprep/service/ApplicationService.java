@@ -29,6 +29,12 @@ public class ApplicationService {
     @Autowired
     private ScheduleConflictService conflictService;
 
+    @Autowired
+    private StudentAcademicRecordService academicRecordService;
+
+    @Autowired
+    private SelectionWorkflowService selectionWorkflowService;
+
     public ApplicationService() {
     }
 
@@ -59,6 +65,28 @@ public class ApplicationService {
                 drive = d;
                 break;
             }
+        }
+
+        StudentAcademicRecordService.ApplicationAcademicSnapshot academics =
+                new StudentAcademicRecordService.ApplicationAcademicSnapshot();
+        academics.cgpa = app.getCgpa();
+        academics.tenth = app.getTenthPercentage();
+        academics.twelfth = app.getTwelfthPercentage();
+        academics.backlogs = app.getActiveBacklogs();
+        academics.branch = app.getBranch();
+        academics.batch = app.getGraduationBatch();
+        academicRecordService.enrichApplicationFromVerifiedRecord(
+                app.getStudentId(),
+                app.getStudentEmail(),
+                academics
+        );
+        if (academics.verified) {
+            if (academics.cgpa != null) app.setCgpa(academics.cgpa);
+            if (academics.tenth != null) app.setTenthPercentage(academics.tenth);
+            if (academics.twelfth != null) app.setTwelfthPercentage(academics.twelfth);
+            if (academics.backlogs != null) app.setActiveBacklogs(academics.backlogs);
+            if (academics.branch != null) app.setBranch(academics.branch);
+            if (academics.batch != null) app.setGraduationBatch(academics.batch);
         }
 
         if (drive != null) {
@@ -113,7 +141,13 @@ public class ApplicationService {
             }
         }
 
-        return applicationRepository.save(app);
+        StudentApplication saved = applicationRepository.save(app);
+
+        if (drive != null && "ELIGIBILITY_PASSED".equals(saved.getStatus())) {
+            selectionWorkflowService.initializePipeline(saved);
+        }
+
+        return saved;
     }
 
     public List<StudentApplication> getStudentApplications(String studentId) {

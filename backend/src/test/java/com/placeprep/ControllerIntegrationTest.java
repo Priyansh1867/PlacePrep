@@ -132,4 +132,47 @@ public class ControllerIntegrationTest {
                 .andExpect(jsonPath("$.status", is("ADVANCED")))
                 .andExpect(jsonPath("$.problemSolving", is(9)));
     }
+
+    @Test
+    void testMockSessionEndpointsRequireAuthentication() throws Exception {
+        // Without auth, /api/mock-sessions/my should be rejected with 403 Forbidden by Spring Security
+        mockMvc.perform(get("/api/mock-sessions/my"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testMockSessionCreationAndRetrievalWithAuth() throws Exception {
+        String studentToken = tokenService.generateToken(2L, "student@placeprep.com", "STUDENT");
+
+        String sessionPayload = """
+                {
+                    "companyId": "hcltech",
+                    "companyName": "HCLTech",
+                    "round": "TECHNICAL Interview",
+                    "date": "2026-10-21",
+                    "score": 88,
+                    "correctness": 85,
+                    "clarity": 90,
+                    "structure": 88,
+                    "questionsAnswered": 3,
+                    "feedbackSummary": "Candidate demonstrated strong recursion and graph fundamentals."
+                }
+                """;
+
+        mockMvc.perform(post("/api/mock-sessions")
+                        .header("Authorization", "Bearer " + studentToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sessionPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.score", is(88)))
+                .andExpect(jsonPath("$.companyName", is("HCLTech")));
+
+        // Verify it can be retrieved via /my
+        mockMvc.perform(get("/api/mock-sessions/my")
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
+    }
 }
+

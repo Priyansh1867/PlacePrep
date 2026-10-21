@@ -58,10 +58,30 @@ export default function RevisionPage({ onSelectQuestion, onNavigate }) {
 
       const allQs = await QuestionApi.getAll().catch(() => []);
       const pool = allQs && allQs.length > 0 ? allQs : getInitialQuestions();
-      setQuestions(pool);
+      const normalized = (pool || []).map((q, idx) => ({
+        ...q,
+        id: q.id || q.questionId || `q-${idx}`,
+        title: q.title || q.question || q.questionText || `Question #${idx + 1}`,
+        topic: q.topic || q.category || 'General',
+        companyName: q.companyName || (q.companyId ? q.companyId.toUpperCase() : 'General'),
+        difficulty: q.difficulty || 'Medium',
+        round: q.round || 'Technical',
+        answer: q.answer || q.suggestedAnswer || q.expectedAnswerSnippet || ''
+      }));
+      setQuestions(normalized);
     } catch (err) {
       console.error('Error loading revision questions:', err);
-      setQuestions(getInitialQuestions());
+      const fallback = (getInitialQuestions() || []).map((q, idx) => ({
+        ...q,
+        id: q.id || q.questionId || `q-${idx}`,
+        title: q.title || q.question || q.questionText || `Question #${idx + 1}`,
+        topic: q.topic || q.category || 'General',
+        companyName: q.companyName || (q.companyId ? q.companyId.toUpperCase() : 'General'),
+        difficulty: q.difficulty || 'Medium',
+        round: q.round || 'Technical',
+        answer: q.answer || q.suggestedAnswer || q.expectedAnswerSnippet || ''
+      }));
+      setQuestions(fallback);
     } finally {
       setLoading(false);
     }
@@ -74,9 +94,13 @@ export default function RevisionPage({ onSelectQuestion, onNavigate }) {
   const revisionQuestions = questions.filter(q => revisionIds.includes(q.id));
 
   const filteredQuestions = revisionQuestions.filter(q => {
-    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (q.topic || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (q.companyName || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const titleStr = (q.title || q.question || '').toLowerCase();
+    const topicStr = (q.topic || '').toLowerCase();
+    const compStr = (q.companyName || '').toLowerCase();
+    const searchLower = (searchQuery || '').toLowerCase();
+    const matchesSearch = titleStr.includes(searchLower) ||
+                          topicStr.includes(searchLower) ||
+                          compStr.includes(searchLower);
     const matchesCategory = activeCategory === 'ALL' || q.category === activeCategory || q.round === activeCategory;
     return matchesSearch && matchesCategory;
   });
@@ -235,9 +259,9 @@ export default function RevisionPage({ onSelectQuestion, onNavigate }) {
                         {question.difficulty && (
                           <Badge
                             variant={
-                              question.difficulty.toLowerCase() === 'easy'
+                              (question.difficulty || '').toLowerCase() === 'easy'
                                 ? 'emerald'
-                                : question.difficulty.toLowerCase() === 'medium'
+                                : (question.difficulty || '').toLowerCase() === 'medium'
                                 ? 'amber'
                                 : 'rose'
                             }

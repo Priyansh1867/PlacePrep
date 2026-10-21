@@ -294,17 +294,18 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
   // Filter candidates
   const filteredCandidates = candidates.filter(cand => {
     const matchesRound = selectedRoundFilter === 'all' || cand.currentRound === selectedRoundFilter;
+    const sLower = (searchQuery || '').toLowerCase();
     const matchesSearch = !searchQuery.trim() ||
-      cand.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cand.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cand.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cand.status.toLowerCase().includes(searchQuery.toLowerCase());
+      (cand.name || '').toLowerCase().includes(sLower) ||
+      (cand.college || '').toLowerCase().includes(sLower) ||
+      (cand.companyName || '').toLowerCase().includes(sLower) ||
+      (cand.status || '').toLowerCase().includes(sLower);
     return matchesRound && matchesSearch;
   });
 
   // Filter feedback by role
   const filteredFeedbackList = stakeholderFeedback.filter(fb =>
-    activeFeedbackRole === 'All' || fb.role.toLowerCase() === activeFeedbackRole.toLowerCase()
+    activeFeedbackRole === 'All' || (fb.role || '').toLowerCase() === activeFeedbackRole.toLowerCase()
   );
 
   // All questions for question bank view

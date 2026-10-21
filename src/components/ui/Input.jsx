@@ -4,7 +4,8 @@ export default function Input({
   label,
   error,
   helperText,
-  icon: Icon,
+  icon,
+  leftIcon,
   className = '',
   id,
   type = 'text',
@@ -12,6 +13,7 @@ export default function Input({
   required = false,
   ...props
 }) {
+  const Icon = icon || leftIcon;
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (

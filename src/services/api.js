@@ -331,6 +331,11 @@ export const MockSessionApi = {
     return await request('/mock-sessions/my');
   },
 
+  async getAll(userId = null) {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    return await request(`/mock-sessions${qs}`);
+  },
+
   async saveSession(session) {
     return await request('/mock-sessions', {
       method: 'POST',
@@ -401,3 +406,5 @@ export const FeedbackApi = {
     });
   }
 };
+
+

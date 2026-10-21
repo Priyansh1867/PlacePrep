@@ -4,7 +4,9 @@ export default function Button({
   children,
   variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success'
   size = 'md', // 'sm' | 'md' | 'lg'
-  icon: Icon,
+  icon,
+  leftIcon,
+  rightIcon,
   iconPosition = 'left',
   loading = false,
   disabled = false,
@@ -13,6 +15,8 @@ export default function Button({
   type = 'button',
   ...props
 }) {
+  const Icon = icon || leftIcon || rightIcon;
+  const resolvedIconPosition = rightIcon ? 'right' : iconPosition;
   const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
 
   const sizeStyles = {
@@ -44,9 +48,9 @@ export default function Button({
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
       )}
-      {!loading && Icon && iconPosition === 'left' && <Icon className="w-4 h-4 shrink-0" />}
+      {!loading && Icon && resolvedIconPosition === 'left' && <Icon className="w-4 h-4 shrink-0" />}
       <span>{children}</span>
-      {!loading && Icon && iconPosition === 'right' && <Icon className="w-4 h-4 shrink-0" />}
+      {!loading && Icon && resolvedIconPosition === 'right' && <Icon className="w-4 h-4 shrink-0" />}
     </button>
   );
 }

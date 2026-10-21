@@ -150,8 +150,8 @@ export default function MyApplicationsPage({ onNavigate, onSelectCompany, onOpen
   };
 
   const filteredApps = applications.filter(app => {
-    const matchesSearch = app.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          app.roleTitle.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (app.companyName || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+                          (app.roleTitle || '').toLowerCase().includes((searchQuery || '').toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || app.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

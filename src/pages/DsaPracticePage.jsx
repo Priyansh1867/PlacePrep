@@ -30,6 +30,7 @@ import Input from '../components/ui/Input';
 import ProgressBar from '../components/ui/ProgressBar';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
 import PageHeader from '../components/ui/PageHeader';
 
 const DSA_TOPICS = [
@@ -46,6 +47,7 @@ const DSA_TOPICS = [
 export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('All Topics');
   const [selectedDifficulty, setSelectedDifficulty] = useState('ALL');
@@ -57,19 +59,69 @@ export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await QuestionApi.getAll({ round: 'technical' }).catch(() => []);
       const pool = data && data.length > 0 ? data : getInitialQuestions();
-      // Filter for technical/coding problems
-      const dsaQuestions = pool.filter(q => 
-        q.round === 'technical' || 
-        q.category === 'DSA' || 
-        (q.topic && (q.topic.includes('Array') || q.topic.includes('Tree') || q.topic.includes('Graph') || q.topic.includes('DP') || q.topic.includes('Algorithms') || q.topic.includes('Pointers') || q.topic.includes('Linked List') || q.topic.includes('Recursion')))
-      );
-      setQuestions(dsaQuestions.length > 0 ? dsaQuestions : pool);
+      
+      // Filter and normalize technical/coding problems
+      const normalized = (pool || []).map((q, idx) => {
+        const rawTitle = q.title || q.question || q.questionText || `Coding Problem #${idx + 1}`;
+        const rawCategory = q.category || (Array.isArray(q.skills) && q.skills.length > 0 ? q.skills[0] : 'Algorithms');
+        
+        let derivedTopic = q.topic;
+        if (!derivedTopic) {
+          const lower = (rawTitle + ' ' + rawCategory + ' ' + (Array.isArray(q.skills) ? q.skills.join(' ') : '')).toLowerCase();
+          if (lower.includes('array') || lower.includes('hash')) derivedTopic = 'Arrays & Hashing';
+          else if (lower.includes('pointer') || lower.includes('sliding window')) derivedTopic = 'Two Pointers';
+          else if (lower.includes('linked list') || lower.includes('loop')) derivedTopic = 'Linked Lists';
+          else if (lower.includes('tree') || lower.includes('graph') || lower.includes('bst') || lower.includes('traversal')) derivedTopic = 'Trees & Graphs';
+          else if (lower.includes('dynamic programming') || lower.includes('dp') || lower.includes('knapsack') || lower.includes('memoiz')) derivedTopic = 'Dynamic Programming';
+          else if (lower.includes('stack') || lower.includes('queue')) derivedTopic = 'Stack & Queue';
+          else if (lower.includes('recursion') || lower.includes('backtrack')) derivedTopic = 'Recursion';
+          else derivedTopic = rawCategory;
+        }
+
+        const snippet = q.expectedAnswerSnippet || q.approach || (q.suggestedAnswer ? (q.suggestedAnswer.length > 110 ? q.suggestedAnswer.substring(0, 110) + '...' : q.suggestedAnswer) : '');
+        const compName = q.companyName || (q.companyId ? q.companyId.toUpperCase() : 'General');
+
+        return {
+          ...q,
+          id: q.id || q.questionId || `q-${idx}`,
+          title: rawTitle,
+          topic: derivedTopic,
+          companyName: compName,
+          difficulty: q.difficulty || 'Medium',
+          expectedAnswerSnippet: snippet,
+          skills: Array.isArray(q.skills) ? q.skills : []
+        };
+      });
+
+      const dsaQuestions = normalized.filter(q => {
+        const cat = (q.category || '').toLowerCase();
+        const round = (q.round || '').toLowerCase();
+        const title = (q.title || '').toLowerCase();
+        return round === 'technical' || 
+               cat.includes('dsa') || 
+               cat.includes('data structure') || 
+               cat.includes('algorithm') ||
+               title.includes('array') || title.includes('list') || title.includes('tree') || title.includes('graph') || title.includes('dp');
+      });
+
+      setQuestions(dsaQuestions.length > 0 ? dsaQuestions : normalized);
     } catch (err) {
       console.error('Failed to load DSA questions:', err);
-      setQuestions(getInitialQuestions());
+      setError('Failed to load DSA coding questions. Please check your connection.');
+      const fallback = (getInitialQuestions() || []).map((q, idx) => ({
+        ...q,
+        id: q.id || `q-${idx}`,
+        title: q.title || q.question || 'Coding Problem',
+        topic: q.category || 'Algorithms',
+        companyName: q.companyId ? q.companyId.toUpperCase() : 'General',
+        difficulty: q.difficulty || 'Medium',
+        expectedAnswerSnippet: q.approach || ''
+      }));
+      setQuestions(fallback);
     } finally {
       setLoading(false);
     }
@@ -96,16 +148,26 @@ export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
   };
 
   const filteredQuestions = useMemo(() => {
+    const qLower = searchQuery.toLowerCase().trim();
     return questions.filter(q => {
-      const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (q.topic || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (q.companyName || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const title = (q.title || '').toLowerCase();
+      const topic = (q.topic || '').toLowerCase();
+      const company = (q.companyName || '').toLowerCase();
+      const skillsStr = (Array.isArray(q.skills) ? q.skills.join(' ') : '').toLowerCase();
+
+      const matchesSearch = !qLower || 
+                            title.includes(qLower) || 
+                            topic.includes(qLower) || 
+                            company.includes(qLower) ||
+                            skillsStr.includes(qLower);
       
       const matchesTopic = selectedTopic === 'All Topics' ? true : 
-        (q.topic && q.topic.toLowerCase().includes(selectedTopic.toLowerCase().split(' ')[0]));
+        topic.includes(selectedTopic.toLowerCase().split(' ')[0]) ||
+        title.includes(selectedTopic.toLowerCase().split(' ')[0]) ||
+        skillsStr.includes(selectedTopic.toLowerCase().split(' ')[0]);
 
       const matchesDiff = selectedDifficulty === 'ALL' ? true :
-        (q.difficulty && q.difficulty.toUpperCase() === selectedDifficulty);
+        ((q.difficulty || '').toUpperCase() === selectedDifficulty.toUpperCase());
 
       return matchesSearch && matchesTopic && matchesDiff;
     });
@@ -113,17 +175,18 @@ export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
 
   // Statistics
   const totalCount = questions.length;
-  const practicedCount = questions.filter(q => practicedIds.includes(q.id)).length;
+  const isQuestionPracticed = (q) => practicedIds.includes(q.id) || (q.questionId && practicedIds.includes(q.questionId));
+  const practicedCount = questions.filter(isQuestionPracticed).length;
   const progressPercent = totalCount > 0 ? Math.round((practicedCount / totalCount) * 100) : 0;
 
-  const easyCount = questions.filter(q => q.difficulty?.toLowerCase() === 'easy');
-  const easyPracticed = easyCount.filter(q => practicedIds.includes(q.id)).length;
+  const easyCount = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy');
+  const easyPracticed = easyCount.filter(isQuestionPracticed).length;
 
-  const medCount = questions.filter(q => q.difficulty?.toLowerCase() === 'medium');
-  const medPracticed = medCount.filter(q => practicedIds.includes(q.id)).length;
+  const medCount = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium');
+  const medPracticed = medCount.filter(isQuestionPracticed).length;
 
-  const hardCount = questions.filter(q => q.difficulty?.toLowerCase() === 'hard');
-  const hardPracticed = hardCount.filter(q => practicedIds.includes(q.id)).length;
+  const hardCount = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard');
+  const hardPracticed = hardCount.filter(isQuestionPracticed).length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
@@ -271,7 +334,13 @@ export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
       </Card>
 
       {/* Questions List */}
-      {loading ? (
+      {error && questions.length === 0 ? (
+        <ErrorState
+          title="Unable to Load DSA Problems"
+          message={error}
+          onRetry={loadData}
+        />
+      ) : loading ? (
         <div className="space-y-4">
           <Skeleton className="h-24 rounded-2xl" />
           <Skeleton className="h-24 rounded-2xl" />
@@ -298,8 +367,8 @@ export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
       ) : (
         <div className="space-y-3.5">
           {filteredQuestions.map((q) => {
-            const isPracticed = practicedIds.includes(q.id);
-            const isRevision = revisionIds.includes(q.id);
+            const isPracticed = practicedIds.includes(q.id) || (q.questionId && practicedIds.includes(q.questionId));
+            const isRevision = revisionIds.includes(q.id) || (q.questionId && revisionIds.includes(q.questionId));
 
             return (
               <Card
@@ -325,9 +394,9 @@ export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
                         {q.difficulty && (
                           <Badge
                             variant={
-                              q.difficulty.toLowerCase() === 'easy'
+                              (q.difficulty || '').toLowerCase() === 'easy'
                                 ? 'emerald'
-                                : q.difficulty.toLowerCase() === 'medium'
+                                : (q.difficulty || '').toLowerCase() === 'medium'
                                 ? 'amber'
                                 : 'rose'
                             }

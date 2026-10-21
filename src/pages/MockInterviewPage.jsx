@@ -23,9 +23,11 @@ import {
   getCompanies, 
   getInterviewQuestions, 
   saveMockSession, 
-  getGraduationBatch 
+  getGraduationBatch,
+  getCurrentUser
 } from '../services/storage';
 import { evaluateStudentAnswer } from '../services/aiEngine';
+import { MockSessionApi, QuestionApi } from '../services/api';
 
 export default function MockInterviewPage({ initialCompany, initialRound, onFinish }) {
   const companies = getCompanies();
@@ -48,13 +50,21 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || companies[0];
 
-  const startInterview = () => {
-    const all = getInterviewQuestions();
-    const filtered = all.filter(q => q.companyId === selectedCompanyId && q.round === selectedRound);
+  const startInterview = async () => {
+    let all = getInterviewQuestions();
+    try {
+      const serverQs = await QuestionApi.getAll({ companyId: selectedCompanyId, round: selectedRound });
+      if (Array.isArray(serverQs) && serverQs.length > 0) {
+        all = serverQs;
+      }
+    } catch {
+      // fallback to storage
+    }
+    const filtered = all.filter(q => (q.companyId === selectedCompanyId || !q.companyId) && q.round === selectedRound);
     const pool = filtered.length > 0 ? filtered : all.filter(q => q.round === selectedRound);
 
     // Pick 3 questions
-    const picked = pool.slice(0, 3);
+    const picked = (pool.length > 0 ? pool : all).slice(0, 3);
     setQuestionsList(picked);
     setCurrentQIndex(0);
     setStudentInput('');
@@ -109,6 +119,12 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
       };
 
       saveMockSession(newSession);
+      const user = getCurrentUser();
+      if (user) {
+        MockSessionApi.saveSession(newSession).catch(err => {
+          console.warn('Backend mock session sync deferred to local cache:', err);
+        });
+      }
       setSessionComplete(true);
     }
   };

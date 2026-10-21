@@ -27,8 +27,10 @@ import {
   toggleSavedQuestion, 
   getRevisionList, 
   toggleRevisionQuestion,
-  getCompanies
+  getCompanies,
+  getCurrentUser
 } from '../services/storage';
+import { UserApi } from '../services/api';
 
 export default function QuestionPrepPage({ 
   initialQuestion, 
@@ -85,16 +87,28 @@ export default function QuestionPrepPage({
   const handleTogglePractice = () => {
     const res = togglePracticedQuestion(currentQ.id);
     setIsPracticed(res);
+    const user = getCurrentUser();
+    if (user && currentQ?.id) {
+      UserApi.togglePracticedQuestion(currentQ.id).catch(() => {});
+    }
   };
 
   const handleToggleSave = () => {
     const res = toggleSavedQuestion(currentQ.id);
     setIsSaved(res);
+    const user = getCurrentUser();
+    if (user && currentQ?.id) {
+      UserApi.toggleSavedQuestion(currentQ.id).catch(() => {});
+    }
   };
 
   const handleToggleRevision = () => {
     const res = toggleRevisionQuestion(currentQ.id);
     setIsRevision(res);
+    const user = getCurrentUser();
+    if (user && currentQ?.id) {
+      UserApi.toggleRevisionQuestion(currentQ.id).catch(() => {});
+    }
   };
 
   const handleCopyAnswer = () => {

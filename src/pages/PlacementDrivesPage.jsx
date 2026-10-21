@@ -87,16 +87,20 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
   };
 
   const getApplicationForDrive = (drive) => {
+    if (!drive) return null;
     const id = drive.driveId || drive.id;
-    return applications.find(a => a.driveId === id || a.companyName.toLowerCase() === drive.companyName.toLowerCase());
+    return applications.find(a => 
+      (id && a.driveId === id) || 
+      (a.companyName && drive.companyName && a.companyName.toLowerCase() === drive.companyName.toLowerCase())
+    );
   };
 
   const filteredDrives = useMemo(() => {
     return drives.filter(d => {
       const matchBatch = selectedBatchFilter === 'all' || 
         (d.eligibleBatches && (d.eligibleBatches.includes(selectedBatchFilter) || d.eligibleBatches.includes(Number(selectedBatchFilter))));
-      const matchSearch = d.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          d.role.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSearch = (d.companyName || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+                          (d.role || '').toLowerCase().includes((searchQuery || '').toLowerCase());
       const matchStatus = statusFilter === 'all' ? true : (d.status || '').toLowerCase().includes(statusFilter);
       return matchBatch && matchSearch && matchStatus;
     });

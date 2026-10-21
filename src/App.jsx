@@ -26,6 +26,8 @@ import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminPage from './pages/AdminPage';
 import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
+import AcademicProfilePage from './pages/AcademicProfilePage';
+import MyApplicationsPage from './pages/MyApplicationsPage';
 
 import { getCompanies } from './services/storage';
 
@@ -295,6 +297,22 @@ export default function App() {
         {/* 15. ACADEMIC RECORDS */}
         {currentRoute === 'academic-records' && (
           <AcademicRecordsPage />
+        )}
+
+        {/* 16. ACADEMIC PROFILE & TRANSCRIPT */}
+        {currentRoute === 'academic-profile' && (
+          <AcademicProfilePage
+            onNavigate={setCurrentRoute}
+          />
+        )}
+
+        {/* 17. SELECTION ROUND TRACKER & MY APPLICATIONS */}
+        {(currentRoute === 'applications' || currentRoute === 'selection-tracker') && (
+          <MyApplicationsPage
+            onNavigate={setCurrentRoute}
+            onSelectCompany={handleSelectCompany}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          />
         )}
 
         {/* 16. SUPER ADMIN (Full CRUD) */}

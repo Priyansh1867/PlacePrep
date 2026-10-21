@@ -68,13 +68,15 @@ export default function Navbar({
   };
 
   const moreModules = [
-    { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
-    { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
-    { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },
+    { id: 'applications', label: 'Selection Round Tracker', desc: 'Live candidate pipeline: Applied → Aptitude → Technical → HR', icon: ClipboardCheck, isNew: true },
+    { id: 'academic-profile', label: 'Academic Profile & SGPA', desc: 'Roll number, branch, semester marksheets & backlog status', icon: GraduationCap, isNew: true },
+    { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles },
     { id: 'drives', label: 'Placement Drives', desc: 'Campus drive schedules, packages & criteria', icon: Briefcase },
     { id: 'prep', label: 'Question Bank', desc: 'Technical, Aptitude & Company rounds', icon: BookOpen },
-    { id: 'experiences', label: 'Interview Experiences', desc: 'Senior student placement debriefs', icon: MessageSquare },
     { id: 'mock-interview', label: 'AI Mock Interview', desc: 'Real-time voice & text interview simulation', icon: Bot, isNew: true },
+    { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
+    { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },
+    { id: 'experiences', label: 'Interview Experiences', desc: 'Senior student placement debriefs', icon: MessageSquare },
   ];
 
   return (
@@ -288,7 +290,21 @@ export default function Navbar({
                     className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
                   >
                     <User className="w-3.5 h-3.5 text-indigo-600" />
-                    My Student Profile
+                    Student Dashboard
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('academic-profile')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+                    Academic Profile & Marksheets
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('applications')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <ClipboardCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    Selection Round Tracker
                   </button>
                   <button
                     onClick={() => handleNavigate('admin')}

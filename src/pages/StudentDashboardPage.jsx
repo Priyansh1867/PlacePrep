@@ -232,10 +232,29 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
               {user?.college || 'SRM Institute of Science & Tech'} • {user?.branch || 'Computer Science & Engineering'}
             </p>
 
-            <div className="mt-3 flex flex-wrap gap-2 text-xs font-mono">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-mono">
               <span className="px-2.5 py-1 rounded-lg bg-white/10 text-indigo-100 border border-white/15">
-                Target Recruiters: {displayTargetCompanies.map(c => c.name).join(', ') || 'HCLTech, TCS, Infosys'}
+                Roll: <strong className="text-white">{user?.rollNumber || '22CS0101'}</strong>
               </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-indigo-100 border border-white/15">
+                CGPA: <strong className="text-emerald-300">8.84 / 10.0</strong> (0 Backlogs)
+              </span>
+              <button
+                onClick={() => onNavigate('academic-profile')}
+                className="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold transition flex items-center gap-1 cursor-pointer"
+                title="View complete semester marksheets and CGPA"
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Academic Profile</span>
+              </button>
+              <button
+                onClick={() => onNavigate('applications')}
+                className="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold transition flex items-center gap-1 cursor-pointer"
+                title="View live selection round progress pipeline"
+              >
+                <FileCheck2 className="w-3.5 h-3.5" />
+                <span>Selection Tracker</span>
+              </button>
             </div>
           </div>
         </div>
@@ -537,13 +556,23 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
                 Active candidate registration passes, scheduled interview stages, and reporting guidelines.
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onNavigate('drives')}
-            >
-              Manage in Placement Suite →
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="primary"
+                icon={FileCheck2}
+                onClick={() => onNavigate('applications')}
+              >
+                Live Selection Tracker →
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onNavigate('drives')}
+              >
+                Manage Drives
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

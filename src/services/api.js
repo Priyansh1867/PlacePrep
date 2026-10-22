@@ -474,3 +474,61 @@ export const ScheduleConflictApi = {
     return await request('/schedules/conflicts/drives');
   }
 };
+
+// 14. Daily Class & CRT Attendance Portal API
+export const AttendanceApi = {
+  async findOrCreateClassSession(session) {
+    return await request('/attendance/class/sessions/find-or-create', {
+      method: 'POST',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async markClassAttendance(sessionId, records) {
+    return await request(`/attendance/class/sessions/${sessionId}/mark`, {
+      method: 'POST',
+      body: JSON.stringify(records)
+    });
+  },
+
+  async getSessionRecords(sessionId) {
+    return await request(`/attendance/class/sessions/${sessionId}/records`);
+  },
+
+  async getClassAttendanceReport({ department, semester, subjectCode, targetDate }) {
+    const params = new URLSearchParams();
+    if (department) params.append('department', department);
+    if (semester) params.append('semester', semester);
+    if (subjectCode) params.append('subjectCode', subjectCode);
+    if (targetDate) params.append('targetDate', targetDate);
+    return await request(`/attendance/class/report?${params.toString()}`);
+  },
+
+  async getClassRoster({ department, semester }) {
+    const params = new URLSearchParams();
+    if (department) params.append('department', department);
+    if (semester) params.append('semester', semester);
+    return await request(`/attendance/class/roster?${params.toString()}`);
+  },
+
+  async getStudentSummary(studentId) {
+    return await request(`/attendance/student/${encodeURIComponent(studentId)}/summary`);
+  },
+
+  async getCrtSessions(targetBatch) {
+    const url = targetBatch ? `/attendance/crt/sessions?targetBatch=${encodeURIComponent(targetBatch)}` : '/attendance/crt/sessions';
+    return await request(url);
+  },
+
+  async markCrtAttendance(sessionId, records) {
+    return await request(`/attendance/crt/sessions/${sessionId}/mark`, {
+      method: 'POST',
+      body: JSON.stringify(records)
+    });
+  },
+
+  async getStudentCrtSummary(studentId) {
+    return await request(`/attendance/crt/student/${encodeURIComponent(studentId)}`);
+  }
+};
+

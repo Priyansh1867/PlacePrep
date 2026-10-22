@@ -46,6 +46,7 @@ import {
   broadcastPushNotification
 } from '../services/storage';
 import PortalModuleCards from '../components/PortalModuleCards';
+import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const currentUser = getCurrentUser();
@@ -531,38 +532,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 5: CLASS ATTENDANCE */}
+        {/* TAB 5: CLASS ATTENDANCE (Teacher & HOD Daily Class Attendance Portal) */}
         {activeTab === 'class-attendance' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-2">Semester Academic Subject Attendance</h3>
-              <p className="text-xs text-slate-500 mb-6">Real-time attendance record submitted by department subject professors.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {classAttendance.map((item, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-xs">
-                          {item.subjectCode}
-                        </span>
-                        <span className={`text-xs font-bold ${item.percentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {item.percentage}%
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-slate-900 text-sm">{item.subjectName}</h4>
-                      <p className="text-xs text-slate-500 mt-1">Faculty: {item.teacher}</p>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-500">
-                      <span>Attended: {item.attended} / {item.totalClasses} classes</span>
-                      <span className="font-semibold text-emerald-600">{item.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <DailyAttendancePortalView onNavigate={onNavigate} />
         )}
 
         {/* TAB 6: RESUME STATUS (ATS) */}

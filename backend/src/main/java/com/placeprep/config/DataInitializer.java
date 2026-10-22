@@ -1,9 +1,13 @@
 package com.placeprep.config;
 
+import com.placeprep.model.ClassAttendanceRecord;
+import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.Company;
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.StudentApplication;
 import com.placeprep.model.User;
+import com.placeprep.repository.ClassAttendanceRecordRepository;
+import com.placeprep.repository.ClassAttendanceSessionRepository;
 import com.placeprep.repository.CompanyRepository;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
@@ -23,7 +27,9 @@ public class DataInitializer {
             CompanyRepository companyRepository,
             PlacementDriveRepository driveRepository,
             StudentApplicationRepository applicationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ClassAttendanceSessionRepository classSessionRepository,
+            ClassAttendanceRecordRepository classRecordRepository
     ) {
         return args -> {
             if (userRepository.count() == 0) {
@@ -35,8 +41,38 @@ public class DataInitializer {
                 demoUser.setBranch("Computer Science and Engineering");
                 demoUser.setGraduationBatch("2028");
                 demoUser.setRole("student");
+                demoUser.setRollNumber("22CS0101");
                 demoUser.setOnboardingCompleted(true);
                 userRepository.save(demoUser);
+            }
+
+            // Seed faculty users if not existing
+            if (userRepository.findByEmail("teacher@placeprep.com").isEmpty()) {
+                User teacher = new User();
+                teacher.setName("Dr. Neha Sharma");
+                teacher.setEmail("teacher@placeprep.com");
+                teacher.setPassword("demo123");
+                teacher.setCollege("Delhi Technological University (DTU)");
+                teacher.setBranch("Computer Science and Engineering");
+                teacher.setGraduationBatch("2026");
+                teacher.setRole("teacher");
+                teacher.setRollNumber("FAC-CSE-042");
+                teacher.setOnboardingCompleted(true);
+                userRepository.save(teacher);
+            }
+
+            if (userRepository.findByEmail("hod@placeprep.com").isEmpty()) {
+                User hod = new User();
+                hod.setName("Prof. Alok Verma");
+                hod.setEmail("hod@placeprep.com");
+                hod.setPassword("demo123");
+                hod.setCollege("Delhi Technological University (DTU)");
+                hod.setBranch("Computer Science and Engineering");
+                hod.setGraduationBatch("2026");
+                hod.setRole("hod");
+                hod.setRollNumber("HOD-CSE-001");
+                hod.setOnboardingCompleted(true);
+                userRepository.save(hod);
             }
 
             if (companyRepository.count() == 0) {
@@ -197,6 +233,53 @@ public class DataInitializer {
                 app1.setConflictFlagged(true);
                 app1.setConflictReason("Schedule collision detected: Overlaps with Accenture Virtual Assessment slot on 2026-11-18.");
                 applicationRepository.save(app1);
+            }
+
+            if (classSessionRepository.count() == 0) {
+                String[][] sampleSessions = {
+                    {"2026-10-15", "2", "Cloud Computing Architectures"},
+                    {"2026-10-17", "3", "Virtualization & Containerization with Docker"},
+                    {"2026-10-19", "1", "Microservices & Kubernetes Orchestration"},
+                    {"2026-10-21", "4", "Serverless Computing & Cloud Storage Security"}
+                };
+
+                String[][] rosterData = {
+                    {"22CS0101", "Priyansh Jain", "priyansh.jain@example.edu", "PRESENT", "PRESENT", "PRESENT", "PRESENT"},
+                    {"22CS0102", "Ananya Sharma", "ananya.sharma@example.edu", "PRESENT", "ABSENT", "PRESENT", "PRESENT"},
+                    {"22CS0103", "Rohan Kulkarni", "rohan.kulkarni@example.edu", "ABSENT", "PRESENT", "ABSENT", "PRESENT"},
+                    {"22CS0104", "Siddharth Nair", "siddharth.nair@example.edu", "PRESENT", "PRESENT", "PRESENT", "LATE"},
+                    {"22CS0105", "Meera Venkat", "meera.venkat@example.edu", "ABSENT", "ABSENT", "ABSENT", "PRESENT"},
+                    {"22CS0106", "Kabir Mehta", "kabir.mehta@example.edu", "PRESENT", "LATE", "ABSENT", "PRESENT"},
+                    {"22CS0107", "Divya Reddy", "divya.reddy@example.edu", "PRESENT", "PRESENT", "PRESENT", "PRESENT"},
+                    {"22CS0108", "Aarav Gupta", "aarav.gupta@example.edu", "PRESENT", "ABSENT", "ABSENT", "PRESENT"}
+                };
+
+                for (int sIdx = 0; sIdx < sampleSessions.length; sIdx++) {
+                    ClassAttendanceSession sess = new ClassAttendanceSession();
+                    sess.setDepartment("CSE");
+                    sess.setSemester("6");
+                    sess.setSubjectCode("CS306");
+                    sess.setSubjectName("Cloud Computing & Distributed Systems");
+                    sess.setSection("A");
+                    sess.setSessionDate(sampleSessions[sIdx][0]);
+                    sess.setPeriodNumber(Integer.parseInt(sampleSessions[sIdx][1]));
+                    sess.setFacultyId("FAC-CSE-042");
+                    sess.setFacultyName("Dr. Neha Sharma");
+                    sess.setCreatedAt(sampleSessions[sIdx][0] + " 09:00");
+                    ClassAttendanceSession savedSession = classSessionRepository.save(sess);
+
+                    for (String[] stu : rosterData) {
+                        ClassAttendanceRecord rec = new ClassAttendanceRecord();
+                        rec.setSessionId(savedSession.getId());
+                        rec.setStudentId(stu[2]);
+                        rec.setStudentRollNumber(stu[0]);
+                        rec.setStudentName(stu[1]);
+                        rec.setStatus(stu[3 + sIdx]);
+                        rec.setRemarks("LATE".equalsIgnoreCase(stu[3 + sIdx]) ? "Arrived 10 mins late" : null);
+                        rec.setRecordedAt(sampleSessions[sIdx][0] + " 09:15");
+                        classRecordRepository.save(rec);
+                    }
+                }
             }
         };
     }

@@ -66,6 +66,45 @@ public class AttendanceController {
         }
     }
 
+    @PostMapping("/class/sessions/find-or-create")
+    public ResponseEntity<?> findOrCreateClassSession(@RequestBody ClassAttendanceSession session) {
+        try {
+            ClassAttendanceSession res = attendanceService.findOrCreateClassSession(session);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/class/sessions/{sessionId}/records")
+    public ResponseEntity<List<ClassAttendanceRecord>> getSessionRecords(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(attendanceService.getSessionRecords(sessionId));
+    }
+
+    @GetMapping("/class/report")
+    public ResponseEntity<?> getClassAttendanceReport(
+            @RequestParam(required = false, defaultValue = "CSE") String department,
+            @RequestParam(required = false, defaultValue = "6") String semester,
+            @RequestParam(required = false, defaultValue = "CS306") String subjectCode,
+            @RequestParam(required = false) String targetDate
+    ) {
+        try {
+            Map<String, Object> report = attendanceService.getClassAttendanceReport(department, semester, subjectCode, targetDate);
+            return ResponseEntity.ok(report);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/class/roster")
+    public ResponseEntity<List<Map<String, Object>>> getClassRoster(
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String semester
+    ) {
+        return ResponseEntity.ok(attendanceService.getClassRoster(department, semester));
+    }
+
     @GetMapping("/student/{studentId}/summary")
     public ResponseEntity<?> getStudentAttendanceSummary(@PathVariable String studentId) {
         try {

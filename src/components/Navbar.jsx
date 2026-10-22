@@ -21,7 +21,8 @@ import {
   Layers,
   LogIn,
   Compass,
-  ArrowRight
+  ArrowRight,
+  FileCheck
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -68,6 +69,7 @@ export default function Navbar({
   };
 
   const moreModules = [
+    { id: 'resume-ats', label: 'ATS Resume Checker', desc: 'Score compatibility, match keywords & audit against JD', icon: FileCheck, isNew: true },
     { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
     { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
     { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },
@@ -141,7 +143,7 @@ export default function Navbar({
             <button
               onClick={() => setExploreDropdownOpen(!exploreDropdownOpen)}
               className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
-                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview'].includes(currentRoute)
+                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'resume-ats'].includes(currentRoute)
                   ? 'bg-black/[0.06] text-[#111439] font-semibold'
                   : 'hover:text-[#111439] hover:bg-black/[0.04]'
               }`}
@@ -289,6 +291,13 @@ export default function Navbar({
                   >
                     <User className="w-3.5 h-3.5 text-indigo-600" />
                     My Student Profile
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('resume-ats')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    ATS Resume Checker
                   </button>
                   <button
                     onClick={() => handleNavigate('admin')}

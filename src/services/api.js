@@ -26,8 +26,9 @@ export function setAuthToken(token) {
 
 export async function request(endpoint, options = {}) {
   const token = getAuthToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };
@@ -472,5 +473,18 @@ export const ScheduleConflictApi = {
   },
   async getDriveConflicts() {
     return await request('/schedules/conflicts/drives');
+  }
+};
+
+// 14. Resume ATS Compatibility API
+export const ResumeAtsApi = {
+  async analyze(formData) {
+    return await request('/resume-ats/analyze', {
+      method: 'POST',
+      body: formData
+    });
+  },
+  async getSampleJds() {
+    return await request('/resume-ats/sample-jds');
   }
 };

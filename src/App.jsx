@@ -26,6 +26,7 @@ import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminPage from './pages/AdminPage';
 import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
+import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
 
 import { getCompanies } from './services/storage';
 
@@ -300,6 +301,14 @@ export default function App() {
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
           <AdminPage />
+        )}
+
+        {/* 17. RESUME ATS COMPATIBILITY CHECKER */}
+        {currentRoute === 'resume-ats' && (
+          <ResumeAtsCheckerPage
+            onNavigate={setCurrentRoute}
+            onSelectCompany={handleSelectCompany}
+          />
         )}
 
       </main>

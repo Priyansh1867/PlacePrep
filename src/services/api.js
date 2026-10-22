@@ -474,3 +474,110 @@ export const ScheduleConflictApi = {
     return await request('/schedules/conflicts/drives');
   }
 };
+
+// 14. Daily Class & CRT Attendance Portal API
+export const AttendanceApi = {
+  async findOrCreateClassSession(session) {
+    return await request('/attendance/class/sessions/find-or-create', {
+      method: 'POST',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async markClassAttendance(sessionId, records) {
+    return await request(`/attendance/class/sessions/${sessionId}/mark`, {
+      method: 'POST',
+      body: JSON.stringify(records)
+    });
+  },
+
+  async getSessionRecords(sessionId) {
+    return await request(`/attendance/class/sessions/${sessionId}/records`);
+  },
+
+  async getClassAttendanceReport({ department, semester, subjectCode, targetDate }) {
+    const params = new URLSearchParams();
+    if (department) params.append('department', department);
+    if (semester) params.append('semester', semester);
+    if (subjectCode) params.append('subjectCode', subjectCode);
+    if (targetDate) params.append('targetDate', targetDate);
+    return await request(`/attendance/class/report?${params.toString()}`);
+  },
+
+  async getClassRoster({ department, semester }) {
+    const params = new URLSearchParams();
+    if (department) params.append('department', department);
+    if (semester) params.append('semester', semester);
+    return await request(`/attendance/class/roster?${params.toString()}`);
+  },
+
+  async getStudentSummary(studentId) {
+    return await request(`/attendance/student/${encodeURIComponent(studentId)}/summary`);
+  },
+
+  async getCrtSessions(params = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.targetBatch) searchParams.append('targetBatch', params.targetBatch);
+    if (params.department) searchParams.append('department', params.department);
+    if (params.status) searchParams.append('status', params.status);
+    const qs = searchParams.toString();
+    return await request(`/attendance/crt/sessions${qs ? `?${qs}` : ''}`);
+  },
+
+  async getCrtSessionById(sessionId) {
+    return await request(`/attendance/crt/sessions/${sessionId}`);
+  },
+
+  async createCrtSession(session) {
+    return await request('/attendance/crt/sessions', {
+      method: 'POST',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async updateCrtSession(sessionId, session) {
+    return await request(`/attendance/crt/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async updateCrtSessionStatus(sessionId, status) {
+    return await request(`/attendance/crt/sessions/${sessionId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  },
+
+  async getCrtSessionRoster(sessionId) {
+    return await request(`/attendance/crt/sessions/${sessionId}/roster`);
+  },
+
+  async markCrtAttendance(sessionId, records) {
+    return await request(`/attendance/crt/sessions/${sessionId}/mark`, {
+      method: 'POST',
+      body: JSON.stringify(records)
+    });
+  },
+
+  async getCrtSessionRecords(sessionId) {
+    return await request(`/attendance/crt/sessions/${sessionId}/records`);
+  },
+
+  async getCrtSessionReport(sessionId) {
+    return await request(`/attendance/crt/report/session/${sessionId}`);
+  },
+
+  async getCrtCumulativeReport({ targetBatch, department } = {}) {
+    const params = new URLSearchParams();
+    if (targetBatch) params.append('targetBatch', targetBatch);
+    if (department) params.append('department', department);
+    const qs = params.toString();
+    return await request(`/attendance/crt/report/cumulative${qs ? `?${qs}` : ''}`);
+  },
+
+  async getStudentCrtSummary(studentId) {
+    return await request(`/attendance/crt/student/${encodeURIComponent(studentId)}`);
+  }
+};
+

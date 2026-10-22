@@ -26,6 +26,8 @@ import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminPage from './pages/AdminPage';
 import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
+import DailyAttendancePage from './pages/DailyAttendancePage';
+import CrtAttendancePage from './pages/CrtAttendancePage';
 
 import { getCompanies } from './services/storage';
 
@@ -300,6 +302,16 @@ export default function App() {
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
           <AdminPage />
+        )}
+
+        {/* 17. TEACHER & HOD DAILY CLASS ATTENDANCE PORTAL */}
+        {(currentRoute === 'attendance' || currentRoute === 'daily-attendance' || currentRoute === 'class-attendance') && (
+          <DailyAttendancePage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 18. CRT TRAINING ATTENDANCE & ELIGIBILITY PORTAL */}
+        {(currentRoute === 'crt-attendance' || currentRoute === 'crt-training-attendance') && (
+          <CrtAttendancePage onNavigate={setCurrentRoute} />
         )}
 
       </main>

@@ -12,4 +12,5 @@ public interface CrtAttendanceRecordRepository extends JpaRepository<CrtAttendan
     List<CrtAttendanceRecord> findByCrtSessionId(Long crtSessionId);
     List<CrtAttendanceRecord> findByStudentId(String studentId);
     Optional<CrtAttendanceRecord> findByCrtSessionIdAndStudentId(Long crtSessionId, String studentId);
+    void deleteByCrtSessionId(Long crtSessionId);
 }

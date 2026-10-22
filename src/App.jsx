@@ -29,6 +29,7 @@ import AcademicRecordsPage from './pages/AcademicRecordsPage';
 import DailyAttendancePage from './pages/DailyAttendancePage';
 import CrtAttendancePage from './pages/CrtAttendancePage';
 import ReportsExporterPage from './pages/ReportsExporterPage';
+import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
 
 import { getCompanies } from './services/storage';
 
@@ -318,6 +319,11 @@ export default function App() {
         {/* 19. REPORTS EXPORTER (DRIVE ELIGIBILITY, PLACEMENTS & ATTENDANCE) */}
         {(currentRoute === 'reports' || currentRoute === 'reports-exporter') && (
           <ReportsExporterPage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 20. HOD CURRICULUM & SYLLABUS GOVERNANCE */}
+        {(currentRoute === 'curriculum-governance' || currentRoute === 'syllabus-governance') && (
+          <CurriculumGovernancePage onNavigate={setCurrentRoute} />
         )}
 
       </main>

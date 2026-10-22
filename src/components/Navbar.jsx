@@ -71,6 +71,7 @@ export default function Navbar({
   };
 
   const moreModules = [
+    { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', desc: 'HOD department syllabus delivery, labs & internal assessments', icon: GraduationCap, isNew: true },
     { id: 'reports-exporter', label: 'Reports Exporter', desc: 'Download Drive Eligibility, Placed Students & Attendance', icon: FileSpreadsheet, isNew: true },
     { id: 'attendance', label: 'Daily Class Attendance', desc: 'Teacher & HOD speed attendance marking portal', icon: UserCheck, isNew: true },
     { id: 'crt-attendance', label: 'CRT Training Attendance', desc: 'Pre-placement training, attendance & certificate eligibility', icon: Award, isNew: true },

@@ -51,12 +51,17 @@ import DailyAttendancePortalView from '../components/attendance/DailyAttendanceP
 import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
 import BulkImportModal from '../components/BulkImportModal';
 import ReportsExporterPage from './ReportsExporterPage';
+import CurriculumGovernanceView from '../components/curriculum/CurriculumGovernanceView';
 import { registerSingleStudent } from '../services/studentRegistrationService';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const currentUser = getCurrentUser();
-  const [activeTab, setActiveTab] = useState(currentUser.role === 'student' ? 'upcoming-drives' : 'student-data'); 
-  // 'student-data', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus', 'reports-exporter'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (currentUser.role === 'student') return 'upcoming-drives';
+    if (currentUser.role === 'hod') return 'curriculum-governance';
+    return 'student-data';
+  }); 
+  // 'student-data', 'curriculum-governance', 'reports-exporter', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus'
   
   const studentBatch = getGraduationBatch();
   const isFinalYear = studentBatch === '2025' || studentBatch === '2026';
@@ -139,6 +144,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   const navTabs = [
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'hod'] },
+    { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
     { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'hod'] },
     { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives.length}` },
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
@@ -146,11 +152,29 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus.atsScore}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
-    { id: 'hackathons', label: 'Hackathons', icon: Code2 },
-    { id: 'internships', label: 'Internships', icon: Award },
-    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true }
+    { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'hod'] },
+    { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'hod'] },
+    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'hod'] }
   ];
-  const visibleNavTabs = navTabs.filter((tab) => !tab.roles || tab.roles.includes(currentUser.role || 'student'));
+
+  const userRole = currentUser.role || 'student';
+  const visibleNavTabs = navTabs.filter((tab) => {
+    if (tab.excludedRoles && tab.excludedRoles.includes(userRole)) {
+      return false;
+    }
+    if (tab.roles && !tab.roles.includes(userRole)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Guard activeTab against unauthorized/hidden tabs for current role
+  useEffect(() => {
+    const isAllowed = visibleNavTabs.some((tab) => tab.id === activeTab);
+    if (!isAllowed && visibleNavTabs.length > 0) {
+      setActiveTab(visibleNavTabs[0].id);
+    }
+  }, [userRole, visibleNavTabs, activeTab]);
 
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
@@ -858,6 +882,11 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         {/* TAB: REPORTS EXPORTER */}
         {activeTab === 'reports-exporter' && (
           <ReportsExporterPage onNavigate={onNavigate} />
+        )}
+
+        {/* TAB: CURRICULUM & SYLLABUS GOVERNANCE (HOD ONLY) */}
+        {activeTab === 'curriculum-governance' && (
+          <CurriculumGovernanceView onNavigate={onNavigate} />
         )}
 
       </div>

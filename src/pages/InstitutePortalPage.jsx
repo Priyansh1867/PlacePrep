@@ -22,12 +22,13 @@ import {
   Download,
   ExternalLink,
   Code2,
-  Briefcase,
   HelpCircle,
   FileCheck,
   CheckSquare,
   Flame,
-  Plus
+  Plus,
+  Briefcase,
+  FileSpreadsheet
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -80,6 +81,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   // Student Registration Modal Form State
   const [isRegisterStudentModalOpen, setIsRegisterStudentModalOpen] = useState(false);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const [newStudentForm, setNewStudentForm] = useState({
     name: '',
     email: '',
@@ -89,6 +91,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     cgpa: '8.5'
   });
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
+  const [registrationErrorMsg, setRegistrationErrorMsg] = useState('');
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -109,9 +112,23 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   const handleRegisterStudent = (e) => {
     e.preventDefault();
-    setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in Institute records!`);
-    setIsRegisterStudentModalOpen(false);
-    setTimeout(() => setRegistrationSuccessMsg(''), 5000);
+    setRegistrationErrorMsg('');
+    const res = registerSingleStudent(newStudentForm, currentUser);
+    if (res.success) {
+      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in Institute records!`);
+      setIsRegisterStudentModalOpen(false);
+      setNewStudentForm({
+        name: '',
+        email: '',
+        rollNumber: '',
+        branch: 'Computer Science and Engineering',
+        batch: '2028',
+        cgpa: '8.5'
+      });
+      setTimeout(() => setRegistrationSuccessMsg(''), 5000);
+    } else {
+      setRegistrationErrorMsg(res.errors ? res.errors.join('. ') : 'Failed to register student.');
+    }
   };
 
   const handleAnalyzeResume = () => {
@@ -136,6 +153,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   const navTabs = [
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'hod'] },
+    { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
+    { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'hod'] },
     { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives.length}` },
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
     ...(isVerifiedStudent ? [{ id: 'coding-studio', label: 'Coding Studio', icon: Code2, badge: 'DSA practice' }] : []),
@@ -143,11 +162,29 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus.atsScore}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
-    { id: 'hackathons', label: 'Hackathons', icon: Code2 },
-    { id: 'internships', label: 'Internships', icon: Award },
-    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true }
+    { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'hod'] },
+    { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'hod'] },
+    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'hod'] }
   ];
-  const visibleNavTabs = navTabs.filter((tab) => !tab.roles || tab.roles.includes(currentUser.role || 'student'));
+
+  const userRole = currentUser.role || 'student';
+  const visibleNavTabs = navTabs.filter((tab) => {
+    if (tab.excludedRoles && tab.excludedRoles.includes(userRole)) {
+      return false;
+    }
+    if (tab.roles && !tab.roles.includes(userRole)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Guard activeTab against unauthorized/hidden tabs for current role
+  useEffect(() => {
+    const isAllowed = visibleNavTabs.some((tab) => tab.id === activeTab);
+    if (!isAllowed && visibleNavTabs.length > 0) {
+      setActiveTab(visibleNavTabs[0].id);
+    }
+  }, [userRole, visibleNavTabs, activeTab]);
 
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
@@ -174,14 +211,24 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsRegisterStudentModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Register Student</span>
               </button>
+              {currentUser.role !== 'student' && (
+                <button
+                  type="button"
+                  onClick={() => setIsBulkImportModalOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Bulk Import</span>
+                </button>
+              )}
               <button
                 onClick={() => onNavigate('gateway')}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Switch Portal</span>
               </button>
@@ -295,12 +342,21 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <h4 className="font-extrabold text-slate-900 text-sm">New Student Enrollment & Data Ingestion</h4>
                   <p className="text-xs text-slate-600 mt-1">Register new candidates to verify credentials for on-campus and off-campus drive eligibility.</p>
                 </div>
-                <button
-                  onClick={() => setIsRegisterStudentModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition shrink-0"
-                >
-                  Register Form
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setIsRegisterStudentModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition"
+                  >
+                    Register Form
+                  </button>
+                  <button
+                    onClick={() => setIsBulkImportModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Bulk Import (.xlsx / .csv)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Attendance & Training Checklist */}
@@ -489,105 +545,14 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 4: CRT ATTENDANCE */}
+        {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900">Campus Recruitment Training (CRT) Attendance</h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Continuous monitoring of pre-placement aptitude, soft skills, and DSA training attendance.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block font-semibold">Your Overall CRT %:</span>
-                    <span className={`text-2xl font-black ${studentCrt.percentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {studentCrt.percentage}%
-                    </span>
-                  </div>
-                  <div className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
-                    studentCrt.percentage >= 75 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
-                    {studentCrt.percentage >= 75 ? 'Eligible for Placement' : 'Action Required (<75%)'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Attendance Sessions Log */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase">
-                    <tr>
-                      <th className="p-3">Session Title</th>
-                      <th className="p-3">Module</th>
-                      <th className="p-3">Trainer</th>
-                      <th className="p-3">Date & Time</th>
-                      <th className="p-3">Batch Turnout</th>
-                      <th className="p-3">Your Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {crtSessions.map(session => (
-                      <tr key={session.id} className="hover:bg-slate-50/70 transition">
-                        <td className="p-3 font-bold text-slate-900">{session.title}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">
-                            {session.module}
-                          </span>
-                        </td>
-                        <td className="p-3 text-slate-600">{session.trainer}</td>
-                        <td className="p-3 text-slate-500">{session.date} • {session.time}</td>
-                        <td className="p-3 font-semibold text-slate-700">{session.attendanceRate}% ({session.attendedCount}/{session.totalEnrolled})</td>
-                        <td className="p-3">
-                          <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>Present</span>
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <CrtAttendancePortalView onNavigate={onNavigate} />
         )}
 
-        {/* TAB 5: CLASS ATTENDANCE */}
+        {/* TAB 5: CLASS ATTENDANCE (Teacher & HOD Daily Class Attendance Portal) */}
         {activeTab === 'class-attendance' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-2">Semester Academic Subject Attendance</h3>
-              <p className="text-xs text-slate-500 mb-6">Real-time attendance record submitted by department subject professors.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {classAttendance.map((item, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-xs">
-                          {item.subjectCode}
-                        </span>
-                        <span className={`text-xs font-bold ${item.percentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {item.percentage}%
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-slate-900 text-sm">{item.subjectName}</h4>
-                      <p className="text-xs text-slate-500 mt-1">Faculty: {item.teacher}</p>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-500">
-                      <span>Attended: {item.attended} / {item.totalClasses} classes</span>
-                      <span className="font-semibold text-emerald-600">{item.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <DailyAttendancePortalView onNavigate={onNavigate} />
         )}
 
         {/* TAB 6: RESUME STATUS (ATS) */}
@@ -936,6 +901,16 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
+        {/* TAB: REPORTS EXPORTER */}
+        {activeTab === 'reports-exporter' && (
+          <ReportsExporterPage onNavigate={onNavigate} />
+        )}
+
+        {/* TAB: CURRICULUM & SYLLABUS GOVERNANCE (HOD ONLY) */}
+        {activeTab === 'curriculum-governance' && (
+          <CurriculumGovernanceView onNavigate={onNavigate} />
+        )}
+
       </div>
 
       {/* STUDENT REGISTRATION MODAL */}
@@ -943,7 +918,32 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl relative">
             <h3 className="text-xl font-black text-slate-900 mb-1">Register New Student</h3>
-            <p className="text-xs text-slate-500 mb-4">Add candidate to university database for automated placement eligibility verification.</p>
+            <p className="text-xs text-slate-500 mb-3">Add candidate to university database for automated placement eligibility verification.</p>
+
+            {/* Quick Bulk Import Banner */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 mb-4 text-xs">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-slate-700 font-medium">Need to enroll multiple students?</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegisterStudentModalOpen(false);
+                  setIsBulkImportModalOpen(true);
+                }}
+                className="font-bold text-indigo-700 hover:text-indigo-900 underline text-xs shrink-0 cursor-pointer"
+              >
+                Bulk Import Spreadsheet
+              </button>
+            </div>
+
+            {registrationErrorMsg && (
+              <div className="mb-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{registrationErrorMsg}</span>
+              </div>
+            )}
 
             <form onSubmit={handleRegisterStudent} className="space-y-3 text-xs">
               <div>
@@ -1038,6 +1038,16 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         </div>
       )}
+
+      {/* BULK IMPORT MODAL */}
+      <BulkImportModal
+        isOpen={isBulkImportModalOpen}
+        onClose={() => setIsBulkImportModalOpen(false)}
+        onImportSuccess={(count) => {
+          setRegistrationSuccessMsg(`Successfully registered ${count} students into university database!`);
+          setTimeout(() => setRegistrationSuccessMsg(''), 5000);
+        }}
+      />
 
     </div>
   );

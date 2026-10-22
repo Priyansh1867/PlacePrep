@@ -63,24 +63,49 @@ public class UserService {
     }
 
     public User demoLogin() {
-        String demoEmail = "demo@placeprep.com";
+        return demoLogin("student");
+    }
+
+    public User demoLogin(String role) {
+        String cleanRole = (role != null && !role.trim().isEmpty()) ? role.trim().toLowerCase() : "student";
+        String demoEmail = cleanRole + "@placeprep.com";
+        if ("student".equalsIgnoreCase(cleanRole)) {
+            demoEmail = "demo@placeprep.com";
+        }
+
         Optional<User> existing = userRepository.findByEmail(demoEmail);
         if (existing.isPresent()) {
             return existing.get();
         }
+
         User demoUser = new User();
         demoUser.setEmail(demoEmail);
         demoUser.setPassword("demo123");
-        demoUser.setName("Demo Student");
-        demoUser.setCollege("Demo University");
-        demoUser.setBranch("CSE");
-        demoUser.setGraduationBatch("2028");
-        demoUser.setRole("student");
+        demoUser.setCollege("Delhi Technological University (DTU)");
+        demoUser.setBranch("Computer Science and Engineering");
+        demoUser.setGraduationBatch("2026");
+        demoUser.setRole(cleanRole);
+        demoUser.setStatus("ACTIVE");
         demoUser.setOnboardingCompleted(true);
         demoUser.setSavedCompanyIds(new ArrayList<>());
         demoUser.setSavedQuestionIds(new ArrayList<>());
         demoUser.setPracticedQuestionIds(new ArrayList<>());
         demoUser.setRevisionQuestionIds(new ArrayList<>());
+
+        if ("teacher".equalsIgnoreCase(cleanRole)) {
+            demoUser.setName("Dr. Neha Sharma");
+            demoUser.setRollNumber("FAC-CSE-042");
+        } else if ("hod".equalsIgnoreCase(cleanRole)) {
+            demoUser.setName("Prof. Alok Verma");
+            demoUser.setRollNumber("HOD-CSE-001");
+        } else if ("admin".equalsIgnoreCase(cleanRole)) {
+            demoUser.setName("System Administrator");
+            demoUser.setRollNumber("ADM-ROOT-001");
+        } else {
+            demoUser.setName("Demo Student");
+            demoUser.setRollNumber("22CS0101");
+        }
+
         return userRepository.save(demoUser);
     }
 

@@ -10,5 +10,7 @@ import java.util.List;
 public interface CrtTrainingSessionRepository extends JpaRepository<CrtTrainingSession, Long> {
     List<CrtTrainingSession> findByTargetBatchOrderByScheduledDateDesc(String targetBatch);
     List<CrtTrainingSession> findByModuleTypeOrderByScheduledDateDesc(String moduleType);
+    List<CrtTrainingSession> findByStatusOrderByScheduledDateDesc(String status);
+    List<CrtTrainingSession> findByTargetBranchOrderByScheduledDateDesc(String targetBranch);
     List<CrtTrainingSession> findAllByOrderByScheduledDateDesc();
 }

@@ -43,8 +43,38 @@ public class DataInitializer {
                 demoUser.setBranch("Computer Science and Engineering");
                 demoUser.setGraduationBatch("2028");
                 demoUser.setRole("student");
+                demoUser.setRollNumber("22CS0101");
                 demoUser.setOnboardingCompleted(true);
                 userRepository.save(demoUser);
+            }
+
+            // Seed faculty users if not existing
+            if (userRepository.findByEmail("teacher@placeprep.com").isEmpty()) {
+                User teacher = new User();
+                teacher.setName("Dr. Neha Sharma");
+                teacher.setEmail("teacher@placeprep.com");
+                teacher.setPassword("demo123");
+                teacher.setCollege("Delhi Technological University (DTU)");
+                teacher.setBranch("Computer Science and Engineering");
+                teacher.setGraduationBatch("2026");
+                teacher.setRole("teacher");
+                teacher.setRollNumber("FAC-CSE-042");
+                teacher.setOnboardingCompleted(true);
+                userRepository.save(teacher);
+            }
+
+            if (userRepository.findByEmail("hod@placeprep.com").isEmpty()) {
+                User hod = new User();
+                hod.setName("Prof. Alok Verma");
+                hod.setEmail("hod@placeprep.com");
+                hod.setPassword("demo123");
+                hod.setCollege("Delhi Technological University (DTU)");
+                hod.setBranch("Computer Science and Engineering");
+                hod.setGraduationBatch("2026");
+                hod.setRole("hod");
+                hod.setRollNumber("HOD-CSE-001");
+                hod.setOnboardingCompleted(true);
+                userRepository.save(hod);
             }
 
             if (companyRepository.count() == 0) {

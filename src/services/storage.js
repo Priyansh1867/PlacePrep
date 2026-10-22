@@ -6,7 +6,7 @@ import {
   INITIAL_QUESTIONS,
   INITIAL_EXPERIENCES,
   INITIAL_AI_INSIGHTS
-} from '../data/initialData';
+} from '../data/initialData.js';
 import {
   INITIAL_CRT_SESSIONS,
   INITIAL_STUDENT_CRT_ATTENDANCE,
@@ -20,7 +20,7 @@ import {
   INITIAL_LIVE_SESSIONS,
   INITIAL_PUSH_NOTIFICATIONS,
   INITIAL_FEEDBACK_LOOP
-} from '../data/portalWorkflowData';
+} from '../data/portalWorkflowData.js';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'placeprep_current_user',

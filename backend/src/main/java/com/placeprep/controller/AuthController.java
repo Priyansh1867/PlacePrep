@@ -38,6 +38,20 @@ public class AuthController {
         this.userService = userService;
     }
 
+    private Map<String, Object> buildAuthResponse(User user, String token) {
+        Map<String, Object> resp = new java.util.LinkedHashMap<>();
+        resp.put("token", token);
+        resp.put("user", user);
+        resp.put("id", user.getId());
+        resp.put("name", user.getName());
+        resp.put("email", user.getEmail());
+        resp.put("role", user.getRole());
+        resp.put("branch", user.getBranch());
+        resp.put("college", user.getCollege());
+        resp.put("rollNumber", user.getRollNumber());
+        return resp;
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
@@ -67,7 +81,7 @@ public class AuthController {
     }
 
     @PostMapping("/demo-login")
-    public ResponseEntity<?> demoLogin() {
+    public ResponseEntity<?> demoLogin(@RequestBody(required = false) Map<String, String> body) {
         try {
             User demoUser = userService.demoLogin();
             return ResponseEntity.ok(createSession(demoUser));

@@ -48,6 +48,8 @@ import {
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
 import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
+import CsvDataImporterModal from '../components/data/CsvDataImporterModal';
+import UserProfileMenu from '../components/UserProfileMenu';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const currentUser = getCurrentUser();
@@ -80,6 +82,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   // Student Registration Modal Form State
   const [isRegisterStudentModalOpen, setIsRegisterStudentModalOpen] = useState(false);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvSuccessNotice, setCsvSuccessNotice] = useState(null);
   const [newStudentForm, setNewStudentForm] = useState({
     name: '',
     email: '',
@@ -156,17 +160,18 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsRegisterStudentModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Register Student</span>
               </button>
               <button
                 onClick={() => onNavigate('gateway')}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Switch Portal</span>
               </button>
+              <UserProfileMenu onNavigate={onNavigate} theme="dark" />
             </div>
           </div>
 
@@ -256,29 +261,53 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
               <button
                 onClick={() => onNavigate('academic-records')}
-                className="w-full mt-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center justify-center gap-1.5"
+                className="w-full mt-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>View Full Semester Marksheets</span>
                 <ChevronRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => onNavigate('profile')}
+                className="w-full mt-2.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition flex items-center justify-center gap-1.5 border border-indigo-200 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span>Open Superset Student Profile</span>
               </button>
             </div>
 
             {/* Quick Summary Panels */}
             <div className="lg:col-span-2 space-y-6">
               
-              {/* Registration Form Banner */}
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 flex items-center justify-between gap-4">
+              {/* Registration & CSV Import Banner */}
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-extrabold text-slate-900 text-sm">New Student Enrollment & Data Ingestion</h4>
-                  <p className="text-xs text-slate-600 mt-1">Register new candidates to verify credentials for on-campus and off-campus drive eligibility.</p>
+                  <h4 className="font-extrabold text-slate-900 text-sm">New Student Enrollment & .CSV Data Ingestion</h4>
+                  <p className="text-xs text-slate-600 mt-1">Batch import candidate rosters via .CSV or register candidates to verify drive credentials.</p>
                 </div>
-                <button
-                  onClick={() => setIsRegisterStudentModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition shrink-0"
-                >
-                  Register Form
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setIsCsvModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200 shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Import .CSV</span>
+                  </button>
+                  <button
+                    onClick={() => setIsRegisterStudentModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                  >
+                    Register Form
+                  </button>
+                </div>
               </div>
+
+              {csvSuccessNotice && (
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{csvSuccessNotice}</span>
+                </div>
+              )}
 
               {/* Attendance & Training Checklist */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
@@ -466,7 +495,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
+        {/* TAB 4: CRT ATTENDANCE (Pre-Placement Training & Eligibility) */}
         {activeTab === 'crt-attendance' && (
           <CrtAttendancePortalView onNavigate={onNavigate} />
         )}
@@ -908,7 +937,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md cursor-pointer"
                 >
                   Confirm Registration
                 </button>
@@ -917,6 +946,16 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         </div>
       )}
+
+      {/* CSV Data Ingestion Modal */}
+      <CsvDataImporterModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onImportSuccess={(records) => {
+          setCsvSuccessNotice(`Successfully ingested ${records.length} candidate records from CSV into Institute system.`);
+          setTimeout(() => setCsvSuccessNotice(null), 6000);
+        }}
+      />
 
     </div>
   );

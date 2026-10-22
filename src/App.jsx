@@ -28,12 +28,20 @@ import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
 import DailyAttendancePage from './pages/DailyAttendancePage';
 import CrtAttendancePage from './pages/CrtAttendancePage';
+import LiveSessionsPage from './pages/LiveSessionsPage';
+import DebriefSystemPage from './pages/DebriefSystemPage';
+import ProfilePage from './pages/ProfilePage';
 
 import { getCompanies } from './services/storage';
 
 export default function App() {
-  // Default to gateway (the Master Home Page with Institute & Placement options)
-  const [currentRoute, setCurrentRoute] = useState('gateway');
+  // Read initial route from URL hash if present
+  const getInitialRoute = () => {
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '').trim() : '';
+    return hash || 'gateway';
+  };
+
+  const [currentRoute, setCurrentRouteState] = useState(getInitialRoute);
   const [selectedAuthPortal, setSelectedAuthPortal] = useState('institute');
   const [authorizedPortal, setAuthorizedPortal] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -46,6 +54,44 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
+
+  // Synchronized route setter that preserves browser history
+  const setCurrentRoute = (route, replace = false) => {
+    setCurrentRouteState(route);
+    const cleanRoute = route.startsWith('/') ? route.slice(1) : route;
+    const targetHash = `#${cleanRoute}`;
+    if (typeof window !== 'undefined' && window.location.hash !== targetHash) {
+      if (replace) {
+        window.history.replaceState({ route: cleanRoute }, '', targetHash);
+      } else {
+        window.history.pushState({ route: cleanRoute }, '', targetHash);
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Browser back/forward history synchronization
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '').trim();
+      const route = hash || 'gateway';
+      setCurrentRouteState(route);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+
+    // If starting on naked URL, push initial history state
+    if (!window.location.hash) {
+      window.history.replaceState({ route: 'gateway' }, '', '#gateway');
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
 
   // Global Keyboard shortcuts
   useEffect(() => {
@@ -61,22 +107,18 @@ export default function App() {
 
   // Navigation handlers
   const handleSelectPortal = (portal) => {
-    if (authorizedPortal !== portal) {
-      handleNavigateAuth(portal);
-      return;
-    }
     if (portal === 'institute') {
       setCurrentRoute('institute-portal');
     } else if (portal === 'placement') {
       setCurrentRoute('placement-portal');
+    } else {
+      setCurrentRoute('gateway');
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNavigateAuth = (portalBranch = 'institute') => {
     setSelectedAuthPortal(portalBranch);
     setCurrentRoute('auth-portal');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAuthSuccess = (user, portalBranch) => {
@@ -88,7 +130,6 @@ export default function App() {
     } else {
       setCurrentRoute('dashboard');
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectCompany = (company) => {
@@ -148,10 +189,11 @@ export default function App() {
     );
   }
 
-  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal'].includes(currentRoute);
+  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'profile'].includes(currentRoute);
+  const isDarkCanvas = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal'].includes(currentRoute);
 
   return (
-    <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
+    <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isDarkCanvas ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
       
       {!isGuidedFlowRoute && (
         <Navbar
@@ -312,6 +354,21 @@ export default function App() {
         {/* 18. CRT TRAINING ATTENDANCE & ELIGIBILITY PORTAL */}
         {(currentRoute === 'crt-attendance' || currentRoute === 'crt-training-attendance') && (
           <CrtAttendancePage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 19. LIVE SESSIONS & WORKSHOPS MANAGER */}
+        {currentRoute === 'sessions' && (
+          <LiveSessionsPage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 20. PLACEMENT FEEDBACK & DEBRIEF SYSTEM */}
+        {currentRoute === 'debrief' && (
+          <DebriefSystemPage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 21. SUPERSET-STYLE STUDENT PROFILE */}
+        {currentRoute === 'profile' && (
+          <ProfilePage onNavigate={setCurrentRoute} />
         )}
 
       </main>

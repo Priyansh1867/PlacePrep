@@ -37,6 +37,8 @@ import {
 import { getCompanies, getInterviewQuestions } from '../services/storage';
 import { WorkflowApi } from '../services/api';
 import PortalModuleCards from '../components/PortalModuleCards';
+import CandidateFunnelBoard from '../components/workflow/CandidateFunnelBoard';
+import PlacementDebriefSystem from '../components/feedback/PlacementDebriefSystem';
 
 export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) {
   const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline', 'engine', 'evaluations', 'feedback', 'questions'
@@ -446,74 +448,41 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
         {/* TAB 1: CANDIDATE SELECTION PIPELINE */}
         {activeTab === 'pipeline' && (
           <div className="space-y-6">
-            
-            {/* Filter & Search Bar */}
-            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
-                  <Filter className="w-3.5 h-3.5" /> Filter by Round:
-                </span>
-                {['all', 'aptitude', 'technical', 'managerial', 'hr'].map(r => (
-                  <button
-                    key={r}
-                    onClick={() => setSelectedRoundFilter(r)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition ${
-                      selectedRoundFilter === r
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
-                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
-                    }`}
-                  >
-                    {r === 'all' ? 'All Rounds' : `${r} Round`}
-                  </button>
-                ))}
-              </div>
+            <CandidateFunnelBoard
+              candidates={candidates}
+              onUpdateCandidateStatus={handleUpdateStatus}
+              onSaveEvaluation={(evalData) => {
+                const newRecord = {
+                  id: `eval-${Date.now()}`,
+                  candidateId: evalData.candidateId,
+                  candidateName: evalData.candidateName,
+                  companyName: evalData.companyName,
+                  round: evalData.roundName,
+                  evaluatorName: evalData.evaluatorName,
+                  date: new Date().toISOString().split('T')[0],
+                  rubrics: {
+                    problemSolving: evalData.problemSolving,
+                    technicalDepth: evalData.technicalSkills,
+                    communication: evalData.communicationSkills,
+                    culturalFit: 8
+                  },
+                  recommendation: evalData.decision === 'RECOMMEND' ? 'Advance to Next Round' : evalData.decision === 'HOLD' ? 'Put on Hold' : 'Eliminate',
+                  feedbackNotes: `${evalData.strengths} | Areas to improve: ${evalData.weaknesses} | Notes: ${evalData.notes}`
+                };
+                setEvaluatorRecords(prev => [newRecord, ...prev]);
 
-              <div className="flex w-full items-center gap-2 md:w-auto">
-                <div className="relative flex-1 md:w-72"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search candidate, college, company..." className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" /></div>
-                <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={handleCandidateCsvSelect} className="hidden" />
-                <button type="button" onClick={() => csvInputRef.current?.click()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700"><Upload className="h-3.5 w-3.5" />Import CSV</button>
-              </div>
-            </div>
-
-            {candidateImportError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">{candidateImportError}</div>}
-
-            {/* Candidate decision cards */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_35px_-27px_rgba(15,23,42,0.35)] sm:p-6">
-              <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center">
-                <div>
-                  <div className="mb-1 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" /><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600">Live decision board</span></div>
-                  <h3 className="text-lg font-black tracking-tight text-slate-950">Candidate selection roster</h3>
-                  <p className="mt-1 text-xs text-slate-500">Review scores, evidence, and the next decision without losing candidate context.</p>
-                </div>
-                <span className="w-fit rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">{filteredCandidates.length} of {candidates.length} candidates</span>
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-2">
-                {filteredCandidates.map((cand) => {
-                  const currentRoundObj = SELECTION_ROUNDS.find(r => r.id === cand.currentRound);
-                  const roundIndex = Math.max(0, SELECTION_ROUNDS.findIndex(r => r.id === cand.currentRound));
-                  const initials = cand.name.split(' ').map((name) => name[0]).slice(0, 2).join('');
-
-                  return (
-                    <article key={cand.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-[0_18px_30px_-22px_rgba(49,46,129,0.45)]">
-                      <div className="flex items-start justify-between gap-3 bg-gradient-to-r from-slate-50 to-indigo-50/60 px-4 py-3.5">
-                        <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-xs font-black text-white shadow-lg shadow-indigo-200">{initials}</div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h4 className="truncate text-sm font-black text-slate-950">{cand.name}</h4>{getStatusBadge(cand.status)}</div><p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">{cand.branch} · {cand.batch} batch</p></div></div>
-                        <span className="rounded-lg border border-indigo-100 bg-white px-2 py-1 text-[10px] font-bold text-indigo-700 shadow-sm">{cand.companyName}</span>
-                      </div>
-                      <div className="space-y-4 p-4">
-                        <div className="flex items-center justify-between gap-3 text-xs"><div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current stage</p><p className="mt-0.5 font-bold text-indigo-700">{currentRoundObj?.name || cand.currentRound}</p></div><div className="text-right"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last updated</p><p className="mt-0.5 font-semibold text-slate-600">{cand.lastUpdated}</p></div></div>
-                        <div className="flex gap-1.5">{SELECTION_ROUNDS.map((round, index) => <span key={round.id} title={round.name} className={`h-1.5 flex-1 rounded-full ${index <= roundIndex ? 'bg-indigo-500' : 'bg-slate-100'}`} />)}</div>
-                        <div className="grid grid-cols-4 gap-1.5">{[['Apt', cand.scores.aptitude], ['Tech', cand.scores.technical], ['Mgr', cand.scores.managerial], ['HR', cand.scores.hr]].map(([label, score]) => <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-1.5 text-center"><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-0.5 text-sm font-black text-slate-800">{score || '—'}</p></div>)}</div>
-                        <div className="border-l-2 border-indigo-200 bg-indigo-50/50 px-3 py-2 text-[11px] leading-4 text-slate-600"><span className="font-bold text-slate-700">Evaluator:</span> {cand.evaluator || 'Awaiting allocation'}<span className="mx-1.5 text-indigo-300">·</span>{cand.college}</div>
-                        {cand.notes && <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] italic leading-4 text-slate-600">“{cand.notes}”</p>}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3"><button onClick={() => handleOpenEvaluation(cand)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-indigo-700"><ClipboardCheck className="h-3.5 w-3.5" />Evaluate</button>{cand.status !== 'Selected' && cand.status !== 'Eliminated' && <><button onClick={() => handleUpdateStatus(cand.id, 'Advanced')} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100">Advance</button><button onClick={() => handleUpdateStatus(cand.id, 'Eliminated')} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100">Eliminate</button></>}</div>
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
-
+                WorkflowApi.submitEvaluation(evalData.candidateId, {
+                  evaluatorName: evalData.evaluatorName,
+                  problemSolving: evalData.problemSolving,
+                  technicalDepth: evalData.technicalSkills,
+                  communication: evalData.communicationSkills,
+                  culturalFit: 8,
+                  recommendation: evalData.decision,
+                  feedbackNotes: newRecord.feedbackNotes
+                });
+              }}
+              companies={getCompanies()}
+            />
           </div>
         )}
 
@@ -726,80 +695,10 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
           </div>
         )}
 
-        {/* TAB 5: MULTI-STAKEHOLDER FEEDBACK SYSTEM */}
+        {/* TAB 5: MULTI-STAKEHOLDER FEEDBACK & DEBRIEF SYSTEM */}
         {activeTab === 'feedback' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Multi-Stakeholder Feedback System</h3>
-                <p className="text-xs text-slate-500">Collects and analyzes transparent feedback from Students, TPO Placement Cell, Faculty, and Company Recruiters.</p>
-              </div>
-
-              <button
-                onClick={() => setIsFeedbackModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
-              >
-                <PlusCircle className="w-4 h-4" /> Submit Stakeholder Feedback
-              </button>
-            </div>
-
-            {/* Role Filter Tabs */}
-            <div className="flex gap-2 pb-1 overflow-x-auto">
-              {['All', 'Student', 'TPO', 'Faculty', 'Company'].map(role => (
-                <button
-                  key={role}
-                  onClick={() => setActiveFeedbackRole(role)}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                    activeFeedbackRole === role
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                  }`}
-                >
-                  {role} Reviews
-                </button>
-              ))}
-            </div>
-
-            {/* Feedback Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredFeedbackList.map(item => (
-                <div key={item.id} className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        item.role === 'Student' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                        item.role === 'TPO' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                        item.role === 'Faculty' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                        'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      }`}>
-                        {item.role} Feedback
-                      </span>
-
-                      <div className="flex items-center gap-1 text-amber-500">
-                        {Array.from({ length: item.rating }).map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-base">{item.author}</h4>
-                      <p className="text-xs text-slate-500">{item.companyName} • {item.driveName}</p>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-lg text-xs text-slate-700 border border-slate-100">
-                      <span className="font-semibold text-slate-500 block mb-1">Focus Area: {item.roundDiscussed}</span>
-                      <p className="leading-relaxed italic">"{item.feedback}"</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 flex justify-between items-center">
-                    <span>Verified Stakeholder Audit</span>
-                    <span>{item.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PlacementDebriefSystem />
           </div>
         )}
 

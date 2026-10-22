@@ -24,6 +24,7 @@ import {
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'placeprep_current_user',
+  SUPERSET_PROFILE: 'placeprep_superset_profile',
   GRADUATION_BATCH: 'placeprep_graduation_batch',
   ONBOARDING_DONE: 'placeprep_onboarding_completed',
   SAVED_QUESTIONS: 'placeprep_saved_questions',
@@ -77,15 +78,16 @@ function setStorageItem(key, value) {
 export function getCurrentUser() {
   return getStorageItem(STORAGE_KEYS.CURRENT_USER, {
     id: 'user-demo-01',
-    name: 'Priyansh Jain',
-    email: 'priyansh.jain@example.edu',
-    college: 'Delhi Technological University (DTU)',
-    branch: 'Computer Science and Engineering',
-    graduationBatch: '2028',
+    name: 'Payanshi Jain',
+    email: 'payanshijain.ai27@jecrc.ac.in',
+    college: 'Jaipur Engineering College and Research Center',
+    branch: 'Artificial Intelligence & Data Science',
+    graduationBatch: '2027',
     role: 'student', // 'student' or 'admin'
     targetCompanies: ['hcltech', 'tcs', 'accenture'],
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    isLoggedIn: true
   });
 }
 
@@ -93,6 +95,235 @@ export function setCurrentUser(user) {
   setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
   if (user && user.graduationBatch) {
     setGraduationBatch(user.graduationBatch);
+  }
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: user }));
+}
+
+export function logoutUser() {
+  const guestUser = {
+    id: 'guest',
+    name: 'Guest User',
+    email: '',
+    college: '',
+    branch: '',
+    graduationBatch: '2027',
+    role: 'guest',
+    avatar: '',
+    isLoggedIn: false
+  };
+  setStorageItem(STORAGE_KEYS.CURRENT_USER, guestUser);
+  localStorage.removeItem('placeprep_auth_token');
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: guestUser }));
+  return guestUser;
+}
+
+export function loginUser(userData) {
+  const logged = {
+    ...userData,
+    isLoggedIn: true
+  };
+  setCurrentUser(logged);
+  return logged;
+}
+
+// Superset Profile Storage
+export function getSupersetProfile() {
+  const current = getCurrentUser();
+  return getStorageItem(STORAGE_KEYS.SUPERSET_PROFILE, {
+    supersetId: '8034395',
+    fullName: 'Payanshi Jain',
+    dateOfBirth: '10 May, 2006',
+    gender: 'Female',
+    college: 'Jaipur Engineering College and Research Center',
+    degree: 'Bachelor of Technology (B.Tech)',
+    branch: 'Artificial Intelligence & Data Science',
+    batch: '2027',
+    currentCgpa: 8.84,
+    phone: '+91 9950661182',
+    primaryEmail: 'payanshijain.ai27@jecrc.ac.in',
+    personalEmail: 'payanshi.personal@gmail.com',
+    currentAddress: 'RIICO Industrial Area, Sitapura, Jaipur, Rajasthan 302022',
+    permanentAddress: 'Civil Lines, Jaipur, Rajasthan 302006',
+    isLocked: true,
+    isVerified: true,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=256&auto=format&fit=crop&q=80',
+    changeRequests: [],
+    education: [
+      {
+        id: 'edu-ug',
+        type: 'Undergraduate (B.Tech)',
+        institution: 'Jaipur Engineering College and Research Center',
+        boardOrUniversity: 'Rajasthan Technical University (RTU)',
+        stream: 'Artificial Intelligence & Data Science',
+        startYear: '2023',
+        endYear: '2027',
+        score: '8.84 CGPA',
+        isCurrent: true,
+        status: 'Pursuing (Year 3)'
+      },
+      {
+        id: 'edu-12th',
+        type: 'Class XII (Senior Secondary)',
+        institution: 'Mahaveer Public School, Jaipur',
+        boardOrUniversity: 'CBSE',
+        stream: 'Science (PCM with Computer Science)',
+        startYear: '2021',
+        endYear: '2023',
+        score: '93.4%',
+        isCurrent: false,
+        status: 'Completed'
+      },
+      {
+        id: 'edu-10th',
+        type: 'Class X (Secondary)',
+        institution: 'Mahaveer Public School, Jaipur',
+        boardOrUniversity: 'CBSE',
+        stream: 'General Sciences',
+        startYear: '2019',
+        endYear: '2021',
+        score: '94.8%',
+        isCurrent: false,
+        status: 'Completed'
+      }
+    ],
+    semesters: [
+      { sem: 'Sem 1', sgpa: 8.65, credits: 24, status: 'Passed' },
+      { sem: 'Sem 2', sgpa: 8.90, credits: 24, status: 'Passed' },
+      { sem: 'Sem 3', sgpa: 8.78, credits: 25, status: 'Passed' },
+      { sem: 'Sem 4', sgpa: 9.02, credits: 25, status: 'Passed' }
+    ],
+    internships: [
+      {
+        id: 'int-1',
+        company: 'Infosys Springboard',
+        role: 'AI / Machine Learning Intern',
+        location: 'Remote',
+        startDate: 'May 2025',
+        endDate: 'July 2025',
+        description: 'Engineered predictive pipelines with Scikit-learn and PyTorch. Built sentiment classification models achieving 91.4% accuracy.',
+        certificateUrl: 'https://placeprep.edu/certs/payanshi-infosys-internship.pdf'
+      }
+    ],
+    skills: {
+      technical: ['Python', 'Java', 'Data Structures & Algorithms', 'C++', 'React.js', 'SQL', 'PyTorch', 'TensorFlow', 'Git'],
+      coreSubjects: ['Object Oriented Programming', 'Database Management Systems (DBMS)', 'Operating Systems', 'Computer Networks'],
+      languages: ['English (Fluent)', 'Hindi (Native)']
+    },
+    positionsOfResponsibility: [
+      {
+        id: 'por-1',
+        title: 'Department Placement Coordinator',
+        organization: 'Training & Placement Cell, JECRC',
+        tenure: '2025 - Present',
+        description: 'Coordinating on-campus drives for 350+ students in AI & DS department. Managing eligibility rosters and recruiter visits.'
+      },
+      {
+        id: 'por-2',
+        title: 'Technical Lead',
+        organization: 'Google Developer Student Clubs (GDSC)',
+        tenure: '2024 - 2025',
+        description: 'Organized 6 technical workshops on Cloud Computing & Machine Learning reaching 400+ undergraduates.'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-1',
+        title: 'PlacePrep AI - Intelligent Campus Hiring Ecosystem',
+        techStack: ['React', 'TailwindCSS', 'Python', 'FastAPI'],
+        liveUrl: 'https://placeprep.ai',
+        githubUrl: 'https://github.com/payanshijain/placeprep-ecosystem',
+        duration: 'Jan 2026 - Present',
+        highlights: [
+          'Developed end-to-end multi-round selection funnel with cutoff automation',
+          'Integrated Superset-grade student profile manager and schedule conflict radar',
+          'Architected responsive applicant dashboard supporting 500+ live candidates'
+        ]
+      },
+      {
+        id: 'proj-2',
+        title: 'Chest X-Ray Pneumonia Detection via CNN',
+        techStack: ['PyTorch', 'Torchvision', 'Streamlit', 'OpenCV'],
+        liveUrl: '',
+        githubUrl: 'https://github.com/payanshijain/xray-pneumonia-cnn',
+        duration: 'Aug 2025 - Nov 2025',
+        highlights: [
+          'Trained ResNet-50 transfer learning model achieving 96.2% sensitivity',
+          'Processed NIH dataset with data augmentation and Grad-CAM interpretability'
+        ]
+      }
+    ],
+    accomplishments: [
+      {
+        id: 'acc-1',
+        title: 'Smart India Hackathon (SIH) Finalist',
+        issuer: 'Ministry of Education, Govt. of India',
+        year: '2025',
+        details: 'Top 5 in Smart Automation theme among 2,400+ nationwide teams.'
+      },
+      {
+        id: 'acc-2',
+        title: 'LeetCode Knight Badge',
+        issuer: 'LeetCode',
+        year: '2025',
+        details: 'Top 4.8% worldwide rating (1840+), solved 550+ algorithmic problems.'
+      }
+    ],
+    volunteering: [
+      {
+        id: 'vol-1',
+        organization: 'Rotaract Club of Jaipur',
+        role: 'Community Service Volunteer',
+        duration: '2023 - 2024',
+        details: 'Led tree plantation drive planting 500 saplings across Jaipur outskirts.'
+      }
+    ],
+    extraCurricular: [
+      {
+        id: 'ec-1',
+        activity: 'Inter-College Debate Championship',
+        position: 'Runner-up',
+        year: '2024'
+      },
+      {
+        id: 'ec-2',
+        activity: 'Annual Tech Fest Renaissance Coordinator',
+        position: 'Lead Organizer',
+        year: '2025'
+      }
+    ],
+    documents: [
+      {
+        id: 'doc-resume',
+        name: 'Payanshi_Jain_Resume_2026.pdf',
+        type: 'ATS Resume',
+        uploadDate: '15 Oct, 2026',
+        size: '184 KB',
+        status: 'Verified by Placement Cell'
+      },
+      {
+        id: 'doc-id',
+        name: 'College_ID_Card.pdf',
+        type: 'Identity Proof',
+        uploadDate: '10 Aug, 2023',
+        size: '520 KB',
+        status: 'Verified'
+      }
+    ]
+  });
+}
+
+export function saveSupersetProfile(profile) {
+  setStorageItem(STORAGE_KEYS.SUPERSET_PROFILE, profile);
+  // Also keep currentUser in sync
+  const current = getCurrentUser();
+  if (current) {
+    current.name = profile.fullName || current.name;
+    current.email = profile.primaryEmail || current.email;
+    current.college = profile.college || current.college;
+    current.branch = profile.branch || current.branch;
+    current.graduationBatch = profile.batch || current.graduationBatch;
+    current.avatar = profile.avatar || current.avatar;
+    setStorageItem(STORAGE_KEYS.CURRENT_USER, current);
   }
 }
 

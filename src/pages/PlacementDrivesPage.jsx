@@ -49,10 +49,16 @@ import Input from '../components/ui/Input';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
+import PlacementCalendarView from '../components/drives/PlacementCalendarView';
+import DriveCreationWizard from '../components/drives/DriveCreationWizard';
 
 export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpenAuthModal }) {
   const currentUser = getCurrentUser();
   const currentBatch = getGraduationBatch();
+  const isAdminOrStaff = Boolean(
+    currentUser && 
+    (currentUser.role === 'admin' || currentUser.role === 'tpo' || currentUser.role === 'coordinator' || currentUser.role === 'director' || currentUser.role === 'recruiter')
+  );
 
   // Navigation tabs
   const [activeTab, setActiveTab] = useState('drives'); // 'drives', 'calendar', 'eligibility', 'applications', 'conflicts', 'team-controls'
@@ -67,6 +73,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [trackingLoadingId, setTrackingLoadingId] = useState(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   // Logistics / Instructions Modal
   const [selectedDriveForInstructions, setSelectedDriveForInstructions] = useState(null);
@@ -433,7 +440,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
           { id: 'eligibility', label: 'Eligibility Engine', icon: ShieldCheck, isBadge: 'Live Check' },
           { id: 'applications', label: 'My Registration Passes', icon: FileText, count: applications.length },
           { id: 'conflicts', label: 'Schedule Conflict Radar', icon: AlertTriangle, hasAlert: applications.some(a => a.conflictFlagged) || campusClashes.length > 0 },
-          { id: 'team-controls', label: 'Placement-Team Controls', icon: Sliders, isBadge: 'Admin/TPO' },
+          ...(isAdminOrStaff ? [{ id: 'team-controls', label: 'Placement-Team Controls', icon: Sliders, isBadge: 'Admin/TPO' }] : []),
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -536,6 +543,16 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
                 >
                   Open Drives
                 </button>
+
+                {isAdminOrStaff && (
+                  <button
+                    onClick={() => setIsWizardOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer ml-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Announce Drive (Wizard)</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -725,100 +742,10 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
       {/* ======================================================== */}
       {activeTab === 'calendar' && (
         <div className="space-y-6">
-          <div className="surface-card p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
-              <div>
-                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5 text-indigo-600" />
-                  Upcoming Recruitment Calendar & Timeline
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Chronological schedule of confirmed campus placement drives, reporting venues, and round timelines.
-                </p>
-              </div>
-
-              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                November - December 2026
-              </span>
-            </div>
-
-            {/* Calendar Events List */}
-            <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-indigo-200">
-              {drivesList.map((drive) => {
-                const isNov18Clash = drive.driveDate && drive.driveDate.includes('18');
-                return (
-                  <div key={drive.driveId || drive.id} className="relative group">
-                    {/* Circle Node */}
-                    <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 bg-white ${
-                      isNov18Clash ? 'border-amber-500 ring-2 ring-amber-200' : 'border-indigo-600'
-                    }`} />
-
-                    <div className="bg-slate-50/80 group-hover:bg-indigo-50/40 rounded-2xl p-5 border border-slate-200 transition-all">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-slate-900 text-base">{drive.companyName}</span>
-                          <span className="text-xs text-slate-500 font-semibold">• {drive.role}</span>
-                          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">
-                            {drive.ctc || drive.packageDetails}
-                          </span>
-                          {isNov18Clash && (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono font-bold text-xs flex items-center gap-1 border-amber-300">
-                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Overlapping Slot
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="text-xs font-bold text-indigo-700 bg-white px-3 py-1 rounded-xl border border-indigo-200 shrink-0">
-                          {drive.driveDate || drive.date} • {drive.driveTime || '09:00 AM'}
-                        </div>
-                      </div>
-
-                      {/* Venue & Reporting */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mt-3 bg-white p-3 rounded-xl border border-slate-200/60">
-                        <div>
-                          <span className="text-slate-500 font-bold block text-[11px]">VENUE</span>
-                          <span className="text-slate-800 font-semibold">{drive.venue || 'Campus Auditorium Hall A'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 font-bold block text-[11px]">REPORTING TIME & INSTRUCTIONS</span>
-                          <span className="text-amber-700 font-semibold">{drive.reportingTime || '08:30 AM'}</span>
-                          <p className="text-[11px] text-slate-500 mt-0.5">{drive.instructions?.substring(0, 110)}...</p>
-                        </div>
-                      </div>
-
-                      {/* Configured Rounds */}
-                      {drive.roundConfigs && drive.roundConfigs.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-200/60">
-                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-                            Scheduled Rounds Timeline
-                          </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-                            {drive.roundConfigs.map((rc, rIdx) => (
-                              <div key={rIdx} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
-                                <span className="font-bold text-slate-900 block truncate">R{rc.roundNumber}: {rc.roundName}</span>
-                                <span className="text-[11px] text-indigo-600 font-semibold block">{rc.scheduledTime || `${rc.durationMinutes} mins`}</span>
-                                <span className="text-[10px] text-slate-500 block truncate">{rc.venueOrLink}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => setSelectedDriveForInstructions(drive)}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>Full Venue & Reporting Pass Details</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <PlacementCalendarView
+            drives={drivesList}
+            onApplyDrive={handleApply}
+          />
         </div>
       )}
 
@@ -1314,7 +1241,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
       {/* ======================================================== */}
       {/* TAB 6: PLACEMENT-TEAM ROUND & LOGISTICS CONTROLS         */}
       {/* ======================================================== */}
-      {activeTab === 'team-controls' && (
+      {activeTab === 'team-controls' && isAdminOrStaff && (
         <div className="space-y-6">
           <div className="surface-card p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
@@ -1763,6 +1690,22 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* DRIVE CREATION WIZARD MODAL */}
+      {isWizardOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+          <div className="max-w-4xl w-full my-8">
+            <DriveCreationWizard
+              companies={getCompanies()}
+              onDriveCreated={(newDrive) => {
+                setDrivesList(prev => [newDrive, ...prev]);
+                setIsWizardOpen(false);
+              }}
+              onCancel={() => setIsWizardOpen(false)}
+            />
           </div>
         </div>
       )}

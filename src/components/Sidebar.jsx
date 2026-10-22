@@ -20,7 +20,8 @@ import {
   Layers,
   LogOut,
   User as UserIcon,
-  BookOpen
+  BookOpen,
+  Video
 } from 'lucide-react';
 import PlacePrepLogo from './PlacePrepLogo';
 import Badge from './ui/Badge';
@@ -42,7 +43,8 @@ export default function Sidebar({
     {
       title: 'Overview',
       items: [
-        { id: 'dashboard', label: 'Student Dashboard', icon: LayoutDashboard }
+        { id: 'dashboard', label: 'Student Dashboard', icon: LayoutDashboard },
+        { id: 'profile', label: 'My Profile (Superset)', icon: UserIcon }
       ]
     },
     {
@@ -62,7 +64,9 @@ export default function Sidebar({
         { id: 'drives', label: 'Placement Drives', icon: Briefcase },
         { id: 'applications', label: 'My Applications', icon: FileCheck2 },
         { id: 'experiences', label: 'Peer Experiences', icon: MessageSquare },
-        { id: 'workflow', label: 'Candidate Pipeline', icon: ClipboardCheck }
+        { id: 'sessions', label: 'Live Sessions & PPTs', icon: Video, badge: 'Live' },
+        { id: 'workflow', label: 'Candidate Pipeline', icon: ClipboardCheck },
+        { id: 'debrief', label: 'Placement Debrief', icon: ShieldCheck }
       ]
     },
     {
@@ -201,8 +205,9 @@ export default function Sidebar({
         {user ? (
           <div className="flex items-center justify-between gap-2">
             <div
-              onClick={() => onNavigate('dashboard')}
+              onClick={() => onNavigate('profile')}
               className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
+              title="Open Superset Student Profile"
             >
               <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
                 {user.name ? user.name[0].toUpperCase() : 'U'}

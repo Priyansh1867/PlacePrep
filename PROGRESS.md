@@ -141,6 +141,36 @@
 - **Files**: `src/pages/AdminPage.jsx`, `src/pages/SelectionWorkflowPage.jsx`, `backend/src/main/java/com/placeprep/config/SecurityConfig.java`.
 - **Verification**: Verified via `mvn test` (24/24 passing tests) and `npm run build`.
 
+### Module 9: TPO Operations Suite & Round Shortlisting Ecosystem
+- **Status**: `COMPLETE`
+- **Completed**:
+  - **Drive Creation Wizard (TPO Admin)**: 4-step multi-step drive wizard (`src/components/drives/DriveCreationWizard.jsx`) with step indicators, progress bar, and comprehensive field validation:
+    - *Step 1*: Company details, role, CTC range, tier selector, and job description.
+    - *Step 2*: Eligibility cutoffs (Min CGPA slider, Min 10th/12th %, Max allowed backlogs, interactive Allowed branches checklist).
+    - *Step 3*: Confirmed dates, reporting venue, reporting time, application deadline, and candidate instructions.
+    - *Step 4*: Round setup (Add Round 1: Aptitude, Round 2: Tech, Round 3: HR with customizable cutoff scores, durations, and assessment modes).
+    - *Step 5*: Review & Broadcast to database and live placement catalog.
+  - **Placement Calendar View**: Interactive calendar (`src/components/drives/PlacementCalendarView.jsx`) featuring Month View grid and Week View schedule with slot clash detection, recruiter filters, day detail flyouts, and 1-click apply/track.
+  - **Candidate Funnel & Shortlisting Board**: Interactive recruitment board (`src/components/workflow/CandidateFunnelBoard.jsx`) with:
+    - Visual recruitment funnel progression: `Applied (500) -> Round 1: Aptitude (120) -> Round 2: Technical (40) -> Final Selects (12)`.
+    - Kanban view and Table view toggle.
+    - Bulk action toolbar with dynamic score threshold input: "Select all candidates with score >= cutoff and click Advance to Next Round", plus "Eliminate Remaining" to automatically update unselected candidates' status to REJECTED.
+  - **Evaluator Scorecard Modal**: Pop-up scorecard (`src/components/workflow/EvaluatorScorecardModal.jsx`) for interviewers during technical or HR rounds:
+    - Technical Skills (1-10 slider) with live rating badge.
+    - Problem Solving (1-10 slider).
+    - Communication Skills (1-10 slider) with composite rubric calculation.
+    - Dedicated text areas for Notes, Key Strengths, and Areas for Improvement / Weaknesses.
+    - Decision dropdown strictly offering `RECOMMEND`, `HOLD`, `REJECT`.
+  - **Live Sessions & Workshop Manager**: Dedicated engine (`src/components/sessions/LiveSessionsManager.jsx` & `src/pages/LiveSessionsPage.jsx`):
+    - Categorized into Prep Webinars, Alumni Talk Sessions, and Pre-Placement Talks (PPT).
+    - Fields for Session Title, Speaker Name & Title, Date/Time, and Google Meet/Zoom URL.
+    - RSVP tracking, 1-click join meeting, Add to Google Calendar, and TPO Admin scheduling modal.
+  - **Placement Feedback & Debrief System**: Two-way debrief engine (`src/components/feedback/PlacementDebriefSystem.jsx` & `src/pages/DebriefSystemPage.jsx`):
+    - Structured review form for TPO to rate visiting companies (Hiring experience, Test quality & platform stability, logistics, re-invite recommendation).
+    - Form for companies to submit overall batch feedback to the TPO (Technical depth, Soft skills & communication, Curriculum gaps, Batch strengths, and Future hiring intent).
+- **Files**: `src/components/drives/DriveCreationWizard.jsx`, `src/components/drives/PlacementCalendarView.jsx`, `src/components/workflow/CandidateFunnelBoard.jsx`, `src/components/workflow/EvaluatorScorecardModal.jsx`, `src/components/sessions/LiveSessionsManager.jsx`, `src/components/feedback/PlacementDebriefSystem.jsx`, `src/pages/LiveSessionsPage.jsx`, `src/pages/DebriefSystemPage.jsx`.
+- **Verification**: Verified via `npm run build` (1992 modules transformed cleanly).
+
 ---
 
 ## C. Recent Changes

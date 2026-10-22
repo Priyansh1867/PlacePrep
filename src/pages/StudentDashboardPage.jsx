@@ -261,6 +261,13 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           >
             Practice Next Question
           </Button>
+          <button
+            onClick={() => onNavigate('profile')}
+            className="w-full mt-2 py-1.5 px-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer border border-white/20"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Open Superset Profile</span>
+          </button>
         </div>
       </div>
 

@@ -44,6 +44,9 @@ import {
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import DriveCreationWizard from '../components/drives/DriveCreationWizard';
+import PlacementCalendarView from '../components/drives/PlacementCalendarView';
+import PlacementDebriefSystem from '../components/feedback/PlacementDebriefSystem';
 
 export default function AdminPage() {
   const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
@@ -59,6 +62,7 @@ export default function AdminPage() {
   const [questions, setQuestions] = useState(() => getInterviewQuestions());
   const [experiences, setExperiences] = useState(() => getInterviewExperiences());
   const [feedbackList, setFeedbackList] = useState(() => getPlatformFeedback());
+  const [driveSubTab, setDriveSubTab] = useState('wizard'); // 'wizard', 'calendar', 'list'
 
   // New Company Form State
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -618,157 +622,204 @@ export default function AdminPage() {
 
       {/* TAB 3: PLACEMENT DRIVES */}
       {activeTab === 'drives' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
-            <h3 className="font-extrabold text-base text-slate-900 mb-4 flex items-center gap-2">
-              <Plus className="w-4 h-4 text-indigo-600" /> Announce Placement Drive
-            </h3>
-            <form onSubmit={handleCreateDrive} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Company *</label>
-                <select
-                  value={driveCompany}
-                  onChange={(e) => setDriveCompany(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl cursor-pointer"
-                >
-                  {companies.map(c => {
-                    const cId = c.companyId || c.id;
-                    return <option key={cId} value={cId}>{c.name}</option>;
-                  })}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Role Title *</label>
-                <input
-                  type="text"
-                  value={driveRole}
-                  onChange={(e) => setDriveRole(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">CTC Package</label>
-                <input
-                  type="text"
-                  value={driveCtc}
-                  onChange={(e) => setDriveCtc(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Drive Date</label>
-                  <input
-                    type="text"
-                    value={driveDate}
-                    onChange={(e) => setDriveDate(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">App Deadline</label>
-                  <input
-                    type="text"
-                    value={driveDeadline}
-                    onChange={(e) => setDriveDeadline(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Venue / Mode</label>
-                  <input
-                    type="text"
-                    value={driveVenue}
-                    onChange={(e) => setDriveVenue(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Min CGPA</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={driveMinCgpa}
-                    onChange={(e) => setDriveMinCgpa(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Reporting Time</label>
-                <input
-                  type="text"
-                  value={driveReportingTime}
-                  onChange={(e) => setDriveReportingTime(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Drive Instructions</label>
-                <textarea
-                  rows={2}
-                  value={driveInstructions}
-                  onChange={(e) => setDriveInstructions(e.target.value)}
-                  placeholder="Dress code, items to carry..."
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={submittingAction}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {submittingAction && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Publish Drive Schedule</span>
-              </button>
-            </form>
+        <div className="space-y-6">
+          {/* Sub-tab Switcher */}
+          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 w-fit text-xs font-bold">
+            <button
+              onClick={() => setDriveSubTab('wizard')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+                driveSubTab === 'wizard' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Drive Creation Wizard (Multi-Step)
+            </button>
+            <button
+              onClick={() => setDriveSubTab('calendar')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+                driveSubTab === 'calendar' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Interactive Placement Calendar
+            </button>
+            <button
+              onClick={() => setDriveSubTab('list')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+                driveSubTab === 'list' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Drives Directory ({drives.length})
+            </button>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-            <h3 className="font-extrabold text-base text-slate-900 mb-2">
-              Active Placement Drives ({drives.length})
-            </h3>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {drives.map(d => {
-                const dId = d.driveId || d.id;
-                return (
-                  <div key={dId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs hover:border-slate-300 transition-colors">
+          {driveSubTab === 'wizard' && (
+            <DriveCreationWizard
+              companies={companies}
+              onDriveCreated={(created) => {
+                setDrives(prev => [created, ...prev]);
+                showToast(`Placement drive announced successfully!`);
+                setDriveSubTab('calendar');
+              }}
+            />
+          )}
+
+          {driveSubTab === 'calendar' && (
+            <PlacementCalendarView drives={drives} />
+          )}
+
+          {driveSubTab === 'list' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
+                <h3 className="font-extrabold text-base text-slate-900 mb-4 flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-indigo-600" /> Announce Placement Drive
+                </h3>
+                <form onSubmit={handleCreateDrive} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Company *</label>
+                    <select
+                      value={driveCompany}
+                      onChange={(e) => setDriveCompany(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-xl cursor-pointer"
+                    >
+                      {companies.map(c => {
+                        const cId = c.companyId || c.id;
+                        return <option key={cId} value={cId}>{c.name}</option>;
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Role Title *</label>
+                    <input
+                      type="text"
+                      value={driveRole}
+                      onChange={(e) => setDriveRole(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-xl"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">CTC Package</label>
+                    <input
+                      type="text"
+                      value={driveCtc}
+                      onChange={(e) => setDriveCtc(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="font-extrabold text-slate-900">{d.companyName}</span>
-                      <span className="text-slate-600 ml-2 font-medium">• {d.role} ({d.ctc})</span>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Drive: {d.driveDate} • Deadline: {d.deadline}
-                      </p>
+                      <label className="block font-bold text-slate-700 mb-1">Drive Date</label>
+                      <input
+                        type="text"
+                        value={driveDate}
+                        onChange={(e) => setDriveDate(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                      />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px]">
-                        {d.status || 'Verified'}
-                      </span>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleDeleteDrive(dId)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Remove placement drive"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">App Deadline</label>
+                      <input
+                        type="text"
+                        value={driveDeadline}
+                        onChange={(e) => setDriveDeadline(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                      />
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Venue / Mode</label>
+                      <input
+                        type="text"
+                        value={driveVenue}
+                        onChange={(e) => setDriveVenue(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Min CGPA</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={driveMinCgpa}
+                        onChange={(e) => setDriveMinCgpa(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Reporting Time</label>
+                    <input
+                      type="text"
+                      value={driveReportingTime}
+                      onChange={(e) => setDriveReportingTime(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Drive Instructions</label>
+                    <textarea
+                      rows={2}
+                      value={driveInstructions}
+                      onChange={(e) => setDriveInstructions(e.target.value)}
+                      placeholder="Dress code, items to carry..."
+                      className="w-full p-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submittingAction}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingAction && <Loader2 className="w-4 h-4 animate-spin" />}
+                    <span>Publish Drive Schedule</span>
+                  </button>
+                </form>
+              </div>
+
+              <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
+                <h3 className="font-extrabold text-base text-slate-900 mb-2">
+                  Active Placement Drives ({drives.length})
+                </h3>
+                <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                  {drives.map(d => {
+                    const dId = d.driveId || d.id;
+                    return (
+                      <div key={dId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs hover:border-slate-300 transition-colors">
+                        <div>
+                          <span className="font-extrabold text-slate-900">{d.companyName}</span>
+                          <span className="text-slate-600 ml-2 font-medium">• {d.role} ({d.ctc})</span>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Drive: {d.driveDate} • Deadline: {d.deadline}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px]">
+                            {d.status || 'Verified'}
+                          </span>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDeleteDrive(dId)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Remove placement drive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1003,34 +1054,10 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* TAB 6: FEEDBACK */}
+      {/* TAB 6: PLACEMENT FEEDBACK & DEBRIEF SYSTEM */}
       {activeTab === 'feedback' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-base text-slate-900">
-            Student Feedback & Platform Reports ({feedbackList.length})
-          </h3>
-          {feedbackList.length === 0 ? (
-            <EmptyState
-              icon={MessageSquare}
-              title="No Feedback Submissions Recorded"
-              description="Feedback sent by students via the Experience Vault will populate here for review."
-            />
-          ) : (
-            <div className="space-y-3">
-              {feedbackList.map((fb, idx) => (
-                <div key={fb.feedbackId || fb.id || idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                  <div className="flex justify-between items-center font-bold text-slate-800">
-                    <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-extrabold text-[10px]">
-                      {fb.category}
-                    </span>
-                    <span className="text-slate-400 text-[11px]">{fb.date?.split('T')[0] || 'Verified'}</span>
-                  </div>
-                  <p className="text-slate-700">{fb.message}</p>
-                  <p className="text-[11px] text-slate-400">Batch: {fb.batch || 'General'} • Rating: {fb.rating || 5}/5</p>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="space-y-6">
+          <PlacementDebriefSystem />
         </div>
       )}
 

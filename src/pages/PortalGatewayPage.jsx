@@ -6,6 +6,7 @@ import placementImage from '../assets/images/placement_hero.jpg';
 import collegeBg from '../assets/images/college_campus_main.webp';
 import Institute3DAnimation from '../components/animations/Institute3DAnimation';
 import Placement3DAnimation from '../components/animations/Placement3DAnimation';
+import UserProfileMenu from '../components/UserProfileMenu';
 
 const portals = [
   {
@@ -36,7 +37,7 @@ const portals = [
   },
 ];
 
-export default function PortalGatewayPage({ onNavigateAuth }) {
+export default function PortalGatewayPage({ onSelectPortal, onNavigateAuth }) {
   return (
     <div className="relative w-full h-screen max-h-screen overflow-hidden text-white flex flex-col justify-between select-none">
       
@@ -53,13 +54,25 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
       {/* Foreground Content Container - Exactly Fits Screen Height */}
       <div className="relative z-10 w-full h-full max-w-[1340px] mx-auto px-4 py-2.5 sm:px-6 lg:px-8 flex flex-col justify-between">
         
-        {/* Header Bar */}
+        {/* Header Bar with Logo and Right Upper Corner User Profile */}
         <header className="flex items-center justify-between px-1 shrink-0 py-1">
           <PlacePrepLogo className="h-8 sm:h-9 w-auto" theme="dark" />
-          <span className="hidden items-center gap-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white shadow-sm sm:inline-flex">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            SECURE INSTITUTION ACCESS
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white shadow-sm sm:inline-flex">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+              SECURE INSTITUTION ACCESS
+            </span>
+            <UserProfileMenu
+              onNavigate={(route) => {
+                if (route === 'gateway') onSelectPortal('gateway');
+                else if (route === 'institute-portal') onSelectPortal('institute');
+                else if (route === 'placement-portal') onSelectPortal('placement');
+                else window.location.hash = `#${route}`;
+              }}
+              onOpenAuthModal={() => onNavigateAuth && onNavigateAuth('institute')}
+              theme="dark"
+            />
+          </div>
         </header>
 
         {/* Main Hero Header */}
@@ -90,7 +103,13 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
                 <button
                   key={portal.id}
                   type="button"
-                  onClick={() => onNavigateAuth(portal.id)}
+                  onClick={() => {
+                    if (onSelectPortal) {
+                      onSelectPortal(portal.id);
+                    } else if (onNavigateAuth) {
+                      onNavigateAuth(portal.id);
+                    }
+                  }}
                   className={`gateway-portal-card gateway-portal-card--${portal.tone} group text-left w-full cursor-pointer`}
                 >
                   <img src={portal.image} alt="" className="gateway-portal-card__image" />

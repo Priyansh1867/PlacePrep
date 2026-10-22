@@ -44,6 +44,9 @@ import {
   addFeedbackLoopEntry
 } from '../services/storage';
 import PortalModuleCards from '../components/PortalModuleCards';
+import LiveSessionsManager from '../components/sessions/LiveSessionsManager';
+import PlacementDebriefSystem from '../components/feedback/PlacementDebriefSystem';
+import UserProfileMenu from '../components/UserProfileMenu';
 
 export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [activeTab, setActiveTab] = useState('drives');
@@ -156,17 +159,18 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsBroadcastModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Bell className="w-4 h-4" />
                 <span>Broadcast Push Alert</span>
               </button>
               <button
                 onClick={() => onNavigate('gateway')}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Switch Portal</span>
               </button>
+              <UserProfileMenu onNavigate={onNavigate} theme="dark" />
             </div>
           </div>
 
@@ -324,64 +328,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 3: LIVE SESSIONS & PPTS */}
+        {/* TAB 3: LIVE SESSIONS & WORKSHOP MANAGER */}
         {activeTab === 'live-sessions' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900">Pre-Placement Talks (PPT) & Corporate Live Webinars</h3>
-                  <p className="text-xs text-slate-500 mt-1">Direct interactive sessions hosted by company tech leads and university recruiters.</p>
-                </div>
-                <button
-                  onClick={() => setIsLiveModalOpen(true)}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Schedule Live Session</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {liveSessions.map(session => (
-                  <div key={session.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-black text-xs text-slate-900">{session.companyName}</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                          {session.platform}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-slate-900 text-sm mb-1">{session.title}</h4>
-                      <p className="text-xs text-slate-600 mb-2">Speaker: {session.speaker}</p>
-                      <p className="text-xs text-slate-500 mb-4 italic leading-relaxed">"{session.agenda}"</p>
-
-                      <div className="space-y-1 text-xs text-slate-500 bg-white p-3 rounded-xl border border-slate-100 mb-4">
-                        <div className="flex justify-between">
-                          <span>Date & Time:</span>
-                          <span className="font-semibold text-slate-800">{session.date} • {session.time}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Student RSVPs:</span>
-                          <span className="font-bold text-emerald-600">{session.rsvpsCount} Attending</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <a
-                      href={session.joinUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-sm"
-                    >
-                      <Video className="w-3.5 h-3.5" />
-                      <span>Join Live Video Room</span>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <LiveSessionsManager onNavigate={onNavigate} />
           </div>
         )}
 
@@ -433,51 +383,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 6: FEEDBACK LOOP (FEEDBACK -> TPO -> COMPANY) */}
+        {/* TAB 6: PLACEMENT FEEDBACK & DEBRIEF SYSTEM */}
         {activeTab === 'feedback-loop' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold uppercase">
-                  Continuous Quality Loop
-                </span>
-                <span className="text-xs text-slate-500">Student Feedback → TPO Cell → Company Recruiter</span>
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 mb-6">3-Way Campus Recruitment Feedback System</h3>
-
-              <div className="space-y-6">
-                {feedbackLoop.map((item, idx) => (
-                  <div key={idx} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                      <div>
-                        <h4 className="font-black text-slate-900 text-base">{item.companyName} Campus Drive Review</h4>
-                        <span className="text-xs text-slate-500">Date: {item.driveDate}</span>
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-                        {item.status}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                      <div className="p-4 bg-white rounded-2xl border border-slate-100">
-                        <span className="font-bold text-indigo-600 block mb-1">1. Student Feedback (Rating: {item.studentRatingAvg}/5)</span>
-                        <p className="text-slate-600 leading-relaxed italic">"{item.studentFeedbackSummary}"</p>
-                      </div>
-
-                      <div className="p-4 bg-white rounded-2xl border border-slate-100">
-                        <span className="font-bold text-emerald-600 block mb-1">2. TPO Cell Assessment</span>
-                        <p className="text-slate-600 leading-relaxed italic">"{item.tpoAssessment}"</p>
-                      </div>
-
-                      <div className="p-4 bg-white rounded-2xl border border-slate-100">
-                        <span className="font-bold text-amber-600 block mb-1">3. Company Recruiter Rating ({item.companyRecruiterRating}/5)</span>
-                        <p className="text-slate-600 leading-relaxed italic">"{item.companyRecruiterComments}"</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PlacementDebriefSystem />
           </div>
         )}
 

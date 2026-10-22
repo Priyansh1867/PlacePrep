@@ -240,7 +240,7 @@ function getInitialSeedRecords() {
 }
 
 // Local Storage helpers
-function getLocalCrtSessions() {
+export function getLocalCrtSessions() {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.CRT_SESSIONS);
     if (stored) return JSON.parse(stored);
@@ -256,7 +256,7 @@ function getLocalCrtSessions() {
   return initial;
 }
 
-function saveLocalCrtSessions(sessions) {
+export function saveLocalCrtSessions(sessions) {
   try {
     localStorage.setItem(STORAGE_KEYS.CRT_SESSIONS, JSON.stringify(sessions));
   } catch (e) {
@@ -264,7 +264,7 @@ function saveLocalCrtSessions(sessions) {
   }
 }
 
-function getLocalCrtRecords() {
+export function getLocalCrtRecords() {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.CRT_RECORDS);
     if (stored) return JSON.parse(stored);
@@ -280,13 +280,16 @@ function getLocalCrtRecords() {
   return initial;
 }
 
-function saveLocalCrtRecords(records) {
+export function saveLocalCrtRecords(records) {
   try {
     localStorage.setItem(STORAGE_KEYS.CRT_RECORDS, JSON.stringify(records));
   } catch (e) {
     console.error('Failed to save CRT records to localStorage:', e);
   }
 }
+
+export const getCrtSessionsList = getLocalCrtSessions;
+export const getCrtRecordsList = getLocalCrtRecords;
 
 // --- PUBLIC SERVICE METHODS ---
 

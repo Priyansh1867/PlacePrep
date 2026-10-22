@@ -27,7 +27,8 @@ import {
   MessageSquare,
   ShieldCheck,
   CheckSquare,
-  Plus
+  Plus,
+  FileSpreadsheet
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -44,10 +45,11 @@ import {
   addFeedbackLoopEntry
 } from '../services/storage';
 import PortalModuleCards from '../components/PortalModuleCards';
+import ReportsExporterPage from './ReportsExporterPage';
 
 export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [activeTab, setActiveTab] = useState('drives');
-  // 'drives', 'eligibility-criteria', 'live-sessions', 'shortlisted', 'internships', 'feedback-loop', 'off-campus', 'push-notifications'
+  // 'drives', 'eligibility-criteria', 'live-sessions', 'shortlisted', 'internships', 'feedback-loop', 'off-campus', 'push-notifications', 'reports-exporter'
 
   const currentUser = getCurrentUser();
   const [drives, setDrives] = useState(getUpcomingDrives());
@@ -121,6 +123,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   const navTabs = [
     { id: 'drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${drives.length}` },
+    { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['tpo', 'coordinator', 'director', 'admin', 'super_admin'] },
     { id: 'eligibility-criteria', label: 'Company Eligibility Criteria', icon: CheckSquare },
     { id: 'live-sessions', label: 'Live Sessions & PPTs', icon: Video, badge: `${liveSessions.length}` },
     { id: 'shortlisted', label: 'Shortlisted Students', icon: Users, badge: 'Pipeline' },
@@ -566,6 +569,11 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               </div>
             </div>
           </div>
+        )}
+
+        {/* TAB: REPORTS EXPORTER */}
+        {activeTab === 'reports-exporter' && (
+          <ReportsExporterPage onNavigate={onNavigate} />
         )}
 
       </div>

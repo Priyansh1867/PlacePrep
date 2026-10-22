@@ -28,6 +28,7 @@ import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
 import DailyAttendancePage from './pages/DailyAttendancePage';
 import CrtAttendancePage from './pages/CrtAttendancePage';
+import ReportsExporterPage from './pages/ReportsExporterPage';
 
 import { getCompanies } from './services/storage';
 
@@ -312,6 +313,11 @@ export default function App() {
         {/* 18. CRT TRAINING ATTENDANCE & ELIGIBILITY PORTAL */}
         {(currentRoute === 'crt-attendance' || currentRoute === 'crt-training-attendance') && (
           <CrtAttendancePage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 19. REPORTS EXPORTER (DRIVE ELIGIBILITY, PLACEMENTS & ATTENDANCE) */}
+        {(currentRoute === 'reports' || currentRoute === 'reports-exporter') && (
+          <ReportsExporterPage onNavigate={setCurrentRoute} />
         )}
 
       </main>

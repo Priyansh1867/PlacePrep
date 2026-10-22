@@ -24,6 +24,7 @@ const rolesByPortal = {
     { id: 'coordinator', label: 'Coordinator', icon: Users, description: 'Run placement ops' },
     { id: 'hr', label: 'Recruiter', icon: Briefcase, description: 'Discover candidates' },
     { id: 'director', label: 'Director', icon: ShieldCheck, description: 'Monitor outcomes' },
+    { id: 'student', label: 'Student', icon: GraduationCap, description: 'View drives, eligibility & jobs' },
   ],
 };
 
@@ -252,7 +253,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   <label className="text-xs font-bold text-slate-700">I’m signing in as</label>
                   <span className="text-[11px] text-slate-400">Choose your workspace</span>
                 </div>
-                <div className={`grid gap-1.5 ${roleOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div className={`grid gap-1.5 ${roleOptions.length > 4 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
                   {roleOptions.map(({ id, label, icon: Icon, description }) => (
                     <button
                       key={id}

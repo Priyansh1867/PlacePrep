@@ -515,9 +515,42 @@ export const AttendanceApi = {
     return await request(`/attendance/student/${encodeURIComponent(studentId)}/summary`);
   },
 
-  async getCrtSessions(targetBatch) {
-    const url = targetBatch ? `/attendance/crt/sessions?targetBatch=${encodeURIComponent(targetBatch)}` : '/attendance/crt/sessions';
-    return await request(url);
+  async getCrtSessions(params = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.targetBatch) searchParams.append('targetBatch', params.targetBatch);
+    if (params.department) searchParams.append('department', params.department);
+    if (params.status) searchParams.append('status', params.status);
+    const qs = searchParams.toString();
+    return await request(`/attendance/crt/sessions${qs ? `?${qs}` : ''}`);
+  },
+
+  async getCrtSessionById(sessionId) {
+    return await request(`/attendance/crt/sessions/${sessionId}`);
+  },
+
+  async createCrtSession(session) {
+    return await request('/attendance/crt/sessions', {
+      method: 'POST',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async updateCrtSession(sessionId, session) {
+    return await request(`/attendance/crt/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async updateCrtSessionStatus(sessionId, status) {
+    return await request(`/attendance/crt/sessions/${sessionId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  },
+
+  async getCrtSessionRoster(sessionId) {
+    return await request(`/attendance/crt/sessions/${sessionId}/roster`);
   },
 
   async markCrtAttendance(sessionId, records) {
@@ -525,6 +558,22 @@ export const AttendanceApi = {
       method: 'POST',
       body: JSON.stringify(records)
     });
+  },
+
+  async getCrtSessionRecords(sessionId) {
+    return await request(`/attendance/crt/sessions/${sessionId}/records`);
+  },
+
+  async getCrtSessionReport(sessionId) {
+    return await request(`/attendance/crt/report/session/${sessionId}`);
+  },
+
+  async getCrtCumulativeReport({ targetBatch, department } = {}) {
+    const params = new URLSearchParams();
+    if (targetBatch) params.append('targetBatch', targetBatch);
+    if (department) params.append('department', department);
+    const qs = params.toString();
+    return await request(`/attendance/crt/report/cumulative${qs ? `?${qs}` : ''}`);
   },
 
   async getStudentCrtSummary(studentId) {

@@ -3,12 +3,16 @@ package com.placeprep.config;
 import com.placeprep.model.ClassAttendanceRecord;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.Company;
+import com.placeprep.model.CrtAttendanceRecord;
+import com.placeprep.model.CrtTrainingSession;
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.StudentApplication;
 import com.placeprep.model.User;
 import com.placeprep.repository.ClassAttendanceRecordRepository;
 import com.placeprep.repository.ClassAttendanceSessionRepository;
 import com.placeprep.repository.CompanyRepository;
+import com.placeprep.repository.CrtAttendanceRecordRepository;
+import com.placeprep.repository.CrtTrainingSessionRepository;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import com.placeprep.repository.UserRepository;
@@ -29,7 +33,9 @@ public class DataInitializer {
             StudentApplicationRepository applicationRepository,
             UserRepository userRepository,
             ClassAttendanceSessionRepository classSessionRepository,
-            ClassAttendanceRecordRepository classRecordRepository
+            ClassAttendanceRecordRepository classRecordRepository,
+            CrtTrainingSessionRepository crtSessionRepository,
+            CrtAttendanceRecordRepository crtRecordRepository
     ) {
         return args -> {
             if (userRepository.count() == 0) {
@@ -278,6 +284,174 @@ public class DataInitializer {
                         rec.setRemarks("LATE".equalsIgnoreCase(stu[3 + sIdx]) ? "Arrived 10 mins late" : null);
                         rec.setRecordedAt(sampleSessions[sIdx][0] + " 09:15");
                         classRecordRepository.save(rec);
+                    }
+                }
+            }
+
+            if (crtSessionRepository.count() == 0) {
+                // 1. Session 1: Quantitative Aptitude
+                CrtTrainingSession s1 = new CrtTrainingSession();
+                s1.setTopic("Quantitative Aptitude & Speed Math Masterclass");
+                s1.setModuleType("Quantitative Ability");
+                s1.setTrainerName("Prof. Alok Verma");
+                s1.setTrainerOrganization("Placement Training Cell");
+                s1.setScheduledDate("2026-10-12");
+                s1.setTimeSlot("10:00 AM - 12:00 PM");
+                s1.setStartTime("10:00 AM");
+                s1.setEndTime("12:00 PM");
+                s1.setVenue("Seminar Hall 1 / Online Hybrid");
+                s1.setTargetBatch("2026");
+                s1.setTargetBranch("ALL");
+                s1.setAcademicYear("3rd Year");
+                s1.setSemester("6");
+                s1.setDescription("Permutations, Combinations, Probability, and high-frequency company aptitude problem patterns.");
+                s1.setStatus("COMPLETED");
+                s1.setCreatedBy("teacher@placeprep.com");
+                s1.setCreatedAt("2026-10-10 09:00");
+                s1.setUpdatedAt("2026-10-12 12:30");
+                CrtTrainingSession savedS1 = crtSessionRepository.save(s1);
+
+                // 2. Session 2: Coding & DSA
+                CrtTrainingSession s2 = new CrtTrainingSession();
+                s2.setTopic("Data Structures & Algorithms - Dynamic Programming & Trees");
+                s2.setModuleType("Coding");
+                s2.setTrainerName("Dr. Radhika Sen");
+                s2.setTrainerOrganization("Ex-Amazon SDE / Placement Mentor");
+                s2.setScheduledDate("2026-10-16");
+                s2.setTimeSlot("02:00 PM - 05:00 PM");
+                s2.setStartTime("02:00 PM");
+                s2.setEndTime("05:00 PM");
+                s2.setVenue("Computer Center Lab 4");
+                s2.setTargetBatch("2026");
+                s2.setTargetBranch("ALL");
+                s2.setAcademicYear("3rd Year");
+                s2.setSemester("6");
+                s2.setDescription("Memoization, Tabulation, Knapsack variations, and Binary Tree traversals with live coding.");
+                s2.setStatus("COMPLETED");
+                s2.setCreatedBy("teacher@placeprep.com");
+                s2.setCreatedAt("2026-10-14 10:00");
+                s2.setUpdatedAt("2026-10-16 17:15");
+                CrtTrainingSession savedS2 = crtSessionRepository.save(s2);
+
+                // 3. Session 3: Soft Skills & Behavioral
+                CrtTrainingSession s3 = new CrtTrainingSession();
+                s3.setTopic("Mock HR & STAR Method Behavioral Coaching");
+                s3.setModuleType("Soft Skills");
+                s3.setTrainerName("Ms. Sunita Kapoor");
+                s3.setTrainerOrganization("Corporate HR Consultant");
+                s3.setScheduledDate("2026-10-19");
+                s3.setTimeSlot("11:00 AM - 01:00 PM");
+                s3.setStartTime("11:00 AM");
+                s3.setEndTime("01:00 PM");
+                s3.setVenue("Auditorium 2");
+                s3.setTargetBatch("2026");
+                s3.setTargetBranch("ALL");
+                s3.setAcademicYear("3rd Year");
+                s3.setSemester("6");
+                s3.setDescription("Behavioral interview mastery: Situation, Task, Action, Result framing for corporate culture fit.");
+                s3.setStatus("COMPLETED");
+                s3.setCreatedBy("teacher@placeprep.com");
+                s3.setCreatedAt("2026-10-17 11:00");
+                s3.setUpdatedAt("2026-10-19 13:10");
+                CrtTrainingSession savedS3 = crtSessionRepository.save(s3);
+
+                // 4. Session 4: Technical Interview Prep
+                CrtTrainingSession s4 = new CrtTrainingSession();
+                s4.setTopic("SQL, Indexing & ACID Transactions Deep Dive");
+                s4.setModuleType("Technical Interview Preparation");
+                s4.setTrainerName("Prof. Tarun Gupta");
+                s4.setTrainerOrganization("Database Architect");
+                s4.setScheduledDate("2026-10-21");
+                s4.setTimeSlot("03:00 PM - 05:00 PM");
+                s4.setStartTime("03:00 PM");
+                s4.setEndTime("05:00 PM");
+                s4.setVenue("Lab 2");
+                s4.setTargetBatch("2026");
+                s4.setTargetBranch("ALL");
+                s4.setAcademicYear("3rd Year");
+                s4.setSemester("6");
+                s4.setDescription("Query optimization, execution plans, B-Tree indexes, and distributed transaction isolation.");
+                s4.setStatus("COMPLETED");
+                s4.setCreatedBy("teacher@placeprep.com");
+                s4.setCreatedAt("2026-10-18 14:00");
+                s4.setUpdatedAt("2026-10-21 17:05");
+                CrtTrainingSession savedS4 = crtSessionRepository.save(s4);
+
+                // 5. Session 5: Upcoming / Scheduled Session
+                CrtTrainingSession s5 = new CrtTrainingSession();
+                s5.setTopic("Full-Stack System Design & Microservices Architecture");
+                s5.setModuleType("Technical Interview Preparation");
+                s5.setTrainerName("Er. Vikram Malhotra");
+                s5.setTrainerOrganization("Principal Architect @ CloudCorp");
+                s5.setScheduledDate("2026-10-25");
+                s5.setTimeSlot("10:00 AM - 01:00 PM");
+                s5.setStartTime("10:00 AM");
+                s5.setEndTime("01:00 PM");
+                s5.setVenue("Central Auditorium & MS Teams Hybrid");
+                s5.setTargetBatch("2026");
+                s5.setTargetBranch("ALL");
+                s5.setAcademicYear("3rd Year");
+                s5.setSemester("6");
+                s5.setDescription("Load balancing, caching strategies (Redis), CDN, horizontal scaling, and CAP theorem trade-offs.");
+                s5.setStatus("SCHEDULED");
+                s5.setCreatedBy("teacher@placeprep.com");
+                s5.setCreatedAt("2026-10-20 10:00");
+                s5.setUpdatedAt("2026-10-20 10:00");
+                crtSessionRepository.save(s5);
+
+                // 6. Session 6: Cancelled Session (to verify exclusion from completed reports)
+                CrtTrainingSession s6 = new CrtTrainingSession();
+                s6.setTopic("Campus Coding Marathon (Round 1 Rescheduled)");
+                s6.setModuleType("Coding");
+                s6.setTrainerName("Internal TPO Team");
+                s6.setTrainerOrganization("Placement Cell");
+                s6.setScheduledDate("2026-10-14");
+                s6.setTimeSlot("09:00 AM - 12:00 PM");
+                s6.setStartTime("09:00 AM");
+                s6.setEndTime("12:00 PM");
+                s6.setVenue("Online Portal");
+                s6.setTargetBatch("2026");
+                s6.setTargetBranch("ALL");
+                s6.setAcademicYear("3rd Year");
+                s6.setSemester("6");
+                s6.setDescription("Rescheduled due to college mid-term examination week collision.");
+                s6.setStatus("CANCELLED");
+                s6.setCreatedBy("teacher@placeprep.com");
+                s6.setCreatedAt("2026-10-10 12:00");
+                s6.setUpdatedAt("2026-10-13 18:00");
+                crtSessionRepository.save(s6);
+
+                // Seed Attendance for the 4 completed sessions:
+                // [roll, name, email, S1, S2, S3, S4]
+                String[][] crtStudentData = {
+                    {"22CS0101", "Priyansh Jain", "priyansh.jain@example.edu", "PRESENT", "PRESENT", "PRESENT", "PRESENT"},
+                    {"22CS0102", "Ananya Sharma", "ananya.sharma@example.edu", "PRESENT", "ABSENT", "PRESENT", "PRESENT"},
+                    {"22CS0103", "Rohan Kulkarni", "rohan.kulkarni@example.edu", "ABSENT", "PRESENT", "ABSENT", "PRESENT"},
+                    {"22CS0104", "Siddharth Nair", "siddharth.nair@example.edu", "PRESENT", "LATE", "PRESENT", "ABSENT"},
+                    {"22CS0105", "Meera Venkat", "meera.venkat@example.edu", "ABSENT", "ABSENT", "ABSENT", "PRESENT"},
+                    {"22CS0106", "Kabir Mehta", "kabir.mehta@example.edu", "PRESENT", "PRESENT", "LATE", "PRESENT"},
+                    {"22CS0107", "Divya Reddy", "divya.reddy@example.edu", "PRESENT", "PRESENT", "PRESENT", "PRESENT"},
+                    {"22CS0108", "Aarav Gupta", "aarav.gupta@example.edu", "PRESENT", "ABSENT", "ABSENT", "PRESENT"}
+                };
+
+                CrtTrainingSession[] completedSessions = {savedS1, savedS2, savedS3, savedS4};
+
+                for (int cIdx = 0; cIdx < completedSessions.length; cIdx++) {
+                    CrtTrainingSession cs = completedSessions[cIdx];
+                    for (String[] stu : crtStudentData) {
+                        CrtAttendanceRecord rec = new CrtAttendanceRecord();
+                        rec.setCrtSessionId(cs.getId());
+                        rec.setStudentId(stu[2]);
+                        rec.setStudentRollNumber(stu[0]);
+                        rec.setStudentName(stu[1]);
+                        rec.setDepartment("CSE");
+                        rec.setStatus(stu[3 + cIdx]);
+                        rec.setRecordedBy("Dr. Neha Sharma");
+                        rec.setRecordedAt(cs.getScheduledDate() + " 12:00");
+                        if ("LATE".equalsIgnoreCase(stu[3 + cIdx])) {
+                            rec.setRemarks("Arrived 15 minutes late after lab transit");
+                        }
+                        crtRecordRepository.save(rec);
                     }
                 }
             }

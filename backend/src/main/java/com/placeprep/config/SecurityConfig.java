@@ -81,6 +81,8 @@ public class SecurityConfig {
                         // Marking class attendance requires TEACHER, HOD, or ADMIN role
                         .requestMatchers(HttpMethod.POST, "/api/attendance/class/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY")
                         .requestMatchers(HttpMethod.POST, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.PUT, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.GET, "/api/attendance/**").permitAll()
 
                         // Any other request must be authenticated

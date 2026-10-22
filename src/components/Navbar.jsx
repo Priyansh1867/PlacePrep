@@ -22,7 +22,8 @@ import {
   LogIn,
   Compass,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Award
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -70,6 +71,7 @@ export default function Navbar({
 
   const moreModules = [
     { id: 'attendance', label: 'Daily Class Attendance', desc: 'Teacher & HOD speed attendance marking portal', icon: UserCheck, isNew: true },
+    { id: 'crt-attendance', label: 'CRT Training Attendance', desc: 'Pre-placement training, attendance & certificate eligibility', icon: Award, isNew: true },
     { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
     { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
     { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },

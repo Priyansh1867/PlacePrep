@@ -352,33 +352,188 @@ public class AttendanceService {
         return summary;
     }
 
-    // --- CRT ATTENDANCE ---
+    // --- CRT ATTENDANCE CONFIGURATION & SERVICE ---
+
+    public static final double CRT_SHORTAGE_THRESHOLD = 75.0;
+    public static final double CRT_CERTIFICATE_MIN_PERCENTAGE = 75.0;
+    public static final int CRT_CERTIFICATE_MIN_COMPLETED_SESSIONS = 3;
 
     public CrtTrainingSession createCrtSession(CrtTrainingSession session) {
-        if (session.getCreatedAt() == null) {
-            session.setCreatedAt(LocalDateTime.now().format(TS));
+        if (session.getTopic() == null || session.getTopic().trim().isEmpty()) {
+            throw new IllegalArgumentException("Session title/topic cannot be empty");
         }
+        if (session.getModuleType() == null || session.getModuleType().trim().isEmpty()) {
+            throw new IllegalArgumentException("Session module category cannot be empty");
+        }
+        if (session.getScheduledDate() == null || session.getScheduledDate().trim().isEmpty()) {
+            throw new IllegalArgumentException("Scheduled date cannot be empty");
+        }
+
+        String now = LocalDateTime.now().format(TS);
+        if (session.getCreatedAt() == null) {
+            session.setCreatedAt(now);
+        }
+        session.setUpdatedAt(now);
+
+        if (session.getStatus() == null || session.getStatus().trim().isEmpty()) {
+            session.setStatus("SCHEDULED");
+        } else {
+            session.setStatus(session.getStatus().toUpperCase());
+        }
+
+        if (session.getTargetBranch() == null || session.getTargetBranch().trim().isEmpty()) {
+            session.setTargetBranch("ALL");
+        }
+        if (session.getTargetBatch() == null || session.getTargetBatch().trim().isEmpty()) {
+            session.setTargetBatch("ALL");
+        }
+        if (session.getTimeSlot() == null && session.getStartTime() != null && session.getEndTime() != null) {
+            session.setTimeSlot(session.getStartTime() + " - " + session.getEndTime());
+        }
+
         return crtSessionRepo.save(session);
     }
 
-    public List<CrtTrainingSession> getCrtSessions(String targetBatch) {
-        if (targetBatch != null && !targetBatch.trim().isEmpty()) {
-            return crtSessionRepo.findByTargetBatchOrderByScheduledDateDesc(targetBatch);
+    public CrtTrainingSession updateCrtSession(Long id, CrtTrainingSession updated) {
+        CrtTrainingSession existing = crtSessionRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("CRT Session not found: " + id));
+
+        if (updated.getTopic() != null) existing.setTopic(updated.getTopic());
+        if (updated.getModuleType() != null) existing.setModuleType(updated.getModuleType());
+        if (updated.getTrainerName() != null) existing.setTrainerName(updated.getTrainerName());
+        if (updated.getTrainerOrganization() != null) existing.setTrainerOrganization(updated.getTrainerOrganization());
+        if (updated.getScheduledDate() != null) existing.setScheduledDate(updated.getScheduledDate());
+        if (updated.getTimeSlot() != null) existing.setTimeSlot(updated.getTimeSlot());
+        if (updated.getStartTime() != null) existing.setStartTime(updated.getStartTime());
+        if (updated.getEndTime() != null) existing.setEndTime(updated.getEndTime());
+        if (updated.getVenue() != null) existing.setVenue(updated.getVenue());
+        if (updated.getTargetBatch() != null) existing.setTargetBatch(updated.getTargetBatch());
+        if (updated.getTargetBranch() != null) existing.setTargetBranch(updated.getTargetBranch());
+        if (updated.getAcademicYear() != null) existing.setAcademicYear(updated.getAcademicYear());
+        if (updated.getSemester() != null) existing.setSemester(updated.getSemester());
+        if (updated.getDescription() != null) existing.setDescription(updated.getDescription());
+        if (updated.getStatus() != null) existing.setStatus(updated.getStatus().toUpperCase());
+
+        existing.setUpdatedAt(LocalDateTime.now().format(TS));
+        return crtSessionRepo.save(existing);
+    }
+
+    public CrtTrainingSession updateCrtSessionStatus(Long id, String newStatus) {
+        CrtTrainingSession existing = crtSessionRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("CRT Session not found: " + id));
+
+        String upper = newStatus.trim().toUpperCase();
+        if (!upper.equals("SCHEDULED") && !upper.equals("IN_PROGRESS") && !upper.equals("COMPLETED") && !upper.equals("CANCELLED")) {
+            throw new IllegalArgumentException("Invalid status: " + newStatus + ". Allowed: SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED");
         }
-        return crtSessionRepo.findAllByOrderByScheduledDateDesc();
+
+        existing.setStatus(upper);
+        existing.setUpdatedAt(LocalDateTime.now().format(TS));
+        return crtSessionRepo.save(existing);
+    }
+
+    public List<CrtTrainingSession> getCrtSessions(String targetBatch, String department, String status) {
+        List<CrtTrainingSession> all = crtSessionRepo.findAllByOrderByScheduledDateDesc();
+        List<CrtTrainingSession> filtered = new ArrayList<>();
+
+        for (CrtTrainingSession s : all) {
+            boolean batchMatch = targetBatch == null || targetBatch.trim().isEmpty() || "ALL".equalsIgnoreCase(targetBatch) ||
+                    "ALL".equalsIgnoreCase(s.getTargetBatch()) || targetBatch.equalsIgnoreCase(s.getTargetBatch());
+
+            boolean deptMatch = department == null || department.trim().isEmpty() || "ALL".equalsIgnoreCase(department) ||
+                    "ALL".equalsIgnoreCase(s.getTargetBranch()) ||
+                    (s.getTargetBranch() != null && s.getTargetBranch().toUpperCase().contains(department.toUpperCase()));
+
+            boolean statusMatch = status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status) ||
+                    (s.getStatus() != null && s.getStatus().equalsIgnoreCase(status));
+
+            if (batchMatch && deptMatch && statusMatch) {
+                filtered.add(s);
+            }
+        }
+        return filtered;
+    }
+
+    public Optional<CrtTrainingSession> getCrtSessionById(Long id) {
+        return crtSessionRepo.findById(id);
+    }
+
+    public List<Map<String, Object>> getCrtSessionRoster(Long sessionId) {
+        CrtTrainingSession session = crtSessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("CRT Session not found: " + sessionId));
+
+        String deptFilter = "ALL".equalsIgnoreCase(session.getTargetBranch()) ? null : session.getTargetBranch();
+        String semFilter = session.getSemester() != null ? session.getSemester() : "6";
+        List<Map<String, Object>> baseRoster = getClassRoster(deptFilter, semFilter);
+
+        List<CrtAttendanceRecord> existingRecords = crtRecordRepo.findByCrtSessionId(sessionId);
+        Map<String, CrtAttendanceRecord> recordMap = new HashMap<>();
+        for (CrtAttendanceRecord r : existingRecords) {
+            recordMap.put(r.getStudentId(), r);
+            if (r.getStudentRollNumber() != null) {
+                recordMap.put(r.getStudentRollNumber(), r);
+            }
+        }
+
+        List<Map<String, Object>> merged = new ArrayList<>();
+        for (Map<String, Object> stu : baseRoster) {
+            String studentId = (String) stu.get("studentId");
+            String rollNumber = (String) stu.get("rollNumber");
+
+            CrtAttendanceRecord existing = recordMap.get(studentId);
+            if (existing == null && rollNumber != null) {
+                existing = recordMap.get(rollNumber);
+            }
+
+            Map<String, Object> row = new LinkedHashMap<>(stu);
+            row.put("crtSessionId", sessionId);
+            if (existing != null) {
+                row.put("status", existing.getStatus() != null ? existing.getStatus().toUpperCase() : "UNMARKED");
+                row.put("assessmentScore", existing.getAssessmentScore());
+                row.put("remarks", existing.getRemarks());
+                row.put("recordedAt", existing.getRecordedAt());
+                row.put("recordedBy", existing.getRecordedBy());
+            } else {
+                row.put("status", "UNMARKED");
+                row.put("assessmentScore", null);
+                row.put("remarks", null);
+                row.put("recordedAt", null);
+                row.put("recordedBy", null);
+            }
+            merged.add(row);
+        }
+        return merged;
     }
 
     @Transactional
-    public List<CrtAttendanceRecord> markCrtAttendance(Long crtSessionId, List<CrtAttendanceRecord> records) {
+    public List<CrtAttendanceRecord> markCrtAttendance(Long crtSessionId, List<CrtAttendanceRecord> records, String recordedBy) {
         CrtTrainingSession session = crtSessionRepo.findById(crtSessionId)
                 .orElseThrow(() -> new IllegalArgumentException("CRT Session not found: " + crtSessionId));
+
+        if ("CANCELLED".equalsIgnoreCase(session.getStatus())) {
+            throw new IllegalArgumentException("Cannot mark attendance for a CANCELLED session.");
+        }
 
         List<CrtAttendanceRecord> saved = new ArrayList<>();
         String now = LocalDateTime.now().format(TS);
 
         for (CrtAttendanceRecord rec : records) {
+            if (rec.getStudentId() == null || rec.getStudentId().trim().isEmpty()) {
+                continue;
+            }
+
+            String status = rec.getStatus() != null ? rec.getStatus().trim().toUpperCase() : "UNMARKED";
+            if (!status.equals("PRESENT") && !status.equals("ABSENT") && !status.equals("LATE") && !status.equals("UNMARKED")) {
+                status = "UNMARKED";
+            }
+
             rec.setCrtSessionId(crtSessionId);
+            rec.setStatus(status);
             rec.setRecordedAt(now);
+            if (recordedBy != null && !recordedBy.trim().isEmpty()) {
+                rec.setRecordedBy(recordedBy);
+            }
+
             Optional<CrtAttendanceRecord> existing = crtRecordRepo.findByCrtSessionIdAndStudentId(crtSessionId, rec.getStudentId());
             if (existing.isPresent()) {
                 CrtAttendanceRecord cur = existing.get();
@@ -386,42 +541,282 @@ public class AttendanceService {
                 cur.setAssessmentScore(rec.getAssessmentScore());
                 cur.setRemarks(rec.getRemarks());
                 cur.setRecordedAt(now);
+                if (rec.getRecordedBy() != null) cur.setRecordedBy(rec.getRecordedBy());
                 saved.add(crtRecordRepo.save(cur));
             } else {
                 saved.add(crtRecordRepo.save(rec));
             }
         }
+
+        // If attendance is being marked for a SCHEDULED session, transition it to COMPLETED
+        if ("SCHEDULED".equalsIgnoreCase(session.getStatus())) {
+            session.setStatus("COMPLETED");
+            session.setUpdatedAt(now);
+            crtSessionRepo.save(session);
+        }
+
         return saved;
+    }
+
+    public List<CrtAttendanceRecord> getCrtSessionRecords(Long crtSessionId) {
+        return crtRecordRepo.findByCrtSessionId(crtSessionId);
+    }
+
+    public Map<String, Object> getCrtSessionReport(Long crtSessionId) {
+        CrtTrainingSession session = crtSessionRepo.findById(crtSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("CRT Session not found: " + crtSessionId));
+
+        List<Map<String, Object>> roster = getCrtSessionRoster(crtSessionId);
+        int total = roster.size();
+        int present = 0;
+        int late = 0;
+        int absent = 0;
+        int unmarked = 0;
+
+        for (Map<String, Object> stu : roster) {
+            String st = (String) stu.get("status");
+            if ("PRESENT".equalsIgnoreCase(st)) {
+                present++;
+            } else if ("LATE".equalsIgnoreCase(st)) {
+                late++;
+            } else if ("ABSENT".equalsIgnoreCase(st)) {
+                absent++;
+            } else {
+                unmarked++;
+            }
+        }
+
+        int attended = present + late;
+        double completionRate = total > 0 ? (attended * 100.0 / total) : 0.0;
+        completionRate = Math.round(completionRate * 10.0) / 10.0;
+
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("sessionId", session.getId());
+        report.put("topic", session.getTopic());
+        report.put("moduleType", session.getModuleType());
+        report.put("trainerName", session.getTrainerName());
+        report.put("trainerOrganization", session.getTrainerOrganization());
+        report.put("scheduledDate", session.getScheduledDate());
+        report.put("timeSlot", session.getTimeSlot());
+        report.put("venue", session.getVenue());
+        report.put("status", session.getStatus());
+        report.put("targetBatch", session.getTargetBatch());
+        report.put("targetBranch", session.getTargetBranch());
+        report.put("totalEligibleStudents", total);
+        report.put("presentCount", present);
+        report.put("lateCount", late);
+        report.put("absentCount", absent);
+        report.put("unmarkedCount", unmarked);
+        report.put("qualifyingAttendedCount", attended);
+        report.put("attendanceCompletionPercentage", completionRate);
+        report.put("roster", roster);
+        return report;
+    }
+
+    public Map<String, Object> getCrtCumulativeReport(String targetBatch, String department) {
+        List<CrtTrainingSession> allSessions = crtSessionRepo.findAllByOrderByScheduledDateDesc();
+        List<CrtTrainingSession> completedSessions = new ArrayList<>();
+
+        for (CrtTrainingSession s : allSessions) {
+            // Per requirement: exclude cancelled sessions, exclude future or incomplete sessions
+            if (!"COMPLETED".equalsIgnoreCase(s.getStatus())) {
+                continue;
+            }
+
+            boolean batchMatch = targetBatch == null || targetBatch.trim().isEmpty() || "ALL".equalsIgnoreCase(targetBatch) ||
+                    "ALL".equalsIgnoreCase(s.getTargetBatch()) || targetBatch.equalsIgnoreCase(s.getTargetBatch());
+
+            boolean deptMatch = department == null || department.trim().isEmpty() || "ALL".equalsIgnoreCase(department) ||
+                    "ALL".equalsIgnoreCase(s.getTargetBranch()) ||
+                    (s.getTargetBranch() != null && s.getTargetBranch().toUpperCase().contains(department.toUpperCase()));
+
+            if (batchMatch && deptMatch) {
+                completedSessions.add(s);
+            }
+        }
+
+        int completedSessionsHeld = completedSessions.size();
+        String deptFilter = (department == null || "ALL".equalsIgnoreCase(department)) ? "CSE" : department;
+        List<Map<String, Object>> baseRoster = getClassRoster(deptFilter, "6");
+
+        // Map student -> attended, late, absent counts across completed sessions
+        Map<String, Integer> attendedMap = new HashMap<>();
+        Map<String, Integer> lateMap = new HashMap<>();
+        Map<String, Integer> absentMap = new HashMap<>();
+
+        for (CrtTrainingSession cs : completedSessions) {
+            List<CrtAttendanceRecord> recs = crtRecordRepo.findByCrtSessionId(cs.getId());
+            for (CrtAttendanceRecord r : recs) {
+                String sid = r.getStudentId();
+                if ("PRESENT".equalsIgnoreCase(r.getStatus())) {
+                    attendedMap.put(sid, attendedMap.getOrDefault(sid, 0) + 1);
+                } else if ("LATE".equalsIgnoreCase(r.getStatus())) {
+                    attendedMap.put(sid, attendedMap.getOrDefault(sid, 0) + 1);
+                    lateMap.put(sid, lateMap.getOrDefault(sid, 0) + 1);
+                } else if ("ABSENT".equalsIgnoreCase(r.getStatus())) {
+                    absentMap.put(sid, absentMap.getOrDefault(sid, 0) + 1);
+                }
+            }
+        }
+
+        List<Map<String, Object>> studentReports = new ArrayList<>();
+        int shortageCount = 0;
+        int eligibleCertificateCount = 0;
+        double sumPercentage = 0.0;
+
+        for (Map<String, Object> stu : baseRoster) {
+            String studentId = (String) stu.get("studentId");
+            String rollNumber = (String) stu.get("rollNumber");
+            String name = (String) stu.get("name");
+            String branch = (String) stu.get("department");
+
+            int attended = attendedMap.getOrDefault(studentId, 0);
+            int late = lateMap.getOrDefault(studentId, 0);
+            int absent = absentMap.getOrDefault(studentId, 0);
+
+            // Safe division for zero completed sessions held
+            double percentage = completedSessionsHeld > 0 ? (attended * 100.0 / completedSessionsHeld) : 100.0;
+            percentage = Math.round(percentage * 10.0) / 10.0;
+
+            // Strict threshold: strictly < 75% triggers shortage alert; exactly 75% does NOT
+            boolean shortageWarning = (percentage < CRT_SHORTAGE_THRESHOLD) && (completedSessionsHeld > 0);
+            if (shortageWarning) {
+                shortageCount++;
+            }
+            sumPercentage += percentage;
+
+            // Certificate Eligibility Policy:
+            // 1. Minimum 3 completed sessions held
+            // 2. Attendance percentage >= 75.0%
+            String certificateStatus;
+            String certificateRemarks;
+            boolean certificateEligible;
+
+            if (completedSessionsHeld < CRT_CERTIFICATE_MIN_COMPLETED_SESSIONS) {
+                certificateStatus = "PENDING";
+                certificateEligible = false;
+                certificateRemarks = "Pending: Requires at least " + CRT_CERTIFICATE_MIN_COMPLETED_SESSIONS + " completed CRT sessions (Held: " + completedSessionsHeld + ").";
+            } else if (percentage >= CRT_CERTIFICATE_MIN_PERCENTAGE) {
+                certificateStatus = "ELIGIBLE";
+                certificateEligible = true;
+                eligibleCertificateCount++;
+                certificateRemarks = "Eligible: Meets criteria (" + percentage + "% >= " + CRT_CERTIFICATE_MIN_PERCENTAGE + "%, " + attended + "/" + completedSessionsHeld + " sessions).";
+            } else {
+                certificateStatus = "INELIGIBLE";
+                certificateEligible = false;
+                certificateRemarks = "Ineligible: Attendance " + percentage + "% is strictly below " + CRT_CERTIFICATE_MIN_PERCENTAGE + "% threshold.";
+            }
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentId", studentId);
+            row.put("rollNumber", rollNumber);
+            row.put("name", name);
+            row.put("department", branch);
+            row.put("eligibleSessionsHeld", completedSessionsHeld);
+            row.put("sessionsAttended", attended);
+            row.put("sessionsMissed", absent);
+            row.put("sessionsLate", late);
+            row.put("crtAttendancePercentage", percentage);
+            row.put("shortageWarning", shortageWarning);
+            row.put("certificateStatus", certificateStatus);
+            row.put("certificateEligible", certificateEligible);
+            row.put("certificateRemarks", certificateRemarks);
+            studentReports.add(row);
+        }
+
+        int totalEnrolled = baseRoster.size();
+        double averageAttendance = totalEnrolled > 0 ? Math.round((sumPercentage / totalEnrolled) * 10.0) / 10.0 : 100.0;
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("targetBatch", targetBatch != null ? targetBatch : "ALL");
+        result.put("department", department != null ? department : "ALL");
+        result.put("completedSessionsHeld", completedSessionsHeld);
+        result.put("totalStudents", totalEnrolled);
+        result.put("shortageCount", shortageCount);
+        result.put("eligibleCertificateCount", eligibleCertificateCount);
+        result.put("shortageThreshold", CRT_SHORTAGE_THRESHOLD);
+        result.put("certificateMinPercentage", CRT_CERTIFICATE_MIN_PERCENTAGE);
+        result.put("certificateMinSessions", CRT_CERTIFICATE_MIN_COMPLETED_SESSIONS);
+        result.put("averageAttendance", averageAttendance);
+        result.put("roster", studentReports);
+        return result;
     }
 
     public Map<String, Object> getStudentCrtSummary(String studentId) {
         List<CrtAttendanceRecord> records = crtRecordRepo.findByStudentId(studentId);
-        int total = records.size();
+        List<CrtTrainingSession> allSessions = crtSessionRepo.findAllByOrderByScheduledDateDesc();
+
+        Map<Long, CrtTrainingSession> sessionMap = new HashMap<>();
+        for (CrtTrainingSession s : allSessions) {
+            sessionMap.put(s.getId(), s);
+        }
+
+        int completedSessionsHeld = 0;
+        for (CrtTrainingSession s : allSessions) {
+            if ("COMPLETED".equalsIgnoreCase(s.getStatus())) {
+                completedSessionsHeld++;
+            }
+        }
+
         int attended = 0;
+        int missed = 0;
+        int late = 0;
         double totalScore = 0;
         int scoredCount = 0;
+        List<Map<String, Object>> sessionDetails = new ArrayList<>();
 
         for (CrtAttendanceRecord r : records) {
-            if ("ATTENDED".equalsIgnoreCase(r.getStatus())) {
-                attended++;
+            CrtTrainingSession s = sessionMap.get(r.getCrtSessionId());
+            boolean isCompleted = s != null && "COMPLETED".equalsIgnoreCase(s.getStatus());
+
+            if ("PRESENT".equalsIgnoreCase(r.getStatus())) {
+                if (isCompleted) attended++;
+            } else if ("LATE".equalsIgnoreCase(r.getStatus())) {
+                if (isCompleted) {
+                    attended++;
+                    late++;
+                }
+            } else if ("ABSENT".equalsIgnoreCase(r.getStatus())) {
+                if (isCompleted) missed++;
             }
+
             if (r.getAssessmentScore() != null) {
                 totalScore += r.getAssessmentScore();
                 scoredCount++;
             }
+
+            Map<String, Object> det = new LinkedHashMap<>();
+            det.put("sessionId", r.getCrtSessionId());
+            det.put("title", s != null ? s.getTopic() : "CRT Session #" + r.getCrtSessionId());
+            det.put("moduleType", s != null ? s.getModuleType() : "General");
+            det.put("date", s != null ? s.getScheduledDate() : null);
+            det.put("status", r.getStatus());
+            det.put("remarks", r.getRemarks());
+            det.put("assessmentScore", r.getAssessmentScore());
+            sessionDetails.add(det);
         }
 
-        double rate = total > 0 ? (attended * 100.0 / total) : 0.0;
+        double percentage = completedSessionsHeld > 0 ? (attended * 100.0 / completedSessionsHeld) : 100.0;
+        percentage = Math.round(percentage * 10.0) / 10.0;
         double avgScore = scoredCount > 0 ? (totalScore / scoredCount) : 0.0;
 
-        Map<String, Object> summary = new HashMap<>();
+        boolean shortage = percentage < CRT_SHORTAGE_THRESHOLD && completedSessionsHeld > 0;
+        boolean certEligible = percentage >= CRT_CERTIFICATE_MIN_PERCENTAGE && completedSessionsHeld >= CRT_CERTIFICATE_MIN_COMPLETED_SESSIONS;
+        String certStatus = completedSessionsHeld < CRT_CERTIFICATE_MIN_COMPLETED_SESSIONS ? "PENDING" : (certEligible ? "ELIGIBLE" : "INELIGIBLE");
+
+        Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("studentId", studentId);
-        summary.put("totalCrtSessions", total);
-        summary.put("attendedCrtSessions", attended);
-        summary.put("crtParticipationPercentage", Math.round(rate * 10.0) / 10.0);
+        summary.put("completedSessionsHeld", completedSessionsHeld);
+        summary.put("attendedSessions", attended);
+        summary.put("missedSessions", missed);
+        summary.put("lateSessions", late);
+        summary.put("crtAttendancePercentage", percentage);
+        summary.put("shortageWarning", shortage);
+        summary.put("shortageThreshold", CRT_SHORTAGE_THRESHOLD);
+        summary.put("certificateStatus", certStatus);
+        summary.put("certificateEligible", certEligible);
         summary.put("averageAssessmentScore", Math.round(avgScore * 10.0) / 10.0);
-        summary.put("eligibleForPlacementDrives", rate >= 75.0);
-        summary.put("records", records);
+        summary.put("records", sessionDetails);
         return summary;
     }
 }

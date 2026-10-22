@@ -35,13 +35,17 @@ public class CrtAttendanceRecord {
 
     private String studentName;
 
-    // ATTENDED, ABSENT
+    private String department;
+
+    // PRESENT, ABSENT, LATE, UNMARKED
     @Column(nullable = false)
     private String status;
 
     private Double assessmentScore; // optional score out of 100 for post-session quiz
 
     private String remarks;
+
+    private String recordedBy;
 
     private String recordedAt;
 }

@@ -47,6 +47,7 @@ import {
 } from '../services/storage';
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
+import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const currentUser = getCurrentUser();
@@ -465,71 +466,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 4: CRT ATTENDANCE */}
+        {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900">Campus Recruitment Training (CRT) Attendance</h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Continuous monitoring of pre-placement aptitude, soft skills, and DSA training attendance.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block font-semibold">Your Overall CRT %:</span>
-                    <span className={`text-2xl font-black ${studentCrt.percentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {studentCrt.percentage}%
-                    </span>
-                  </div>
-                  <div className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
-                    studentCrt.percentage >= 75 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
-                    {studentCrt.percentage >= 75 ? 'Eligible for Placement' : 'Action Required (<75%)'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Attendance Sessions Log */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase">
-                    <tr>
-                      <th className="p-3">Session Title</th>
-                      <th className="p-3">Module</th>
-                      <th className="p-3">Trainer</th>
-                      <th className="p-3">Date & Time</th>
-                      <th className="p-3">Batch Turnout</th>
-                      <th className="p-3">Your Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {crtSessions.map(session => (
-                      <tr key={session.id} className="hover:bg-slate-50/70 transition">
-                        <td className="p-3 font-bold text-slate-900">{session.title}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">
-                            {session.module}
-                          </span>
-                        </td>
-                        <td className="p-3 text-slate-600">{session.trainer}</td>
-                        <td className="p-3 text-slate-500">{session.date} • {session.time}</td>
-                        <td className="p-3 font-semibold text-slate-700">{session.attendanceRate}% ({session.attendedCount}/{session.totalEnrolled})</td>
-                        <td className="p-3">
-                          <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>Present</span>
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <CrtAttendancePortalView onNavigate={onNavigate} />
         )}
 
         {/* TAB 5: CLASS ATTENDANCE (Teacher & HOD Daily Class Attendance Portal) */}

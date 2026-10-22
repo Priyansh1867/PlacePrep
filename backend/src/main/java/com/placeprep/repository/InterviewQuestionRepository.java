@@ -12,4 +12,5 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
     List<InterviewQuestion> findByCompanyId(String companyId);
     List<InterviewQuestion> findByCompanyIdAndRound(String companyId, String round);
     List<InterviewQuestion> findByRound(String round);
+    List<InterviewQuestion> findByCodingStatementIsNotNull();
 }

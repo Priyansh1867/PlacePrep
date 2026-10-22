@@ -7,6 +7,7 @@ import {
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
 import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
+import { AuthApi } from '../services/api';
 
 const portalOptions = [
   { id: 'institute', label: 'Institute', icon: School },
@@ -50,6 +51,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', rollNumber: '',
     college: 'Delhi Technological University (DTU)', branch: 'Computer Science and Engineering', batch: '2028',
@@ -77,7 +79,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setErrorMsg('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMsg('');
 
@@ -97,6 +99,38 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       }
     }
 
+    if (selectedRole === 'student') {
+      setIsLoading(true);
+      try {
+        const response = authMode === 'login'
+          ? await AuthApi.login({ email: formData.email.trim(), password: formData.password })
+          : await AuthApi.register({
+              name: formData.fullName.trim(),
+              email: formData.email.trim(),
+              password: formData.password,
+              college: formData.college,
+              branch: formData.branch,
+              graduationBatch: formData.batch
+            });
+        const verifiedUser = response.user;
+
+        setCurrentUser(verifiedUser);
+        setPortalMode(portalBranch);
+        setPortalRole(verifiedUser.role);
+        if (verifiedUser.graduationBatch) {
+          setGraduationBatch(verifiedUser.graduationBatch);
+        }
+        setSuccessMsg(`Welcome, ${verifiedUser.name}! Redirecting to ${portalBranch.toUpperCase()} workspace...`);
+        setTimeout(() => onAuthSuccess(verifiedUser, portalBranch), 550);
+      } catch (error) {
+        setErrorMsg(error.message || 'Unable to sign in. Check your details and try again.');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    AuthApi.logout();
     const roleMeta = roleOptions.find((item) => item.id === selectedRole);
     const userObj = {
       id: `user-${Date.now()}`,
@@ -410,9 +444,11 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   )}
                 </div>
 
-                <button type="submit" className="auth-submit-button py-2.5">
+                <button type="submit" disabled={isLoading} className="auth-submit-button py-2.5">
                   <span>
-                    {authMode === 'login'
+                    {isLoading
+                      ? 'Checking your PlacePrep account...'
+                      : authMode === 'login'
                       ? `Continue as ${roleOptions.find((role) => role.id === selectedRole)?.label}`
                       : 'Create account & continue'}
                   </span>

@@ -1,10 +1,16 @@
 package com.placeprep.config;
 
+import com.placeprep.model.Candidate;
+import com.placeprep.model.CodingExample;
+import com.placeprep.model.CodingTestCase;
 import com.placeprep.model.Company;
+import com.placeprep.model.InterviewQuestion;
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.StudentApplication;
 import com.placeprep.model.User;
+import com.placeprep.repository.CandidateRepository;
 import com.placeprep.repository.CompanyRepository;
+import com.placeprep.repository.InterviewQuestionRepository;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import com.placeprep.repository.UserRepository;
@@ -23,7 +29,9 @@ public class DataInitializer {
             CompanyRepository companyRepository,
             PlacementDriveRepository driveRepository,
             StudentApplicationRepository applicationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            CandidateRepository candidateRepository,
+            InterviewQuestionRepository interviewQuestionRepository
     ) {
         return args -> {
             if (userRepository.count() == 0) {
@@ -198,6 +206,274 @@ public class DataInitializer {
                 app1.setConflictReason("Schedule collision detected: Overlaps with Accenture Virtual Assessment slot on 2026-11-18.");
                 applicationRepository.save(app1);
             }
+
+            if (candidateRepository.count() == 0) {
+                candidateRepository.save(new Candidate(
+                        "cand-001",
+                        "Aarav Sharma",
+                        "aarav.sharma@dtu.ac.in",
+                        "Delhi Technological University",
+                        "Computer Science",
+                        "2028",
+                        "hcltech",
+                        "HCLTech",
+                        "Technical Interview",
+                        "ACTIVE",
+                        88,
+                        9,
+                        9,
+                        8,
+                        "Excellent command of DSA and SQL. Solved cycle detection in O(N) cleanly."
+                ));
+
+                candidateRepository.save(new Candidate(
+                        "cand-002",
+                        "Diya Patel",
+                        "diya.patel@nitt.edu",
+                        "National Institute of Technology, Trichy",
+                        "Information Technology",
+                        "2028",
+                        "hcltech",
+                        "HCLTech",
+                        "Managerial Round",
+                        "ADVANCED",
+                        92,
+                        9,
+                        9,
+                        9,
+                        "Strong STAR communication. Clearly articulated cloud architecture project."
+                ));
+
+                candidateRepository.save(new Candidate(
+                        "cand-003",
+                        "Rohan Nair",
+                        "rohan.nair@coep.ac.in",
+                        "COEP Pune",
+                        "Electronics and Telecomm",
+                        "2028",
+                        "hcltech",
+                        "HCLTech",
+                        "Selected / Offer Extended",
+                        "SELECTED",
+                        95,
+                        10,
+                        9,
+                        9,
+                        "Offered GET Specialist Track (₹8.5 LPA). Cleared all 4 rounds with distinction."
+                ));
+
+                candidateRepository.save(new Candidate(
+                        "cand-004",
+                        "Kavya Singh",
+                        "kavya.singh@iitbhu.ac.in",
+                        "IIT BHU",
+                        "Computer Science",
+                        "2028",
+                        "tcs",
+                        "TCS (Tata Consultancy Services)",
+                        "Technical Interview",
+                        "ACTIVE",
+                        85,
+                        8,
+                        9,
+                        8,
+                        "Cleared NQT with 94 percentile. Strong in Java Spring and microservices."
+                ));
+            }
+
+            seedCodingProblems(interviewQuestionRepository);
         };
+    }
+
+    private void seedCodingProblems(InterviewQuestionRepository repository) {
+        InterviewQuestion cycle = repository.findByQuestionId("hcl-tech-02").orElseGet(InterviewQuestion::new);
+        cycle.setQuestionId("hcl-tech-02");
+        cycle.setCompanyId("hcltech");
+        cycle.setRound("technical");
+        cycle.setCategory("Linked Lists");
+        cycle.setDifficulty("Medium");
+        cycle.setQuestion("How do you detect and remove a loop in a Singly Linked List? Explain Floyd's Cycle Detection algorithm.");
+        cycle.setApproach("Use two pointers: slow (1 step) and fast (2 steps). When they meet, a cycle exists.");
+        cycle.setSampleCode("""
+                boolean hasCycle(ListNode head) {
+                    if (head == null || head.next == null) return false;
+                    ListNode slow = head, fast = head;
+                    while (fast != null && fast.next != null) {
+                        slow = slow.next;
+                        fast = fast.next.next;
+                        if (slow == fast) return true;
+                    }
+                    return false;
+                }
+                """);
+        cycle.setCodingStatement("Given a list of node values and the zero-based index where the last node links back (or -1 if it does not link back), build the singly linked list and determine whether it contains a cycle.");
+        cycle.setInputFormat("The first line contains n. The second line contains n integer node values. The last line contains pos, the zero-based index connected by the final node, or -1 if the list ends normally.");
+        cycle.setOutputFormat("Print true if the list contains a cycle; otherwise print false.");
+        cycle.setCodingConstraints(List.of("0 <= n <= 100000", "-1 <= pos < n", "Node values are signed 32-bit integers."));
+        cycle.setCodingExamples(List.of(
+                new CodingExample("4\n3 2 0 -4\n1", "true", "The final node links back to the node at index 1."),
+                new CodingExample("3\n1 2 3\n-1", "false", "The final node does not link back.")
+        ));
+        cycle.setPublicTestCases(List.of(
+                new CodingTestCase("4\n3 2 0 -4\n1\n", "true"),
+                new CodingTestCase("3\n1 2 3\n-1\n", "false")
+        ));
+        cycle.setHiddenTestCases(List.of(
+                new CodingTestCase("0\n\n-1\n", "false"),
+                new CodingTestCase("1\n5\n0\n", "true"),
+                new CodingTestCase("5\n1 2 3 4 5\n4\n", "true")
+        ));
+        cycle.setStarterCodeJava("""
+                import java.util.*;
+
+                public class Main {
+                    static class ListNode {
+                        int value;
+                        ListNode next;
+                        ListNode(int value) { this.value = value; }
+                    }
+
+                    static boolean hasCycle(ListNode head) {
+                        // Use slow and fast pointers to detect a cycle.
+                        return false;
+                    }
+
+                    public static void main(String[] args) {
+                        Scanner scanner = new Scanner(System.in);
+                        int n = scanner.nextInt();
+                        ListNode[] nodes = new ListNode[n];
+                        for (int i = 0; i < n; i++) nodes[i] = new ListNode(scanner.nextInt());
+                        int pos = scanner.nextInt();
+                        for (int i = 0; i + 1 < n; i++) nodes[i].next = nodes[i + 1];
+                        if (n > 0 && pos >= 0) nodes[n - 1].next = nodes[pos];
+                        System.out.println(hasCycle(n == 0 ? null : nodes[0]));
+                    }
+                }
+                """);
+        repository.save(cycle);
+
+        InterviewQuestion reverseWords = repository.findByQuestionId("tcs-tech-01").orElseGet(InterviewQuestion::new);
+        reverseWords.setQuestionId("tcs-tech-01");
+        reverseWords.setCompanyId("tcs");
+        reverseWords.setRound("technical");
+        reverseWords.setCategory("Strings");
+        reverseWords.setDifficulty("Easy");
+        reverseWords.setQuestion("How do you reverse a string without using built-in reverse functions? How would you reverse words in a sentence?");
+        reverseWords.setApproach("Split the sentence into words and write them from last to first.");
+        reverseWords.setSampleCode("""
+                public static String reverseWords(String s) {
+                    String[] words = s.trim().split("\\\\s+");
+                    StringBuilder result = new StringBuilder();
+                    for (int i = words.length - 1; i >= 0; i--) {
+                        if (words[i].isEmpty()) continue;
+                        if (result.length() > 0) result.append(' ');
+                        result.append(words[i]);
+                    }
+                    return result.toString();
+                }
+                """);
+        reverseWords.setCodingStatement("Given a sentence, return its words in reverse order. Treat one or more spaces as separators and return words separated by a single space.");
+        reverseWords.setInputFormat("One line containing the sentence.");
+        reverseWords.setOutputFormat("Print the words in reverse order, separated by one space.");
+        reverseWords.setCodingConstraints(List.of("0 <= sentence length <= 100000", "A word contains no whitespace."));
+        reverseWords.setCodingExamples(List.of(
+                new CodingExample("the sky is blue", "blue is sky the", "The words are written from right to left."),
+                new CodingExample("hello", "hello", "A sentence with one word stays unchanged.")
+        ));
+        reverseWords.setPublicTestCases(List.of(
+                new CodingTestCase("the sky is blue\n", "blue is sky the"),
+                new CodingTestCase("hello\n", "hello")
+        ));
+        reverseWords.setHiddenTestCases(List.of(
+                new CodingTestCase("a good   example\n", "example good a"),
+                new CodingTestCase("  practice makes perfect  \n", "perfect makes practice")
+        ));
+        reverseWords.setStarterCodeJava("""
+                import java.io.*;
+                import java.util.*;
+
+                public class Main {
+                    static String reverseWords(String sentence) {
+                        String trimmed = sentence.trim();
+                        if (trimmed.isEmpty()) return "";
+                        String[] words = trimmed.split("\\\\s+");
+                        Collections.reverse(Arrays.asList(words));
+                        return String.join(" ", words);
+                    }
+
+                    public static void main(String[] args) throws Exception {
+                        String sentence = new BufferedReader(new InputStreamReader(System.in)).readLine();
+                        System.out.println(reverseWords(sentence == null ? "" : sentence));
+                    }
+                }
+                """);
+        repository.save(reverseWords);
+
+        InterviewQuestion longestSubstring = repository.findByQuestionId("infy-tech-01").orElseGet(InterviewQuestion::new);
+        longestSubstring.setQuestionId("infy-tech-01");
+        longestSubstring.setCompanyId("infosys");
+        longestSubstring.setRound("technical");
+        longestSubstring.setCategory("Sliding Window");
+        longestSubstring.setDifficulty("Medium");
+        longestSubstring.setQuestion("How do you find the longest substring without repeating characters in an optimal way?");
+        longestSubstring.setApproach("Use a sliding window and store the last seen index for each character.");
+        longestSubstring.setSampleCode("""
+                public int lengthOfLongestSubstring(String s) {
+                    Map<Character, Integer> lastSeen = new HashMap<>();
+                    int left = 0, best = 0;
+                    for (int right = 0; right < s.length(); right++) {
+                        char current = s.charAt(right);
+                        if (lastSeen.containsKey(current) && lastSeen.get(current) >= left) {
+                            left = lastSeen.get(current) + 1;
+                        }
+                        lastSeen.put(current, right);
+                        best = Math.max(best, right - left + 1);
+                    }
+                    return best;
+                }
+                """);
+        longestSubstring.setCodingStatement("Given a string, return the length of its longest substring that contains no repeated characters.");
+        longestSubstring.setInputFormat("One line containing the input string.");
+        longestSubstring.setOutputFormat("Print one integer: the maximum length.");
+        longestSubstring.setCodingConstraints(List.of("0 <= string length <= 100000", "The input may contain letters, digits, symbols, and spaces."));
+        longestSubstring.setCodingExamples(List.of(
+                new CodingExample("abcabcbb", "3", "The longest substring without repeats is abc."),
+                new CodingExample("bbbbb", "1", "Every substring longer than one repeats b.")
+        ));
+        longestSubstring.setPublicTestCases(List.of(
+                new CodingTestCase("abcabcbb\n", "3"),
+                new CodingTestCase("bbbbb\n", "1")
+        ));
+        longestSubstring.setHiddenTestCases(List.of(
+                new CodingTestCase("pwwkew\n", "3"),
+                new CodingTestCase("\n", "0"),
+                new CodingTestCase("dvdf\n", "3")
+        ));
+        longestSubstring.setStarterCodeJava("""
+                import java.io.*;
+                import java.util.*;
+
+                public class Main {
+                    static int lengthOfLongestSubstring(String value) {
+                        Map<Character, Integer> lastSeen = new HashMap<>();
+                        int left = 0, best = 0;
+                        for (int right = 0; right < value.length(); right++) {
+                            char current = value.charAt(right);
+                            if (lastSeen.containsKey(current) && lastSeen.get(current) >= left) {
+                                left = lastSeen.get(current) + 1;
+                            }
+                            lastSeen.put(current, right);
+                            best = Math.max(best, right - left + 1);
+                        }
+                        return best;
+                    }
+
+                    public static void main(String[] args) throws Exception {
+                        String value = new BufferedReader(new InputStreamReader(System.in)).readLine();
+                        System.out.println(lengthOfLongestSubstring(value == null ? "" : value));
+                    }
+                }
+                """);
+        repository.save(longestSubstring);
     }
 }

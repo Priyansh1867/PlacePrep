@@ -10,6 +10,7 @@ import PushNotificationDrawer from './components/PushNotificationDrawer';
 import PortalGatewayPage from './pages/PortalGatewayPage';
 import AuthPortalPage from './pages/AuthPortalPage';
 import InstitutePortalPage from './pages/InstitutePortalPage';
+import CodingStudioPage from './pages/CodingStudioPage';
 import PlacementPortalPage from './pages/PlacementPortalPage';
 import RemiiLandingPage from './pages/RemiiLandingPage';
 
@@ -137,6 +138,8 @@ export default function App() {
       setCurrentRoute('experiences');
     } else if (resultItem.type === 'academic-record') {
       setCurrentRoute('academic-records');
+    } else if (resultItem.type === 'coding-studio') {
+      setCurrentRoute('coding-studio');
     }
   };
 
@@ -191,6 +194,10 @@ export default function App() {
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
+        )}
+
+        {currentRoute === 'coding-studio' && (
+          <CodingStudioPage onBack={() => setCurrentRoute('institute-portal')} />
         )}
 
         {/* 4. PLACEMENT PORTAL (HR, Director, TPO, Coordinator) */}

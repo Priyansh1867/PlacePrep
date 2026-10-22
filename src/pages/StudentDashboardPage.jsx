@@ -26,7 +26,8 @@ import {
   Terminal,
   Activity,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Code2
 } from 'lucide-react';
 import { UserApi, CompanyApi, DriveApi, QuestionApi, ApplicationApi, MockSessionApi } from '../services/api';
 import { 
@@ -251,16 +252,32 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           <p className="text-[11px] text-indigo-200 mt-0.5 mb-3">
             {practicedQuestions.length} solved • {revisionQuestions.length} in revision queue
           </p>
-          <Button
-            size="sm"
-            variant="primary"
-            icon={ArrowRight}
-            iconPosition="right"
-            onClick={() => onNavigate('prep')}
-            className="w-full"
-          >
-            Practice Next Question
-          </Button>
+          <div className="space-y-2">
+            <Button
+              size="sm"
+              variant="primary"
+              icon={ArrowRight}
+              iconPosition="right"
+              onClick={() => onNavigate('prep')}
+              className="w-full"
+            >
+              Practice Next Question
+            </Button>
+            <button
+              onClick={() => onNavigate('resume-ats')}
+              className="w-full py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 border border-white/15 cursor-pointer"
+            >
+              <FileCheck2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Resume ATS Checker</span>
+            </button>
+            <button
+              onClick={() => onNavigate('coding-studio')}
+              className="w-full py-1.5 px-3 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-400/30 cursor-pointer"
+            >
+              <Code2 className="w-3.5 h-3.5 text-indigo-300" />
+              <span>DSA Coding Studio</span>
+            </button>
+          </div>
         </div>
       </div>
 

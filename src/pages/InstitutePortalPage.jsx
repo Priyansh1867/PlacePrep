@@ -46,10 +46,12 @@ import {
   broadcastPushNotification
 } from '../services/storage';
 import PortalModuleCards from '../components/PortalModuleCards';
+import { AuthApi, getAuthToken } from '../services/api';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const currentUser = getCurrentUser();
   const [activeTab, setActiveTab] = useState(currentUser.role === 'student' ? 'upcoming-drives' : 'student-data'); 
+  const [isVerifiedStudent, setIsVerifiedStudent] = useState(false);
   // 'student-data', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus'
   
   const studentBatch = getGraduationBatch();
@@ -88,6 +90,23 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   });
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
 
+  useEffect(() => {
+    if (!getAuthToken()) {
+      return;
+    }
+    let isCurrent = true;
+    AuthApi.getMe()
+      .then((user) => {
+        if (isCurrent) setIsVerifiedStudent(user.role?.toLowerCase() === 'student');
+      })
+      .catch(() => {
+        if (isCurrent) setIsVerifiedStudent(false);
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
   const handleRegisterStudent = (e) => {
     e.preventDefault();
     setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in Institute records!`);
@@ -119,6 +138,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'hod'] },
     { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives.length}` },
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
+    ...(isVerifiedStudent ? [{ id: 'coding-studio', label: 'Coding Studio', icon: Code2, badge: 'DSA practice' }] : []),
     { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt.percentage}%` },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus.atsScore}/100`, roles: ['student'] },
@@ -201,7 +221,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* Image-first role-aware workspace cards */}
       <div className="max-w-7xl mx-auto mb-8">
-        <PortalModuleCards items={visibleNavTabs} activeId={activeTab} onSelect={setActiveTab} tone="indigo" />
+        <PortalModuleCards
+          items={visibleNavTabs}
+          activeId={activeTab}
+          onSelect={(tabId) => tabId === 'coding-studio' ? onNavigate('coding-studio') : setActiveTab(tabId)}
+          tone="indigo"
+        />
       </div>
 
       {/* Tab Contents */}
@@ -648,6 +673,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Optimized IIT/NIT LaTeX Template</span>
+                </button>
+                <button
+                  onClick={() => onNavigate('resume-ats')}
+                  className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                >
+                  <FileCheck className="w-4 h-4" />
+                  <span>Launch Full ATS Resume & JD Matcher</span>
                 </button>
               </div>
             </div>

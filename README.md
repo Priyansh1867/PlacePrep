@@ -145,11 +145,31 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
 * **Candidate Application Lifecycle**: Personal tracking (`INTERESTED` → `APPLIED` → `ASSESSMENT` → `INTERVIEW` → `OFFER` → `REJECTED` → `WITHDRAWN`) with real-time KPI metrics and stage notes update modal.
 * **Placement-Team Round Controls**: TPO configurator for round types (Aptitude, Technical, HR), durations, venues, and cutoffs.
 
-### 3. DSA & Coding Practice Studio (`#dsa`)
-* Algorithmic coding studio organized by high-frequency interview patterns:
-  * Arrays & Hashing • Two Pointers & Sliding Window • Linked Lists
-  * Trees & Graphs • Dynamic Programming • Stacks & Queues
-* Difficulty filters, solved tracking, and active recall flag shortcuts.
+### 3. DSA & Coding Practice Studio (Institution portal → Coding Studio)
+* The authenticated Student-only Coding Studio is available from the Institution portal.
+* Reuses PlacePrep DSA problem IDs and existing Java examples, with search and topic, difficulty, and solved filters.
+* Run sample cases, submit against server-side hidden cases, and review your own paginated submission history and progress.
+* Java execution is sent to the configured Judge0 provider; configure that service with networking disabled. No code runs in the browser or directly inside the Spring Boot process.
+* The existing `InterviewQuestion` table is extended with coding details and server-only test cases. Student submissions and metrics are stored in `coding_submissions`; Hibernate applies the schema updates when the backend starts.
+
+#### Configure the Judge0 provider
+
+Set these environment variables for the **backend process only**. Execution remains unavailable (and returns an explicit service error) until `JUDGE0_BASE_URL` points to an approved isolated Judge0 service. Never put provider credentials in frontend settings or source files.
+
+```text
+JUDGE0_BASE_URL=https://your-approved-judge0-host
+JUDGE0_API_KEY=your-provider-key
+JUDGE0_API_KEY_HEADER=X-Auth-Token
+JUDGE0_API_HOST=your-rapidapi-host-if-required
+JUDGE0_LANGUAGE_JAVA_ID=62
+JUDGE0_CPU_TIME_LIMIT=2.0
+JUDGE0_WALL_TIME_LIMIT=5.0
+JUDGE0_MEMORY_LIMIT_KB=128000
+JUDGE0_QUEUE_TIMEOUT_MS=12000
+JUDGE0_SOURCE_MAX_BYTES=40000
+```
+
+Use the API-key header and Java language ID required by your Judge0 deployment. The API key is optional for a trusted self-hosted service that does not require one. C++ and Python are not enabled.
 
 ### 4. Core CS Technical Interview Studio (`#core-cs`)
 * Dedicated preparation studio covering the 4 foundational pillars:

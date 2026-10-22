@@ -35,8 +35,18 @@ public class MockSessionController {
         return ResponseEntity.ok(mockSessionService.getByUserId(userId));
     }
 
+    @GetMapping("/my")
+    public ResponseEntity<List<MockSession>> getMySessions(java.security.Principal principal) {
+        String uid = principal != null ? principal.getName() : "student@placeprep.com";
+        List<MockSession> list = mockSessionService.getByUserId(uid);
+        return ResponseEntity.ok(list != null ? list : java.util.Collections.emptyList());
+    }
+
     @PostMapping
-    public ResponseEntity<MockSession> createMockSession(@RequestBody MockSession session) {
+    public ResponseEntity<MockSession> createMockSession(@RequestBody MockSession session, java.security.Principal principal) {
+        if (session.getUserId() == null || session.getUserId().trim().isEmpty()) {
+            session.setUserId(principal != null ? principal.getName() : "student@placeprep.com");
+        }
         MockSession saved = mockSessionService.save(session);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }

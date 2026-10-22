@@ -41,7 +41,19 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelectResult }) {
 
     const found = [];
 
-    // Search Companies
+    // Quick Module Links: Coding Studio
+    if ((activeFilter === 'all' || activeFilter === 'questions') &&
+        ('coding studio dsa java compiler problem practice'.includes(q) || q.includes('cod') || q.includes('dsa') || q.includes('studio'))) {
+      found.push({
+        type: 'coding-studio',
+        id: 'coding-studio-engine',
+        title: 'DSA Coding Studio',
+        subtitle: 'Practice DSA problems with isolated server-side Java evaluation',
+        badge: 'Coding Studio',
+        badgeColor: 'bg-indigo-100 text-indigo-700',
+        data: { route: 'coding-studio' }
+      });
+    }
     if (activeFilter === 'all' || activeFilter === 'companies') {
       companies.forEach(c => {
         if (

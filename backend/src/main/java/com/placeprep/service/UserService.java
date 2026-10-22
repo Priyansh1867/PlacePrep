@@ -33,9 +33,7 @@ public class UserService {
             throw new IllegalArgumentException("User with email " + cleanEmail + " already exists");
         }
         user.setEmail(cleanEmail);
-        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
-            user.setRole("student");
-        }
+        user.setRole("student");
         if (user.getSavedCompanyIds() == null) {
             user.setSavedCompanyIds(new ArrayList<>());
         }

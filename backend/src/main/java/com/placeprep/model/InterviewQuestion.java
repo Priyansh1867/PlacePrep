@@ -1,5 +1,6 @@
 package com.placeprep.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -43,6 +44,43 @@ public class InterviewQuestion {
 
     @Column(columnDefinition = "TEXT")
     private String sampleCode;
+
+    @JsonIgnore
+    @Column(columnDefinition = "TEXT")
+    private String codingStatement;
+
+    @JsonIgnore
+    @Column(columnDefinition = "TEXT")
+    private String inputFormat;
+
+    @JsonIgnore
+    @Column(columnDefinition = "TEXT")
+    private String outputFormat;
+
+    @JsonIgnore
+    @Column(columnDefinition = "TEXT")
+    private String starterCodeJava;
+
+    @JsonIgnore
+    @ElementCollection
+    @CollectionTable(name = "interview_question_coding_constraints", joinColumns = @JoinColumn(name = "question_id"))
+    @Column(name = "constraint_text", columnDefinition = "TEXT")
+    private List<String> codingConstraints = new ArrayList<>();
+
+    @JsonIgnore
+    @ElementCollection
+    @CollectionTable(name = "interview_question_coding_examples", joinColumns = @JoinColumn(name = "question_id"))
+    private List<CodingExample> codingExamples = new ArrayList<>();
+
+    @JsonIgnore
+    @ElementCollection
+    @CollectionTable(name = "interview_question_public_test_cases", joinColumns = @JoinColumn(name = "question_id"))
+    private List<CodingTestCase> publicTestCases = new ArrayList<>();
+
+    @JsonIgnore
+    @ElementCollection
+    @CollectionTable(name = "interview_question_hidden_test_cases", joinColumns = @JoinColumn(name = "question_id"))
+    private List<CodingTestCase> hiddenTestCases = new ArrayList<>();
 
     private int frequencyScore;
 
@@ -170,6 +208,71 @@ public class InterviewQuestion {
 
     public void setSampleCode(String sampleCode) {
         this.sampleCode = sampleCode;
+    }
+
+    public String getCodingStatement() {
+        return codingStatement;
+    }
+
+    public void setCodingStatement(String codingStatement) {
+        this.codingStatement = codingStatement;
+    }
+
+    public String getInputFormat() {
+        return inputFormat;
+    }
+
+    public void setInputFormat(String inputFormat) {
+        this.inputFormat = inputFormat;
+    }
+
+    public String getOutputFormat() {
+        return outputFormat;
+    }
+
+    public void setOutputFormat(String outputFormat) {
+        this.outputFormat = outputFormat;
+    }
+
+    public String getStarterCodeJava() {
+        return starterCodeJava;
+    }
+
+    public void setStarterCodeJava(String starterCodeJava) {
+        this.starterCodeJava = starterCodeJava;
+    }
+
+    public List<String> getCodingConstraints() {
+        return codingConstraints;
+    }
+
+    public void setCodingConstraints(List<String> codingConstraints) {
+        this.codingConstraints = codingConstraints;
+    }
+
+    public List<CodingExample> getCodingExamples() {
+        return codingExamples;
+    }
+
+    public void setCodingExamples(List<CodingExample> codingExamples) {
+        this.codingExamples = codingExamples;
+    }
+
+    public List<CodingTestCase> getPublicTestCases() {
+        return publicTestCases;
+    }
+
+    public void setPublicTestCases(List<CodingTestCase> publicTestCases) {
+        this.publicTestCases = publicTestCases;
+    }
+
+    @JsonIgnore
+    public List<CodingTestCase> getHiddenTestCases() {
+        return hiddenTestCases;
+    }
+
+    public void setHiddenTestCases(List<CodingTestCase> hiddenTestCases) {
+        this.hiddenTestCases = hiddenTestCases;
     }
 
     public int getFrequencyScore() {

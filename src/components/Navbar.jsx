@@ -22,7 +22,8 @@ import {
   LogIn,
   Compass,
   ArrowRight,
-  FileCheck
+  FileCheck,
+  Code2
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -69,6 +70,7 @@ export default function Navbar({
   };
 
   const moreModules = [
+    { id: 'coding-studio', label: 'DSA Coding Studio', desc: 'Real-time Java code evaluation & problem library', icon: Code2, isNew: true },
     { id: 'resume-ats', label: 'ATS Resume Checker', desc: 'Score compatibility, match keywords & audit against JD', icon: FileCheck, isNew: true },
     { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
     { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
@@ -95,7 +97,7 @@ export default function Navbar({
         </div>
 
         {/* Center: Remii-Style Minimalist Floating Links */}
-        <nav className="hidden md:flex items-center gap-1 text-xs font-medium text-slate-600">
+        <nav className="hidden xl:flex items-center gap-1 text-xs font-medium text-slate-600">
           
           <button
             onClick={() => handleNavigate('gateway')}
@@ -143,7 +145,7 @@ export default function Navbar({
             <button
               onClick={() => setExploreDropdownOpen(!exploreDropdownOpen)}
               className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
-                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'resume-ats'].includes(currentRoute)
+                exploreDropdownOpen || ['coding-studio', 'workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'resume-ats'].includes(currentRoute)
                   ? 'bg-black/[0.06] text-[#111439] font-semibold'
                   : 'hover:text-[#111439] hover:bg-black/[0.04]'
               }`}
@@ -327,7 +329,7 @@ export default function Navbar({
           {/* Mobile Hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-1.5 rounded-xl text-slate-600 hover:text-[#111439] hover:bg-black/[0.04] focus:outline-none cursor-pointer"
+            className="xl:hidden p-1.5 rounded-xl text-slate-600 hover:text-[#111439] hover:bg-black/[0.04] focus:outline-none cursor-pointer"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -336,7 +338,7 @@ export default function Navbar({
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-2 rounded-2xl border border-black/[0.08] bg-white/95 backdrop-blur-xl p-4 shadow-xl text-xs space-y-2">
+        <div className="xl:hidden mt-2 rounded-2xl border border-black/[0.08] bg-white/95 backdrop-blur-xl p-4 shadow-xl text-xs space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleNavigate('gateway')}

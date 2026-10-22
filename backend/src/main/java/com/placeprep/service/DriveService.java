@@ -50,6 +50,9 @@ public class DriveService {
     }
 
     public PlacementDrive create(PlacementDrive drive) {
+        if (drive.getDriveId() == null || drive.getDriveId().trim().isEmpty()) {
+            drive.setDriveId("drive-" + java.util.UUID.randomUUID().toString().substring(0, 8));
+        }
         return placementDriveRepository.save(drive);
     }
 

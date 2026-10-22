@@ -39,3 +39,8 @@ backend/target/
 # Project documents and diagrams
 Responsibilities.md
 *.excalidraw
+
+# Local test resumes & uploads
+sample_resume.pdf
+backend/sample_resume.pdf
+*.pdf

@@ -488,3 +488,41 @@ export const ResumeAtsApi = {
     return await request('/resume-ats/sample-jds');
   }
 };
+
+export const CodingStudioApi = {
+  async getProblems() {
+    return await request('/coding-studio/problems');
+  },
+
+  async getProblem(problemId) {
+    return await request(`/coding-studio/problems/${encodeURIComponent(problemId)}`);
+  },
+
+  async run(problemId, language, sourceCode) {
+    return await request('/coding-studio/run', {
+      method: 'POST',
+      body: JSON.stringify({ problemId, language, sourceCode })
+    });
+  },
+
+  async submit(problemId, language, sourceCode) {
+    return await request('/coding-studio/submit', {
+      method: 'POST',
+      body: JSON.stringify({ problemId, language, sourceCode })
+    });
+  },
+
+  async getSubmissions({ problemId, page = 0, size = 20 } = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (problemId) params.set('problemId', problemId);
+    return await request(`/coding-studio/submissions?${params}`);
+  },
+
+  async getSubmission(submissionId) {
+    return await request(`/coding-studio/submissions/${encodeURIComponent(submissionId)}`);
+  },
+
+  async getProgress() {
+    return await request('/coding-studio/progress');
+  }
+};

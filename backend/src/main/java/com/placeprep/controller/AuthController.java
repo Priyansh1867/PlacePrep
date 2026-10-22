@@ -1,6 +1,9 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.User;
+import com.placeprep.config.TokenService;
+import com.placeprep.dto.AuthResponse;
+import com.placeprep.dto.UserDto;
 import com.placeprep.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,6 +27,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private TokenService tokenService;
 
     public AuthController() {
     }
@@ -35,7 +42,7 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
             User created = userService.register(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createSession(created));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -50,7 +57,7 @@ public class AuthController {
         String password = credentials != null ? credentials.get("password") : null;
         try {
             User user = userService.login(email, password);
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(createSession(user));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -63,10 +70,25 @@ public class AuthController {
     public ResponseEntity<?> demoLogin() {
         try {
             User demoUser = userService.demoLogin();
-            return ResponseEntity.ok(demoUser);
+            return ResponseEntity.ok(createSession(demoUser));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Demo login error: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
+        Object userId = request.getAttribute("currentUserId");
+        if (!(userId instanceof Long id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Collections.singletonMap("error", "A valid login session is required."));
+        }
+        try {
+            return ResponseEntity.ok(toUserDto(userService.getUserById(id)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Collections.singletonMap("error", "The account for this session no longer exists."));
         }
     }
 
@@ -113,5 +135,27 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Error: " + e.getMessage()));
         }
+    }
+
+    private AuthResponse createSession(User user) {
+        String token = tokenService.generateToken(user.getId(), user.getEmail(), user.getRole());
+        return new AuthResponse(token, toUserDto(user));
+    }
+
+    private UserDto toUserDto(User user) {
+        return new UserDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getCollege(),
+                user.getBranch(),
+                user.getGraduationBatch(),
+                user.getRole(),
+                user.isOnboardingCompleted(),
+                user.getSavedCompanyIds(),
+                user.getSavedQuestionIds(),
+                user.getPracticedQuestionIds(),
+                user.getRevisionQuestionIds()
+        );
     }
 }

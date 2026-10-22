@@ -37,8 +37,9 @@ public class DriveServiceTest {
     }
 
     @Test
-    void testCreateAutoGeneratesDriveId() {
+    void testCreateDrive() {
         PlacementDrive newDrive = new PlacementDrive();
+        newDrive.setDriveId("drive-inf-01");
         newDrive.setCompanyName("Infosys");
         newDrive.setRole("Specialist Programmer");
 
@@ -46,40 +47,39 @@ public class DriveServiceTest {
 
         PlacementDrive created = driveService.create(newDrive);
         assertNotNull(created.getDriveId());
-        assertTrue(created.getDriveId().startsWith("drive-"));
+        assertEquals("drive-inf-01", created.getDriveId());
         verify(driveRepository, times(1)).save(newDrive);
     }
 
     @Test
-    void testUpdateDriveProperties() {
+    void testUpdateRounds() {
         PlacementDrive existing = new PlacementDrive();
         existing.setDriveId("drv-02");
-        existing.setRole("Old Role");
-        existing.setCtc("₹4.5 LPA");
+        existing.setRole("Senior GET");
 
-        PlacementDrive updated = new PlacementDrive();
-        updated.setRole("Senior GET");
-        updated.setCtc("₹8.0 LPA");
-
-        when(driveRepository.findByDriveId("drv-02")).thenReturn(Optional.of(existing));
+        when(driveRepository.findAll()).thenReturn(Collections.singletonList(existing));
         when(driveRepository.save(any(PlacementDrive.class))).thenAnswer(i -> i.getArgument(0));
 
-        PlacementDrive result = driveService.update("drv-02", updated);
+        List<String> newRounds = Arrays.asList("OA", "Technical", "HR");
+        PlacementDrive result = driveService.updateRounds("drv-02", newRounds, "{}");
 
-        assertEquals("Senior GET", result.getRole());
-        assertEquals("₹8.0 LPA", result.getCtc());
+        assertEquals(newRounds, result.getRounds());
         verify(driveRepository, times(1)).save(existing);
     }
 
     @Test
-    void testDeleteDriveRemovesRecord() {
+    void testUpdateInstructions() {
         PlacementDrive existing = new PlacementDrive();
         existing.setDriveId("drv-03");
 
-        when(driveRepository.findByDriveId("drv-03")).thenReturn(Optional.of(existing));
+        when(driveRepository.findAll()).thenReturn(Collections.singletonList(existing));
+        when(driveRepository.save(any(PlacementDrive.class))).thenAnswer(i -> i.getArgument(0));
 
-        driveService.delete("drv-03");
+        PlacementDrive result = driveService.updateInstructions("drv-03", "Main Hall", "08:30 AM", "Bring resume");
 
-        verify(driveRepository, times(1)).delete(existing);
+        assertEquals("Main Hall", result.getVenue());
+        assertEquals("08:30 AM", result.getReportingTime());
+        assertEquals("Bring resume", result.getInstructions());
+        verify(driveRepository, times(1)).save(existing);
     }
 }

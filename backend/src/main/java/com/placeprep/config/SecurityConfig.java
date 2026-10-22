@@ -41,8 +41,11 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication & info
+                        .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/api/resume-ats/**").permitAll()
+                        .requestMatchers("/api/coding-studio/**").hasRole("STUDENT")
                         
                         // Public reads & public interactions
                         .requestMatchers(HttpMethod.GET, "/api/companies/**").permitAll()

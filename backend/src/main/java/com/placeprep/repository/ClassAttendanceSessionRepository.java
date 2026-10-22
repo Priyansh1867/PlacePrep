@@ -11,4 +11,6 @@ public interface ClassAttendanceSessionRepository extends JpaRepository<ClassAtt
     List<ClassAttendanceSession> findByDepartmentAndSemesterOrderBySessionDateDesc(String department, String semester);
     List<ClassAttendanceSession> findBySubjectCodeOrderBySessionDateDesc(String subjectCode);
     List<ClassAttendanceSession> findByFacultyIdOrderBySessionDateDesc(String facultyId);
+    List<ClassAttendanceSession> findByDepartmentAndSemesterAndSubjectCodeOrderBySessionDateDesc(String department, String semester, String subjectCode);
+    java.util.Optional<ClassAttendanceSession> findFirstByDepartmentAndSemesterAndSubjectCodeAndSessionDate(String department, String semester, String subjectCode, String sessionDate);
 }

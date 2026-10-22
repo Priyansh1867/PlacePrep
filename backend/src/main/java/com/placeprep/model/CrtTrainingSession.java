@@ -28,7 +28,7 @@ public class CrtTrainingSession {
     @Column(nullable = false)
     private String topic; // e.g. "Quantitative Aptitude - Probability & Permutations"
 
-    // APTITUDE, CODING_DSA, SOFT_SKILLS, RESUME_MOCK
+    // APTITUDE, CODING_DSA, SOFT_SKILLS, RESUME_MOCK, TECHNICAL_INTERVIEW, VERBAL_ABILITY
     @Column(nullable = false)
     private String moduleType;
 
@@ -41,11 +41,31 @@ public class CrtTrainingSession {
 
     private String timeSlot; // e.g. "10:00 AM - 01:00 PM"
 
-    private String venue; // e.g. "Auditorium / Lab 3"
+    private String startTime; // e.g. "10:00 AM"
 
-    private String targetBatch; // e.g. "2026"
+    private String endTime; // e.g. "01:00 PM"
+
+    private String venue; // e.g. "Auditorium / Lab 3" or Meeting link
+
+    private String targetBatch; // e.g. "2026" or "ALL"
 
     private String targetBranch; // e.g. "ALL" or "CSE"
 
+    private String academicYear; // e.g. "3rd Year"
+
+    private String semester; // e.g. "6"
+
+    @Column(length = 2000)
+    private String description;
+
+    // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+    @Builder.Default
+    @Column(nullable = false)
+    private String status = "SCHEDULED";
+
+    private String createdBy;
+
     private String createdAt;
+
+    private String updatedAt;
 }

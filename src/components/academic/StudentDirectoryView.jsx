@@ -14,10 +14,12 @@ import {
   ArrowUpDown, 
   ChevronLeft, 
   ChevronRight, 
-  SlidersHorizontal
+  SlidersHorizontal,
+  FileSpreadsheet
 } from 'lucide-react';
 import { INITIAL_BRANCHES } from '../../data/initialAcademicRecords';
 import { deleteStudent } from '../../services/academicRecordsService';
+import BulkImportModal from '../BulkImportModal';
 
 export default function StudentDirectoryView({ 
   students = [], 
@@ -46,6 +48,7 @@ export default function StudentDirectoryView({
 
   // Delete Confirmation Modal State
   const [studentToDelete, setStudentToDelete] = useState(null);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // Filter & Search Logic
   const filteredStudents = useMemo(() => {
@@ -164,11 +167,19 @@ export default function StudentDirectoryView({
           />
         </div>
 
-        {/* Action Button: Add New Student */}
+        {/* Action Buttons: Add Student Profile & Bulk Import */}
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => setIsBulkImportOpen(true)}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-xs flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+            <span>Bulk Import (.xlsx / .csv)</span>
+          </button>
+          <button
             onClick={onOpenCreateStudent}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-md shadow-indigo-100 flex items-center gap-1.5 transition-all whitespace-nowrap"
+            className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-md shadow-indigo-100 flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Student Profile</span>
@@ -529,6 +540,15 @@ export default function StudentDirectoryView({
           </div>
         </div>
       )}
+
+      {/* BULK IMPORT SPREADSHEET MODAL */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onImportSuccess={() => {
+          if (onRefresh) onRefresh();
+        }}
+      />
     </div>
   );
 }

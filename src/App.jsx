@@ -30,6 +30,7 @@ import DailyAttendancePage from './pages/DailyAttendancePage';
 import CrtAttendancePage from './pages/CrtAttendancePage';
 import ReportsExporterPage from './pages/ReportsExporterPage';
 import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
+import DsaPracticePage from './pages/DsaPracticePage';
 
 import { getCompanies } from './services/storage';
 
@@ -324,6 +325,14 @@ export default function App() {
         {/* 20. HOD CURRICULUM & SYLLABUS GOVERNANCE */}
         {(currentRoute === 'curriculum-governance' || currentRoute === 'syllabus-governance') && (
           <CurriculumGovernancePage onNavigate={setCurrentRoute} />
+        )}
+
+        {/* 21. STUDENT-ONLY DSA & CODING PRACTICE STUDIO */}
+        {(currentRoute === 'dsa-studio' || currentRoute === 'dsa-practice') && (
+          <DsaPracticePage
+            onNavigate={setCurrentRoute}
+            onSelectGlobalQuestion={handleSelectQuestion}
+          />
         )}
 
       </main>

@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication & info
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/resume-ats/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         
                         // Public reads & public interactions

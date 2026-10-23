@@ -28,7 +28,8 @@ import {
   Flame,
   Plus,
   Briefcase,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -610,16 +611,23 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={handleAnalyzeResume}
-                  disabled={isAnalyzingResume}
-                  className="py-3 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-md"
+                  onClick={() => onNavigate && onNavigate('resume-ats')}
+                  className="py-3 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>{isAnalyzingResume ? 'Re-Running ATS Parser...' : 'Re-Run ATS Audit'}</span>
+                  <span>Launch Live ATS Resume Checker & Auditor</span>
+                </button>
+                <button
+                  onClick={handleAnalyzeResume}
+                  disabled={isAnalyzingResume}
+                  className="py-3 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isAnalyzingResume ? 'animate-spin' : ''}`} />
+                  <span>{isAnalyzingResume ? 'Re-Running ATS Parser...' : 'Re-Run Quick Audit'}</span>
                 </button>
                 <button
                   onClick={() => alert('Resume template downloaded.')}
-                  className="py-3 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-2"
+                  className="py-3 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Optimized IIT/NIT LaTeX Template</span>

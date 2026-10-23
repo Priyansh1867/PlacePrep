@@ -26,8 +26,9 @@ export function setAuthToken(token) {
 
 export async function request(endpoint, options = {}) {
   const token = getAuthToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };
@@ -41,8 +42,8 @@ export async function request(endpoint, options = {}) {
     let errorDetail = `Request failed with status ${response.status}`;
     try {
       const errJson = await response.json();
-      if (errJson && errJson.error) {
-        errorDetail = errJson.error;
+      if (errJson && (errJson.message || errJson.error)) {
+        errorDetail = errJson.message || errJson.error;
       }
     } catch {
       // response body was not JSON
@@ -581,3 +582,16 @@ export const AttendanceApi = {
   }
 };
 
+// 15. Resume Status & ATS Compatibility API
+export const ResumeAtsApi = {
+  async analyze(formData) {
+    return await request('/resume-ats/analyze', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  async getSampleJds() {
+    return await request('/resume-ats/sample-jds');
+  }
+};

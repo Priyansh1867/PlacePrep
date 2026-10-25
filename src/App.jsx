@@ -31,6 +31,7 @@ import CrtAttendancePage from './pages/CrtAttendancePage';
 import ReportsExporterPage from './pages/ReportsExporterPage';
 import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
 import DsaPracticePage from './pages/DsaPracticePage';
+import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
 
 import { getCompanies } from './services/storage';
 
@@ -332,6 +333,14 @@ export default function App() {
           <DsaPracticePage
             onNavigate={setCurrentRoute}
             onSelectGlobalQuestion={handleSelectQuestion}
+          />
+        )}
+
+        {/* 22. RESUME STATUS & ATS COMPATIBILITY CHECKER */}
+        {(currentRoute === 'resume-ats' || currentRoute === 'resume-checker' || currentRoute === 'ats-checker') && (
+          <ResumeAtsCheckerPage
+            onNavigate={setCurrentRoute}
+            onSelectCompany={handleSelectCompany}
           />
         )}
 

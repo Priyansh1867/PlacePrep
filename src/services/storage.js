@@ -51,7 +51,8 @@ const STORAGE_KEYS = {
   ELIGIBILITY_MATRIX: 'placeprep_eligibility_matrix',
   LIVE_SESSIONS: 'placeprep_live_sessions',
   PUSH_NOTIFICATIONS: 'placeprep_push_notifications',
-  FEEDBACK_LOOP: 'placeprep_feedback_loop'
+  FEEDBACK_LOOP: 'placeprep_feedback_loop',
+  FULL_STUDENT_PROFILE: 'placeprep_student_full_profile'
 };
 
 // Safe JSON parser
@@ -104,6 +105,239 @@ export function setCurrentUser(user) {
   if (user && user.graduationBatch) {
     setGraduationBatch(user.graduationBatch);
   }
+}
+
+// Generate unique student ID without referencing superset
+export function generateUniqueStudentId(seed = '') {
+  let hash = 0;
+  const str = String(seed || 'placeprep-student');
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) % 8999999;
+  }
+  const idNum = 1000000 + Math.abs(hash);
+  return `PP-${idNum}`;
+}
+
+export function getInitialFullStudentProfile(currentUser = null) {
+  const user = currentUser || getCurrentUser();
+  const uniqueId = user?.uniqueStudentId || generateUniqueStudentId(user?.email || user?.id || 'priyansh.jain@example.edu');
+
+  return {
+    uniqueStudentId: uniqueId,
+    verified: true,
+    avatarTheme: 'emerald',
+    basicDetails: {
+      fullName: user?.name || 'Priyansh Jain',
+      email: user?.email || 'priyansh.jain@example.edu',
+      phone: user?.phone || '+91 98765 43210',
+      alternatePhone: '+91 91234 56789',
+      dateOfBirth: '2004-06-15',
+      gender: 'Male',
+      bloodGroup: 'B+',
+      category: 'General',
+      differentlyAbled: 'No',
+      currentAddress: 'Room 204, Aryabhatta Hostel, DTU Campus, Shahbad Daulatpur, Delhi',
+      permanentAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085',
+      pincode: '110042',
+      hometown: 'New Delhi',
+      state: 'Delhi',
+      nationality: 'Indian',
+      linkedIn: 'https://linkedin.com/in/priyansh-jain',
+      github: 'https://github.com/priyanshjain',
+      portfolio: 'https://priyanshjain.dev',
+      leetCode: 'https://leetcode.com/priyanshjain'
+    },
+    educationDetails: {
+      college: user?.college || 'Delhi Technological University (DTU)',
+      degree: 'Bachelor of Technology (B.Tech)',
+      branch: user?.branch || 'Computer Science and Engineering',
+      graduationBatch: user?.graduationBatch || '2028',
+      rollNumber: user?.rollNumber || '2024/CSE/084',
+      registrationNumber: 'DTU/2024/BTECH/0492',
+      cgpa: user?.cgpa || 8.5,
+      activeBacklogs: user?.activeBacklogs || 0,
+      totalCreditsEarned: 132,
+      twelfthSchool: 'Delhi Public School (DPS), R.K. Puram',
+      twelfthBoard: 'CBSE',
+      twelfthStream: 'Science (PCM with Computer Science)',
+      twelfthPercentage: user?.twelfthPercentage || 86.0,
+      twelfthYear: '2024',
+      tenthSchool: 'Delhi Public School (DPS), R.K. Puram',
+      tenthBoard: 'CBSE',
+      tenthPercentage: user?.tenthPercentage || 88.0,
+      tenthYear: '2022'
+    },
+    workExperiences: [
+      {
+        id: 'work-1',
+        company: 'CloudScale Technologies',
+        role: 'Full Stack Engineering Intern',
+        location: 'Bengaluru (Remote)',
+        startDate: 'May 2025',
+        endDate: 'July 2025',
+        currentlyWorking: false,
+        stipend: '₹35,000 / month',
+        description: 'Engineered high-performance REST APIs with Spring Boot and designed responsive client dashboards with React and Tailwind CSS. Reduced query latency by 28% using Redis cache.'
+      }
+    ],
+    skills: {
+      technical: ['Java', 'Spring Boot', 'React', 'JavaScript', 'TypeScript', 'MySQL', 'Python', 'Tailwind CSS', 'Docker', 'Git & GitHub'],
+      coreSubjects: ['Data Structures & Algorithms', 'Database Management Systems', 'Computer Networks', 'Operating Systems', 'Object Oriented Programming', 'System Design'],
+      languages: [
+        { language: 'English', proficiency: 'Professional Working / Fluent' },
+        { language: 'Hindi', proficiency: 'Native / Bilingual' }
+      ]
+    },
+    responsibilities: [
+      {
+        id: 'por-1',
+        title: 'Training & Placement Student Coordinator',
+        organization: 'Corporate Relations & Placement Cell, DTU',
+        duration: 'Aug 2024 - Present',
+        description: 'Orchestrated smooth conduction of campus recruitment drives for 45+ premier recruiters. Liaised between visiting HR executives and a cohort of 1,200+ eligible final year students.'
+      },
+      {
+        id: 'por-2',
+        title: 'Technical Lead',
+        organization: 'Google Developer Student Clubs (GDSC)',
+        duration: 'Oct 2024 - Present',
+        description: 'Conducted 5+ hands-on technical workshops on full-stack web architectures and cloud deployments for 300+ university undergraduates.'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-1',
+        title: 'PlacePrep AI - Comprehensive Campus Placement Suite',
+        techStack: 'React, Spring Boot, MySQL, Vite, TailwindCSS',
+        liveUrl: 'https://placeprep.edu',
+        githubUrl: 'https://github.com/priyanshjain/placeprep',
+        duration: 'Jan 2025 - Present',
+        description: 'Architected end-to-end recruitment platform with 9 specialized modules including intelligent eligibility checker, auto-report exporter, mock interviews, and live CRT session attendance.'
+      },
+      {
+        id: 'proj-2',
+        title: 'Distributed Real-Time Code Execution Engine',
+        techStack: 'Java, Docker, Redis, WebSocket, Node.js',
+        liveUrl: 'https://code-engine.dev',
+        githubUrl: 'https://github.com/priyanshjain/code-engine',
+        duration: 'Sep 2024 - Nov 2024',
+        description: 'Built sandboxed isolated code runner executing C++, Java, and Python scripts with sub-second turnaround and memory constraint governance.'
+      }
+    ],
+    accomplishments: [
+      {
+        id: 'acc-1',
+        title: 'Finalist - Smart India Hackathon (SIH)',
+        category: 'Hackathon & Competitions',
+        issuedBy: 'Ministry of Education & AICTE',
+        year: '2024',
+        description: 'Ranked top 10 nationwide out of 25,000+ participating teams for building AI-driven disaster response dispatching.'
+      },
+      {
+        id: 'acc-2',
+        title: 'Knight Badge (Rating 1940+)',
+        category: 'Competitive Programming',
+        issuedBy: 'LeetCode',
+        year: '2025',
+        description: 'Solved over 650+ algorithmic coding problems across Data Structures, Dynamic Programming, and Graph Theory.'
+      },
+      {
+        id: 'acc-3',
+        title: 'AWS Certified Cloud Practitioner',
+        category: 'Industry Certification',
+        issuedBy: 'Amazon Web Services',
+        year: '2025',
+        description: 'Demonstrated overall understanding of cloud concepts, security, technology, architecture, and billing.'
+      }
+    ],
+    volunteering: [
+      {
+        id: 'vol-1',
+        organization: 'National Service Scheme (NSS)',
+        role: 'Student Volunteer Lead',
+        duration: 'Jan 2024 - Present',
+        description: 'Organized campus-wide blood donation drives mobilizing 450+ donors, and mentored underprivileged local high school students in basic computer literacy.'
+      }
+    ],
+    extraCurricular: [
+      {
+        id: 'ec-1',
+        activity: 'University Inter-College Football Tournament',
+        role: 'Vice Captain',
+        year: '2024',
+        description: 'Represented DTU university team at zonal inter-varsity championships, securing runner-up trophy.'
+      },
+      {
+        id: 'ec-2',
+        activity: 'Annual Cultural Fest Debating Society',
+        role: 'Parliamentary Debate Finalist',
+        year: '2024',
+        description: 'Adjudged best speaker in parliamentary debate on modern tech monopolies and algorithmic ethics.'
+      }
+    ],
+    documents: {
+      resumeFileName: 'Priyansh_Jain_Software_Engineer_Resume.pdf',
+      resumeLastUpdated: 'Oct 24, 2026',
+      resumeUrl: '#',
+      aboutMe: 'Driven Computer Science undergraduate with hands-on experience in full-stack architecture, microservices, and distributed systems. Passionate about solving complex algorithmic challenges and building impactful scalable digital products for modern enterprise needs.',
+      transcriptsUploaded: true,
+      idProofUploaded: true
+    },
+    guardians: {
+      fatherName: 'Rajesh Jain',
+      fatherOccupation: 'Senior Business Consultant',
+      fatherPhone: '+91 98110 54321',
+      fatherEmail: 'rajesh.jain@example.com',
+      motherName: 'Sunita Jain',
+      motherOccupation: 'Educationist / Principal',
+      motherPhone: '+91 98110 54322',
+      emergencyContactName: 'Rajesh Jain',
+      emergencyRelation: 'Father',
+      emergencyPhone: '+91 98110 54321',
+      residentialAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085'
+    }
+  };
+}
+
+export function getFullStudentProfile() {
+  const current = getCurrentUser();
+  const saved = getStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, null);
+  if (saved) {
+    if (!saved.uniqueStudentId) {
+      saved.uniqueStudentId = generateUniqueStudentId(current?.email || current?.id);
+    }
+    // sync current user name if modified in auth
+    if (current?.name && saved.basicDetails) {
+      saved.basicDetails.fullName = saved.basicDetails.fullName || current.name;
+    }
+    return saved;
+  }
+  const initial = getInitialFullStudentProfile(current);
+  setStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, initial);
+  return initial;
+}
+
+export function saveFullStudentProfile(profile) {
+  setStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, profile);
+  const current = getCurrentUser();
+  if (profile?.basicDetails) {
+    current.name = profile.basicDetails.fullName || current.name;
+    current.email = profile.basicDetails.email || current.email;
+    current.phone = profile.basicDetails.phone || current.phone;
+  }
+  if (profile?.educationDetails) {
+    current.college = profile.educationDetails.college || current.college;
+    current.branch = profile.educationDetails.branch || current.branch;
+    current.graduationBatch = profile.educationDetails.graduationBatch || current.graduationBatch;
+    current.rollNumber = profile.educationDetails.rollNumber || current.rollNumber;
+    current.cgpa = profile.educationDetails.cgpa ?? current.cgpa;
+    current.activeBacklogs = profile.educationDetails.activeBacklogs ?? current.activeBacklogs;
+  }
+  if (profile?.uniqueStudentId) {
+    current.uniqueStudentId = profile.uniqueStudentId;
+  }
+  setCurrentUser(current);
+  window.dispatchEvent(new CustomEvent('profile-updated', { detail: profile }));
 }
 
 // Batch Management

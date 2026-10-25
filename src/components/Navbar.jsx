@@ -25,10 +25,12 @@ import {
   UserCheck,
   Award,
   FileSpreadsheet,
-  Code2
+  Code2,
+  FileCheck
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
+import UserProfileModal from './profile/UserProfileModal';
 
 export default function Navbar({ 
   currentRoute, 
@@ -42,9 +44,18 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [exploreDropdownOpen, setExploreDropdownOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [user, setUser] = useState(getCurrentUser());
   const [batch, setBatch] = useState(getGraduationBatch());
   const [unreadNotifCount, setUnreadNotifCount] = useState(2);
+
+  useEffect(() => {
+    const handleProfileUpdated = () => {
+      setUser(getCurrentUser());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdated);
+  }, []);
 
   useEffect(() => {
     const handleBatchChange = (e) => {
@@ -72,6 +83,7 @@ export default function Navbar({
   };
 
   const moreModules = [
+    { id: 'resume-ats', label: 'ATS Resume Checker', desc: 'Score compatibility, match keywords & audit against JD', icon: FileCheck, isNew: true },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', desc: 'HOD department syllabus delivery, labs & internal assessments', icon: GraduationCap, isNew: true },
     { id: 'reports-exporter', label: 'Reports Exporter', desc: 'Download Drive Eligibility, Placed Students & Attendance', icon: FileSpreadsheet, isNew: true },
     { id: 'attendance', label: 'Daily Class Attendance', desc: 'Teacher & HOD speed attendance marking portal', icon: UserCheck, isNew: true },
@@ -156,7 +168,7 @@ export default function Navbar({
             <button
               onClick={() => setExploreDropdownOpen(!exploreDropdownOpen)}
               className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
-                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'dsa-studio', 'dsa-practice'].includes(currentRoute)
+                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker'].includes(currentRoute)
                   ? 'bg-black/[0.06] text-[#111439] font-semibold'
                   : 'hover:text-[#111439] hover:bg-black/[0.04]'
               }`}
@@ -299,11 +311,21 @@ export default function Navbar({
                     Placement Dashboard
                   </button>
                   <button
-                    onClick={() => handleNavigate('dashboard')}
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      setIsProfileModalOpen(true);
+                    }}
                     className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
                   >
                     <User className="w-3.5 h-3.5 text-indigo-600" />
                     My Student Profile
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('resume-ats')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    ATS Resume Checker
                   </button>
                   <button
                     onClick={() => handleNavigate('admin')}
@@ -409,6 +431,13 @@ export default function Navbar({
           </div>
         </div>
       )}
+
+      {/* Comprehensive Student Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdated={() => setUser(getCurrentUser())}
+      />
     </header>
   );
 }

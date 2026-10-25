@@ -251,16 +251,27 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           <p className="text-[11px] text-indigo-200 mt-0.5 mb-3">
             {practicedQuestions.length} solved • {revisionQuestions.length} in revision queue
           </p>
-          <Button
-            size="sm"
-            variant="primary"
-            icon={ArrowRight}
-            iconPosition="right"
-            onClick={() => onNavigate('prep')}
-            className="w-full"
-          >
-            Practice Next Question
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              size="sm"
+              variant="primary"
+              icon={ArrowRight}
+              iconPosition="right"
+              onClick={() => onNavigate('prep')}
+              className="w-full"
+            >
+              Practice Next Question
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              icon={Sparkles}
+              onClick={() => onNavigate('resume-ats')}
+              className="w-full text-white border-white/20 hover:bg-white/10"
+            >
+              ATS Resume Checker
+            </Button>
+          </div>
         </div>
       </div>
 

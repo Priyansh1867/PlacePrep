@@ -29,7 +29,7 @@ graph TD
     
     Services["Business Service Layer<br/>ApplicationService • WorkflowService<br/>InsightsService • ExperienceService<br/>CompanyService • DriveService • TokenService<br/>EligibilityService • ScheduleConflictService"]
     
-    Database[("H2 In-Memory / File Database<br/>Spring Data JPA • Hibernate DDL<br/>Auto-Seeded via DataInitializer")]
+    Database[("MySQL Database<br/>Spring Data JPA • Hibernate DDL<br/>Auto-Seeded via DataInitializer")]
 
     Client --> Proxy
     Proxy --> Gateway
@@ -49,7 +49,7 @@ graph TD
 * **Backend**:
   * **Language & Runtime**: Java 25.
   * **Framework**: Spring Boot 3.5.16, Spring Security, Spring Data JPA.
-  * **Database**: H2 Database (`jdbc:h2:mem:placeprepdb`) seeded on startup via `DataInitializer.java`.
+  * **Database**: MySQL, seeded on startup via `DataInitializer.java`.
   * **Security**: Stateless cryptographic token issuance (`pp_<token>`), BCrypt password hashing, and role-based access control (`ROLE_ADMIN` vs `ROLE_STUDENT`).
 
 ---
@@ -60,6 +60,7 @@ graph TD
 1. **Java Development Kit (JDK 21 or 25)**: Verify with `java -version`.
 2. **Apache Maven (3.9+)**: Verify with `mvn -version`.
 3. **Node.js (18+ or 22+) & npm**: Verify with `node -v` and `npm -v`.
+4. **MySQL 8+**: Start a local MySQL server and make sure the configured account can create/use the `placeprep` database.
 
 ---
 
@@ -70,11 +71,13 @@ In your terminal, navigate to the `backend` directory:
 cd backend
 mvn spring-boot:run
 ```
-* **Backend API Base**: `http://localhost:8080/api`
-* **H2 Console**: `http://localhost:8080/h2-console`
-  * **JDBC URL**: `jdbc:h2:mem:placeprepdb`
-  * **Username**: `sa`
-  * **Password**: *(leave blank)*
+By default, the backend connects to `jdbc:mysql://localhost:3306/placeprep` as `root`. The database is created if it does not exist. Configure a non-default connection before starting the backend with `MYSQL_URL`, `MYSQL_USER`, and `MYSQL_PASSWORD`; for example, in PowerShell:
+```powershell
+$env:MYSQL_USER = "placeprep"
+$env:MYSQL_PASSWORD = "your-local-password"
+mvn spring-boot:run
+```
+* **Backend API Base**: `http://localhost:8082/api`
 
 ---
 

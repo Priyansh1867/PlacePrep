@@ -1,5 +1,5 @@
 // PlacePrep REST API Client
-// Connects with Spring Boot backend at http://localhost:8080/api/*
+// API requests are routed through the Vite proxy to the Spring Boot backend.
 // Attaches auth tokens and provides clean, explicit error handling.
 
 const API_BASE = '/api';
@@ -93,6 +93,10 @@ export const AuthApi = {
     return await request('/auth/me');
   },
 
+  async getAllUsers() {
+    return await request('/auth/users');
+  },
+
   logout() {
     setAuthToken(null);
   }
@@ -100,6 +104,13 @@ export const AuthApi = {
 
 // 2. User & Student Dashboard API
 export const UserApi = {
+  async createUser(userData) {
+    return await AuthApi.register({
+      password: 'password123',
+      ...userData
+    }).catch(() => null);
+  },
+
   async getMe() {
     return await request('/users/me');
   },
@@ -181,6 +192,10 @@ export const DriveApi = {
   async getAll(batch = null) {
     const qs = batch && batch !== 'all' ? `?batch=${encodeURIComponent(batch)}` : '';
     return await request(`/drives${qs}`);
+  },
+
+  async getDrives(batch = null) {
+    return await this.getAll(batch);
   },
 
   async getById(driveId) {
@@ -281,6 +296,10 @@ export const QuestionApi = {
   async getAll(params = {}) {
     const qs = new URLSearchParams(params).toString();
     return await request(`/questions${qs ? `?${qs}` : ''}`);
+  },
+
+  async getQuestions(params = {}) {
+    return await this.getAll(params);
   },
 
   async getByCompanyAndRound(companyId, round) {
@@ -580,4 +599,3 @@ export const AttendanceApi = {
     return await request(`/attendance/crt/student/${encodeURIComponent(studentId)}`);
   }
 };
-

@@ -38,7 +38,7 @@ const portals = [
 
 export default function PortalGatewayPage({ onNavigateAuth }) {
   return (
-    <div className="relative w-full h-screen max-h-screen overflow-hidden text-white flex flex-col justify-between select-none">
+    <div className="relative w-full min-h-screen text-white flex flex-col justify-between select-none py-3 sm:py-5 lg:py-6">
       
       {/* 1. Main College Campus Photo Background (User's Brick University Image) */}
       <img
@@ -51,7 +51,7 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
       <div className="absolute inset-0 z-[1] bg-gradient-to-b from-slate-950/85 via-slate-900/75 to-slate-950/92 backdrop-blur-[1.5px]" />
 
       {/* Foreground Content Container - Exactly Fits Screen Height */}
-      <div className="relative z-10 w-full h-full max-w-[1340px] mx-auto px-4 py-2.5 sm:px-6 lg:px-8 flex flex-col justify-between">
+      <div className="relative z-10 w-full max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-between flex-1 gap-4">
         
         {/* Header Bar */}
         <header className="flex items-center justify-between px-1 shrink-0 py-1">

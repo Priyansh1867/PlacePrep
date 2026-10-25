@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
+import UserProfileModal from './profile/UserProfileModal';
 
 export default function Navbar({ 
   currentRoute, 
@@ -42,9 +43,18 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [exploreDropdownOpen, setExploreDropdownOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [user, setUser] = useState(getCurrentUser());
   const [batch, setBatch] = useState(getGraduationBatch());
   const [unreadNotifCount, setUnreadNotifCount] = useState(2);
+
+  useEffect(() => {
+    const handleProfileUpdated = () => {
+      setUser(getCurrentUser());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdated);
+  }, []);
 
   useEffect(() => {
     const handleBatchChange = (e) => {
@@ -293,7 +303,10 @@ export default function Navbar({
                     Placement Dashboard
                   </button>
                   <button
-                    onClick={() => handleNavigate('dashboard')}
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      setIsProfileModalOpen(true);
+                    }}
                     className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
                   >
                     <User className="w-3.5 h-3.5 text-indigo-600" />
@@ -410,6 +423,13 @@ export default function Navbar({
           </div>
         </div>
       )}
+
+      {/* Comprehensive Student Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdated={() => setUser(getCurrentUser())}
+      />
     </header>
   );
 }

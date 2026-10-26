@@ -30,6 +30,7 @@ import DailyAttendancePage from './pages/DailyAttendancePage';
 import CrtAttendancePage from './pages/CrtAttendancePage';
 import ReportsExporterPage from './pages/ReportsExporterPage';
 import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
+import DsaPracticePage from './pages/DsaPracticePage';
 import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
 
 import { getCompanies } from './services/storage';
@@ -327,7 +328,15 @@ export default function App() {
           <CurriculumGovernancePage onNavigate={setCurrentRoute} />
         )}
 
-        {/* 21. RESUME STATUS & ATS COMPATIBILITY CHECKER */}
+        {/* 21. STUDENT-ONLY DSA & CODING PRACTICE STUDIO */}
+        {(currentRoute === 'dsa-studio' || currentRoute === 'dsa-practice') && (
+          <DsaPracticePage
+            onNavigate={setCurrentRoute}
+            onSelectGlobalQuestion={handleSelectQuestion}
+          />
+        )}
+
+        {/* 22. RESUME STATUS & ATS COMPATIBILITY CHECKER */}
         {(currentRoute === 'resume-ats' || currentRoute === 'resume-checker' || currentRoute === 'ats-checker') && (
           <ResumeAtsCheckerPage
             onNavigate={setCurrentRoute}

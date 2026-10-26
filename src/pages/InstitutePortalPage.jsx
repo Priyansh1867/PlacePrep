@@ -60,6 +60,7 @@ import CrtAttendancePortalView from '../components/attendance/CrtAttendancePorta
 import BulkImportModal from '../components/BulkImportModal';
 import ReportsExporterPage from './ReportsExporterPage';
 import CurriculumGovernanceView from '../components/curriculum/CurriculumGovernanceView';
+import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
 import UserProfileModal from '../components/profile/UserProfileModal';
 
@@ -272,7 +273,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'hod'] },
     { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}` },
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
-    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage || 80}%` },
+    { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
+    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage ?? 80}%` },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus?.atsScore || 85}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
@@ -787,9 +789,18 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+                {currentUser.role === 'student' && (
+                  <button
+                    onClick={() => setActiveTab('dsa-studio')}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>DSA Studio</span>
+                  </button>
+                )}
                 <button
                   onClick={() => onNavigate('prep')}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shrink-0"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition shrink-0"
                 >
                   Full Hub
                 </button>
@@ -833,6 +844,16 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   </div>
                 ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB: DSA & CODING PRACTICE STUDIO (STUDENT ONLY) */}
+        {activeTab === 'dsa-studio' && (
+          <div className="space-y-6">
+            <DsaPracticePage
+              onNavigate={onNavigate}
+              onSelectGlobalQuestion={onSelectQuestion}
+            />
           </div>
         )}
 

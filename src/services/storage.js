@@ -74,6 +74,16 @@ function setStorageItem(key, value) {
   }
 }
 
+function dispatchSafeCustomEvent(eventName, detail) {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent(eventName, { detail }));
+    } catch {
+      // safe fallback
+    }
+  }
+}
+
 // User Profile
 export function getCurrentUser() {
   return getStorageItem(STORAGE_KEYS.CURRENT_USER, {
@@ -347,7 +357,7 @@ export function setGraduationBatch(batchId) {
     setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
   }
   // Dispatch custom window event so UI reacts instantaneously
-  window.dispatchEvent(new CustomEvent('batch-changed', { detail: batchId }));
+  dispatchSafeCustomEvent('batch-changed', batchId);
 }
 
 export function isOnboardingCompleted() {
@@ -418,7 +428,7 @@ export function togglePracticedQuestion(questionId) {
     updated = [...list, questionId];
   }
   setStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, updated);
-  window.dispatchEvent(new CustomEvent('practice-status-changed', { detail: { questionId, updated } }));
+  dispatchSafeCustomEvent('practice-status-changed', { questionId, updated });
   return updated.includes(questionId);
 }
 
@@ -435,7 +445,7 @@ export function toggleSavedQuestion(questionId) {
     updated = [...list, questionId];
   }
   setStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, updated);
-  window.dispatchEvent(new CustomEvent('saved-status-changed', { detail: { questionId, updated } }));
+  dispatchSafeCustomEvent('saved-status-changed', { questionId, updated });
   return updated.includes(questionId);
 }
 
@@ -452,7 +462,7 @@ export function toggleRevisionQuestion(questionId) {
     updated = [...list, questionId];
   }
   setStorageItem(STORAGE_KEYS.REVISION_LIST, updated);
-  window.dispatchEvent(new CustomEvent('revision-status-changed', { detail: { questionId, updated } }));
+  dispatchSafeCustomEvent('revision-status-changed', { questionId, updated });
   return updated.includes(questionId);
 }
 
@@ -490,7 +500,7 @@ export function addInterviewExperience(newExp) {
   };
   custom.unshift(prepared);
   setStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, custom);
-  window.dispatchEvent(new CustomEvent('experience-added', { detail: prepared }));
+  dispatchSafeCustomEvent('experience-added', prepared);
   return prepared;
 }
 

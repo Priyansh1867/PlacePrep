@@ -1,8 +1,13 @@
 import React from 'react';
 import { ArrowLeft, BookOpen, Award, Sparkles } from 'lucide-react';
 import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
+import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
+import { getCurrentUser } from '../services/storage';
 
 export default function CrtAttendancePage({ onNavigate }) {
+  const currentUser = getCurrentUser() || {};
+  const isStudent = currentUser.role === 'student';
+
   return (
     <div className="min-h-screen bg-slate-50/50 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
       {/* Top Breadcrumb & Navigation */}
@@ -33,6 +38,11 @@ export default function CrtAttendancePage({ onNavigate }) {
           <span className="text-violet-600 font-bold">CRT Attendance & Eligibility</span>
         </div>
       </div>
+
+      {/* GPS Campus Attendance Verification (100m Geofencing) - For Students Only */}
+      {isStudent && (
+        <StudentGpsAttendanceWidget sessionTitle="Campus Recruitment Training (CRT)" sessionType="CRT" />
+      )}
 
       {/* Main CRT Attendance Workspace */}
       <CrtAttendancePortalView onNavigate={onNavigate} />

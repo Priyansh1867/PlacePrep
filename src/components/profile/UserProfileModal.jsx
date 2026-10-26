@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
+  Camera,
   User,
   GraduationCap,
   Briefcase,
@@ -75,6 +76,17 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
     setSaveSuccessMsg('Profile details updated and saved successfully!');
     if (onProfileUpdated) onProfileUpdated(profile);
     setTimeout(() => setSaveSuccessMsg(''), 4000);
+  };
+
+  const handleProfilePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        updateBasic('profilePhoto', event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Updaters for nested state
@@ -409,14 +421,19 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 via-violet-500 to-emerald-400 shadow-md">
                   <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white text-3xl font-black uppercase overflow-hidden border-2 border-white">
-                    {profile.basicDetails?.fullName
-                      ? profile.basicDetails.fullName.split(' ').map(n => n[0]).slice(0, 2).join('')
-                      : 'PJ'}
+                    {profile.basicDetails?.profilePhoto ? (
+                      <img src={profile.basicDetails.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                    ) : profile.basicDetails?.fullName ? (
+                      profile.basicDetails.fullName.split(' ').map(n => n[0]).slice(0, 2).join('')
+                    ) : (
+                      'PJ'
+                    )}
                   </div>
                 </div>
-                <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Active & Verified">
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
+                <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer transition" title="Upload / Change Reference Profile Photo">
+                  <Camera className="w-3.5 h-3.5" />
+                  <input type="file" accept="image/*" onChange={handleProfilePhotoUpload} className="hidden" />
+                </label>
               </div>
 
               {/* User Name with Green Verified Badge */}

@@ -18,7 +18,8 @@ import {
   TrendingUp,
   UserCheck,
   FileSpreadsheet,
-  Loader2
+  Loader2,
+  Award
 } from 'lucide-react';
 import {
   SHORTAGE_THRESHOLD_PERCENT,
@@ -39,8 +40,8 @@ import { AuthApi } from '../../services/api';
 
 export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current logged in user & role
-  const [currentUser, setCurrentUserState] = useState(getCurrentUser());
-  const [activeRole, setActiveRole] = useState(currentUser.role || 'teacher');
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || { role: 'teacher', name: 'Dr. Neha Sharma', email: 'teacher@placeprep.com' });
+  const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || 'teacher'));
 
   // View Mode: 'marking' (speed marking) vs 'report' (cumulative shortage report)
   const [viewMode, setViewMode] = useState('marking');
@@ -504,63 +505,189 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
           </p>
         </div>
 
-        {/* Demo Role Switcher (per requirement 4: reuse roles, test easily without breaking permissions) */}
-        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-2xl flex flex-col gap-1.5 shrink-0 w-full sm:w-auto">
-          <div className="flex items-center justify-between gap-3 px-1">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Active Role:</span>
-            </span>
-            <span className="text-xs font-black text-slate-900 capitalize bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-              {currentUser.name} ({activeRole})
-            </span>
+        {/* Active Role Badge (Static - No Switching) */}
+        <div className="bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-2xl flex items-center gap-3 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-4 h-4" />
           </div>
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
-            <button
-              onClick={() => handleSwitchDemoRole('teacher')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                activeRole === 'teacher'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              Teacher View
-            </button>
-            <button
-              onClick={() => handleSwitchDemoRole('hod')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                activeRole === 'hod'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              HOD View
-            </button>
-            <button
-              onClick={() => handleSwitchDemoRole('student')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                activeRole === 'student'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              Student View
-            </button>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+              Active Role
+            </span>
+            <span className="text-xs font-black text-slate-900 capitalize">
+              {currentUser?.name || 'Faculty'} ({activeRole})
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Student Advisory Mode Notice if active role is student */}
-      {!isAuthorized && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900">
-            <strong className="font-bold">Student Advisory Mode:</strong> You are viewing attendance records as an enrolled student. You can inspect subject rosters and verify your cumulative attendance percentage, but status marking controls are disabled. Teachers and HODs have authorization to mark and submit daily attendance.
+      {/* ─── CONDITIONAL VIEW: STUDENT VS FACULTY/HOD ─── */}
+      {!isAuthorized ? (
+        /* ─── STUDENT VIEW (Strictly No Manual Marking, View Personal Attendance & Shortage Only) ─── */
+        <div className="space-y-6">
+          {/* Advisory Notice */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-3xl p-5 sm:p-6 flex items-start gap-4 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-200 text-indigo-900 text-[10px] font-black uppercase tracking-wider">
+                  Student Attendance View
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                  Mandatory 100m Geofencing
+                </span>
+              </div>
+              <h3 className="text-base font-black text-indigo-950">
+                Academic Class Attendance & Shortage Radar
+              </h3>
+              <p className="text-xs text-indigo-800 mt-1 leading-relaxed">
+                Manual roster marking is <strong>exclusively restricted to designated Faculty and HODs</strong>. Students can mark daily classroom attendance only through the <strong>Campus GPS Geofencing (100m) & Facial Verification</strong> tool above. Below is your official semester attendance record.
+              </p>
+            </div>
+          </div>
+
+          {/* Student Overview Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Overall Attendance</span>
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-3xl font-black text-slate-900">85.4%</div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                ✓ Above 75% Requirement
+              </span>
+            </div>
+
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Classes Attended</span>
+                <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div className="text-3xl font-black text-indigo-600">157 / 184</div>
+              <p className="text-[11px] text-slate-500 font-medium">Lectures & practical labs attended</p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Mandatory Mandate</span>
+                <Clock className="w-4 h-4 text-slate-500" />
+              </div>
+              <div className="text-3xl font-black text-slate-900">75.0%</div>
+              <p className="text-[11px] text-slate-500 font-medium">UGC / AICTE College Minimum</p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Exam Eligibility</span>
+                <Award className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-lg font-black text-emerald-700 mt-1">ELIGIBLE</div>
+              <p className="text-[11px] text-emerald-600 font-bold">Clear for all End-Sem Exams</p>
+            </div>
+          </div>
+
+          {/* Enrolled Subjects Attendance Breakdown Table */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Semester 6 Enrolled Subjects & Attendance Breakdown
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Synchronized with Faculty lecture records & GPS Geofence verified markings
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                  0 Shortage Subjects
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3.5 px-4 w-12 text-center">#</th>
+                    <th className="py-3.5 px-4">Subject Code & Name</th>
+                    <th className="py-3.5 px-4">Faculty In-Charge</th>
+                    <th className="py-3.5 px-4 text-center">Attended / Total</th>
+                    <th className="py-3.5 px-4 text-center">Attendance %</th>
+                    <th className="py-3.5 px-4 text-center">Shortage Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {[
+                    { code: 'CS306', name: 'Cloud Computing & Distributed Systems', faculty: 'Dr. Neha Sharma', attended: 33, total: 38, percent: 86.8 },
+                    { code: 'CS302', name: 'Operating Systems & System Programming', faculty: 'Prof. Alok Verma', attended: 31, total: 34, percent: 91.2 },
+                    { code: 'CS304', name: 'Database Management Systems', faculty: 'Dr. Vikram Malhotra', attended: 33, total: 40, percent: 82.5 },
+                    { code: 'CS308', name: 'Compiler Design & Theory', faculty: 'Dr. Anjali Joshi', attended: 28, total: 36, percent: 77.8 },
+                    { code: 'CS310', name: 'Artificial Intelligence & Machine Learning', faculty: 'Prof. Sanjay Saxena', attended: 32, total: 36, percent: 88.9 }
+                  ].map((sub, idx) => {
+                    const isShortage = sub.percent < 75.0;
+                    return (
+                      <tr key={sub.code} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold mr-2">
+                            {sub.code}
+                          </span>
+                          <span className="font-extrabold text-slate-900">{sub.name}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600 font-medium">{sub.faculty}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-800">
+                          {sub.attended} / {sub.total}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`font-black text-xs ${isShortage ? 'text-rose-600' : 'text-emerald-700'}`}>
+                              {sub.percent}%
+                            </span>
+                            <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${isShortage ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                style={{ width: `${sub.percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {isShortage ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-black">
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              <span>Shortage (&lt;75%)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Eligible</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                College Mandate: <strong className="text-slate-700">Strictly ≥ 75.0% cumulative attendance required for end-semester admit card generation.</strong>
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Attendance marks synchronized daily with GPS Geofence & Facial Verification logs.
+              </div>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* A. CLASS ROSTER SELECTOR (Cascading dropdowns) */}
+      ) : (
+        /* ─── FACULTY & HOD WORKSPACE (Class Roster Selector & Manual Marking Roster) ─── */
+        <div className="space-y-6">
+          {/* A. CLASS ROSTER SELECTOR (Cascading dropdowns) */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -1256,6 +1383,8 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
               </div>
             </div>
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>

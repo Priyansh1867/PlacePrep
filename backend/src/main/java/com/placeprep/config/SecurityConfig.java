@@ -71,9 +71,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/moderate").hasRole("ADMIN")
 
+                        // Management restricted endpoints
+                        .requestMatchers("/api/management/attendance/verify-location").authenticated()
+                        .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
+
                         // Authenticated student/user actions
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers("/api/student/attendance/**").authenticated()
                         .requestMatchers("/api/mock-sessions/**").authenticated()
                         .requestMatchers("/api/applications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/experiences").authenticated()

@@ -601,7 +601,36 @@ export const AttendanceApi = {
   }
 };
 
-// 15. Resume Status & ATS Compatibility API
+// 15. Management & GPS Attendance API
+export const ManagementApi = {
+  async getInstituteLocation() {
+    return await request('/management/institute/location');
+  },
+
+  async updateInstituteLocation(locationData) {
+    return await request('/management/institute/location', {
+      method: 'PUT',
+      body: JSON.stringify(locationData)
+    });
+  },
+
+  async getLocationHistory() {
+    return await request('/management/institute/location/history');
+  },
+
+  async getGeofenceInfo() {
+    return await request('/management/institute/geofence');
+  },
+
+  async verifyStudentLocation(latitude, longitude) {
+    return await request('/management/attendance/verify-location', {
+      method: 'POST',
+      body: JSON.stringify({ latitude, longitude })
+    });
+  }
+};
+
+// 16. Resume Status & ATS Compatibility API
 export const ResumeAtsApi = {
   async analyze(formData) {
     return await request('/resume-ats/analyze', {
@@ -612,5 +641,33 @@ export const ResumeAtsApi = {
 
   async getSampleJds() {
     return await request('/resume-ats/sample-jds');
+  }
+};
+
+// 17. Student Geofence & Face-Verified Attendance API
+export const StudentAttendanceApi = {
+  async getStatus() {
+    return await request('/student/attendance/status');
+  },
+
+  async verifyLocation(latitude, longitude) {
+    return await request('/student/attendance/verify-location', {
+      method: 'POST',
+      body: JSON.stringify({ latitude, longitude })
+    });
+  },
+
+  async verifyFace(photo) {
+    return await request('/student/attendance/verify-face', {
+      method: 'POST',
+      body: JSON.stringify({ photo })
+    });
+  },
+
+  async markAttendance(payload) {
+    return await request('/student/attendance/mark', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };

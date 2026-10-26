@@ -19,6 +19,7 @@ const rolesByPortal = {
     { id: 'student', label: 'Student', icon: GraduationCap, description: 'Prepare and apply' },
     { id: 'teacher', label: 'Faculty', icon: BookOpen, description: 'Guide your cohort' },
     { id: 'hod', label: 'HOD', icon: Award, description: 'See department insights' },
+    { id: 'management', label: 'Management', icon: Building2, description: 'Location & geofence' },
   ],
   placement: [
     { id: 'tpo', label: 'TPO Officer', icon: Building2, description: 'Manage campus drives' },
@@ -35,6 +36,7 @@ const demoDetails = {
   student: { fullName: 'Priyansh Jain', email: 'priyansh.jain@example.edu', password: 'password123', rollNumber: '2024/CSE/084', branch: 'Computer Science and Engineering', batch: '2028', college: 'Delhi Technological University (DTU)' },
   teacher: { fullName: 'Dr. Neha Sharma', email: 'neha.sharma@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Associate Professor & Class Incharge', college: 'Delhi Technological University (DTU)' },
   hod: { fullName: 'Prof. Alok Verma', email: 'hod.cse@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Head of Department (HOD)', college: 'Delhi Technological University (DTU)' },
+  management: { fullName: 'Dr. Ramesh Gupta', email: 'management@placeprep.com', password: 'demo123', designation: 'Director & Location Authority', college: 'Delhi Technological University (DTU)' },
   tpo: { fullName: 'Prof. Rajesh Raman', email: 'tpo@placeprep.edu', password: 'password123', designation: 'Head - Training & Placement Cell', college: 'Delhi Technological University (DTU)' },
   coordinator: { fullName: 'Sneha Kapur', email: 'coordinator.tpo@dtu.ac.in', password: 'password123', designation: 'Lead Student Placement Coordinator', college: 'Delhi Technological University (DTU)' },
   hr: { fullName: 'Vikram Mehta', email: 'vikram.mehta@hcltech.com', password: 'password123', companyName: 'HCLTech', designation: 'University Talent Acquisition Partner' },
@@ -93,6 +95,11 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
         return;
       }
     } else {
+      if (selectedRole === 'management') {
+        setErrorMsg('Management accounts cannot self-register. Please contact the administrator or use Sign in.');
+        setIsSubmitting(false);
+        return;
+      }
       if (!formData.fullName || !formData.email || !formData.password) {
         setErrorMsg('Please complete all required fields.');
         setIsSubmitting(false);
@@ -181,17 +188,19 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       }
     }
 
+    const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
+
     // Persist session to local storage
     setCurrentUser(userObj);
-    setPortalMode(portalBranch);
+    setPortalMode(destinationPortal);
     setPortalRole(selectedRole);
     if (selectedRole === 'student' && userObj.graduationBatch) {
       setGraduationBatch(userObj.graduationBatch);
     }
 
-    setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${portalBranch.toUpperCase()} workspace...`);
+    setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${destinationPortal.toUpperCase()} workspace...`);
     setTimeout(() => {
-      onAuthSuccess(userObj, portalBranch);
+      onAuthSuccess(userObj, destinationPortal);
     }, 550);
   };
 

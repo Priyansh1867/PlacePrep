@@ -63,6 +63,7 @@ import CurriculumGovernanceView from '../components/curriculum/CurriculumGoverna
 import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
 import UserProfileModal from '../components/profile/UserProfileModal';
+import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
@@ -859,12 +860,22 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
-          <CrtAttendancePortalView onNavigate={onNavigate} />
+          <div className="space-y-6">
+            {userRole === 'student' && (
+              <StudentGpsAttendanceWidget sessionTitle="Campus Recruitment Training (CRT)" sessionType="CRT" />
+            )}
+            <CrtAttendancePortalView onNavigate={onNavigate} />
+          </div>
         )}
 
         {/* TAB 5: CLASS ATTENDANCE (Teacher & HOD Daily Class Attendance Portal) */}
         {activeTab === 'class-attendance' && (
-          <DailyAttendancePortalView onNavigate={onNavigate} />
+          <div className="space-y-6">
+            {userRole === 'student' && (
+              <StudentGpsAttendanceWidget sessionTitle="Regular Classroom Academic Attendance" sessionType="CLASS" />
+            )}
+            <DailyAttendancePortalView onNavigate={onNavigate} />
+          </div>
         )}
 
         {/* TAB 6: RESUME STATUS (ATS) */}

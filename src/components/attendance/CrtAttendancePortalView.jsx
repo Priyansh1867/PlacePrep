@@ -58,8 +58,8 @@ import { getCurrentUser, setCurrentUser, setPortalRole } from '../../services/st
 
 export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current user & active role
-  const [currentUser, setCurrentUserState] = useState(getCurrentUser());
-  const [activeRole, setActiveRole] = useState(currentUser.role || 'teacher');
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || { role: 'teacher', name: 'Dr. Neha Sharma', email: 'teacher@placeprep.com' });
+  const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || 'teacher'));
 
   // Active View Tab: 'sessions' | 'marking' | 'session-report' | 'cumulative-report'
   const [activeTab, setActiveTab] = useState('sessions');
@@ -525,31 +525,14 @@ export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
             </p>
           </div>
 
-          {/* Quick Demo Role Switcher */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Active Role:</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {[
-                { id: 'teacher', label: 'Faculty / Teacher' },
-                { id: 'tpo', label: 'TPO Officer' },
-                { id: 'hod', label: 'HOD' },
-                { id: 'student', label: 'Student' }
-              ].map(role => (
-                <button
-                  key={role.id}
-                  onClick={() => handleSwitchDemoRole(role.id)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                    activeRole === role.id
-                      ? 'bg-violet-600 text-white shadow-md'
-                      : 'bg-white/5 text-slate-300 hover:bg-white/15'
-                  }`}
-                >
-                  {role.label}
-                </button>
-              ))}
+          {/* Active Role Badge (Static - No Switching) */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/15 flex items-center gap-3">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <div className="text-xs">
+              <span className="text-slate-300 font-bold uppercase tracking-wider text-[10px] block">Active Role</span>
+              <span className="font-extrabold text-white capitalize">
+                {currentUser?.name || 'User'} ({activeRole})
+              </span>
             </div>
           </div>
         </div>
@@ -813,7 +796,7 @@ export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
       {/* ========================================================================= */}
       {/* TAB 2: SPEED ATTENDANCE MARKING */}
       {/* ========================================================================= */}
-      {activeTab === 'marking' && (
+      {activeTab === 'marking' && isAuthorized && (
         <div className="space-y-6">
           {/* Active Session Info Header */}
           {activeSession ? (

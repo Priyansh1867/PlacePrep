@@ -20,6 +20,7 @@ import {
 import { INITIAL_BRANCHES } from '../../data/initialAcademicRecords';
 import { deleteStudent } from '../../services/academicRecordsService';
 import BulkImportModal from '../BulkImportModal';
+import SearchBar from '../ui/SearchBar';
 
 export default function StudentDirectoryView({ 
   students = [], 
@@ -153,17 +154,20 @@ export default function StudentDirectoryView({
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         
         {/* Search Bar */}
-        <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by student name, roll no, registration ID, or branch..."
+        <div className="flex-1">
+          <SearchBar
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs border border-slate-200 bg-slate-50 hover:bg-white focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-slate-800 font-medium"
+            onClear={() => {
+              setSearchQuery('');
+              setCurrentPage(1);
+            }}
+            placeholder="Search by student name, roll no, registration ID, or branch..."
+            resultCount={filteredStudents.length}
+            totalCount={students.length}
           />
         </div>
 
@@ -467,7 +471,17 @@ export default function StudentDirectoryView({
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
                     <p className="text-sm font-semibold text-slate-600">No student academic records found</p>
-                    <p className="text-xs text-slate-400 mt-1">Try modifying your search criteria or add a new student.</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {searchQuery.trim() ? `No records matched "${searchQuery.trim()}".` : 'Try modifying your filter criteria or add a new student.'}
+                    </p>
+                    {searchQuery.trim() && (
+                      <button
+                        onClick={resetFilters}
+                        className="mt-3 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition cursor-pointer"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}

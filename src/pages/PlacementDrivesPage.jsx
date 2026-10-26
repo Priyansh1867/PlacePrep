@@ -46,6 +46,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
+import SearchBar from '../components/ui/SearchBar';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
@@ -60,6 +61,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
   // Drives list and filter states
   const [selectedBatchFilter, setSelectedBatchFilter] = useState(currentBatch);
   const [searchQuery, setSearchQuery] = useState('');
+  const [applicationsSearchQuery, setApplicationsSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [drivesList, setDrivesList] = useState(() => getUpcomingDrives());
   const [applications, setApplications] = useState(() => getStudentApplications());
@@ -188,16 +190,34 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
 
   // Filtered drives list
   const filteredDrives = useMemo(() => {
+    const q = (searchQuery || '').trim().toLowerCase();
     return drivesList.filter(d => {
       const matchBatch = selectedBatchFilter === 'all' || 
         (d.eligibleBatches && (d.eligibleBatches.includes(selectedBatchFilter) || d.eligibleBatches.includes(Number(selectedBatchFilter))));
-      const matchSearch = (d.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (d.role || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (d.venue && d.venue.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchSearch = !q ||
+        (d.companyName || '').toLowerCase().includes(q) ||
+        (d.role || '').toLowerCase().includes(q) ||
+        (d.ctc || '').toLowerCase().includes(q) ||
+        (d.packageDetails || '').toLowerCase().includes(q) ||
+        (d.venue && d.venue.toLowerCase().includes(q));
       const matchStatus = statusFilter === 'all' ? true : (d.status || '').toLowerCase().includes(statusFilter);
       return matchBatch && matchSearch && matchStatus;
     });
   }, [drivesList, selectedBatchFilter, searchQuery, statusFilter]);
+
+  // Filtered applications list
+  const filteredApplications = useMemo(() => {
+    const q = (applicationsSearchQuery || '').trim().toLowerCase();
+    if (!q) return applications;
+    return applications.filter(app =>
+      (app.companyName || '').toLowerCase().includes(q) ||
+      (app.role || '').toLowerCase().includes(q) ||
+      (app.status || '').toLowerCase().includes(q) ||
+      (app.venue || '').toLowerCase().includes(q) ||
+      (app.currentRound || '').toLowerCase().includes(q) ||
+      (app.scheduledDate || '').toLowerCase().includes(q)
+    );
+  }, [applications, applicationsSearchQuery]);
 
   // Track drive in personal applications tracker
   const handleTrackDrive = async (drive, initialStatus = 'APPLIED') => {
@@ -476,14 +496,14 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
           <div className="surface-card p-4 sm:p-5 border-slate-200 space-y-4">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
               {/* Search Input */}
-              <div className="relative w-full md:w-96">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="text"
+              <div className="w-full md:w-96">
+                <SearchBar
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search drives by company, role, or venue..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onClear={() => setSearchQuery('')}
+                  placeholder="Search drives by company, role, package, or venue..."
+                  resultCount={filteredDrives.length}
+                  totalCount={drivesList.length}
                 />
               </div>
 
@@ -541,8 +561,25 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
           </div>
 
           {/* Drives Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDrives.map((drive) => {
+          {filteredDrives.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No placement drives found"
+              description={
+                searchQuery.trim()
+                  ? `No drives matched "${searchQuery.trim()}". Try checking spelling or clear your search.`
+                  : 'No drives match the current batch and status filters.'
+              }
+              actionLabel="Clear Filters & Search"
+              onAction={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+                setSelectedBatchFilter(currentBatch);
+              }}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDrives.map((drive) => {
               const driveId = drive.driveId || drive.id;
               const applicationObj = getApplicationForDrive(drive);
               const hasApplied = !!applicationObj;
@@ -717,6 +754,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -1042,11 +1080,31 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
               </div>
             ) : (
               <div className="space-y-4">
-                {applications.map((app) => (
-                  <div
-                    key={app.applicationId || app.id}
-                    className="bg-slate-50/80 rounded-2xl border border-slate-200 p-5 hover:border-indigo-300 transition-all space-y-4"
-                  >
+                <div className="w-full md:w-96">
+                  <SearchBar
+                    value={applicationsSearchQuery}
+                    onChange={(e) => setApplicationsSearchQuery(e.target.value)}
+                    onClear={() => setApplicationsSearchQuery('')}
+                    placeholder="Search applications by company, role, status..."
+                    resultCount={filteredApplications.length}
+                    totalCount={applications.length}
+                  />
+                </div>
+
+                {filteredApplications.length === 0 ? (
+                  <EmptyState
+                    icon={Search}
+                    title="No matching applications found"
+                    description={`No applications matched "${applicationsSearchQuery.trim()}". Try searching for another keyword or clear search.`}
+                    actionLabel="Clear Search"
+                    onAction={() => setApplicationsSearchQuery('')}
+                  />
+                ) : (
+                  filteredApplications.map((app) => (
+                    <div
+                      key={app.applicationId || app.id}
+                      className="bg-slate-50/80 rounded-2xl border border-slate-200 p-5 hover:border-indigo-300 transition-all space-y-4"
+                    >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1130,9 +1188,10 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
+          )}
           </div>
         </div>
       )}

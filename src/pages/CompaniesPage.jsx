@@ -17,6 +17,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
+import SearchBar from '../components/ui/SearchBar';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
@@ -54,10 +55,15 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
   }, [currentBatch]);
 
   const filteredCompanies = useMemo(() => {
+    const q = (searchQuery || '').trim().toLowerCase();
+
     let list = companies.filter(c => {
-      const matchSearch = (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (c.roles || []).some(r => r.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                          (c.frequentTopics || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchSearch = !q ||
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.tier || '').toLowerCase().includes(q) ||
+        (c.roles || []).some(r => r.toLowerCase().includes(q)) ||
+        (c.frequentTopics || []).some(t => t.toLowerCase().includes(q)) ||
+        (c.eligibilityCriteria || '').toLowerCase().includes(q);
 
       let matchStatus = true;
       if (statusFilter === 'upcoming') {
@@ -118,12 +124,13 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
           {/* Search Box */}
           <div className="w-full lg:w-96">
-            <Input
-              type="text"
+            <SearchBar
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by company name, role, or core skill..."
-              leftIcon={Search}
+              onClear={() => setSearchQuery('')}
+              placeholder="Search companies by name, role, skill, or tier..."
+              resultCount={filteredCompanies.length}
+              totalCount={companies.length}
             />
           </div>
 
@@ -189,20 +196,18 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
         </div>
       ) : filteredCompanies.length === 0 ? (
         <EmptyState
-          icon={Building2}
+          icon={Search}
           title="No companies found"
-          description={`No recruiting companies matched "${searchQuery}". Try searching for another keyword or reset filters.`}
-          action={
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('all');
-              }}
-            >
-              Reset Filters
-            </Button>
+          description={
+            searchQuery.trim()
+              ? `No recruiting companies matched "${searchQuery.trim()}". Try checking spelling or clear search.`
+              : 'No companies match the selected filter criteria.'
           }
+          actionLabel="Clear Filters & Search"
+          onAction={() => {
+            setSearchQuery('');
+            setStatusFilter('all');
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -27,6 +27,7 @@ import {
 } from '../services/reportsExporterService';
 import { getUpcomingDrives, getCurrentUser } from '../services/storage';
 import { getAllStudents } from '../services/academicRecordsService';
+import SearchBar from '../components/ui/SearchBar';
 
 export default function ReportsExporterPage({ onNavigate }) {
   const currentUser = getCurrentUser();
@@ -36,6 +37,7 @@ export default function ReportsExporterPage({ onNavigate }) {
   const [activeReport, setActiveReport] = useState('drive-eligibility');
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [downloadSuccessMsg, setDownloadSuccessMsg] = useState('');
+  const [previewSearchQuery, setPreviewSearchQuery] = useState('');
 
   // 1. Drive Eligibility Filters
   const drives = useMemo(() => getUpcomingDrives(), []);
@@ -79,6 +81,40 @@ export default function ReportsExporterPage({ onNavigate }) {
   const attendanceRows = useMemo(() => {
     return generateMonthlyAttendanceReportData(attendanceMonth, attendanceYear, attendanceDeptFilter);
   }, [attendanceMonth, attendanceYear, attendanceDeptFilter]);
+
+  // Dynamic live search filtering for preview tables
+  const filteredDriveEligibilityRows = useMemo(() => {
+    const q = (previewSearchQuery || '').trim().toLowerCase();
+    if (!q) return driveEligibilityRows;
+    return driveEligibilityRows.filter(r =>
+      (r['Student Full Name'] || '').toLowerCase().includes(q) ||
+      (r['University Roll Number'] || '').toLowerCase().includes(q) ||
+      (r.Branch || '').toLowerCase().includes(q) ||
+      String(r.CGPA || '').toLowerCase().includes(q)
+    );
+  }, [driveEligibilityRows, previewSearchQuery]);
+
+  const filteredPlacedRows = useMemo(() => {
+    const q = (previewSearchQuery || '').trim().toLowerCase();
+    if (!q) return placedRows;
+    return placedRows.filter(r =>
+      (r['Student Name'] || '').toLowerCase().includes(q) ||
+      (r['Company'] || '').toLowerCase().includes(q) ||
+      (r['Job Role'] || '').toLowerCase().includes(q) ||
+      (r['Branch'] || '').toLowerCase().includes(q) ||
+      (r['Package'] || '').toLowerCase().includes(q)
+    );
+  }, [placedRows, previewSearchQuery]);
+
+  const filteredAttendanceRows = useMemo(() => {
+    const q = (previewSearchQuery || '').trim().toLowerCase();
+    if (!q) return attendanceRows;
+    return attendanceRows.filter(r =>
+      (r['Student Name'] || '').toLowerCase().includes(q) ||
+      (r['Student Roll Number'] || '').toLowerCase().includes(q) ||
+      (r['Department'] || '').toLowerCase().includes(q)
+    );
+  }, [attendanceRows, previewSearchQuery]);
 
   // Handle Downloads
   const handleExportDriveEligibility = () => {
@@ -320,18 +356,45 @@ export default function ReportsExporterPage({ onNavigate }) {
 
                 {/* Live Preview Table */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <h3 className="font-bold text-slate-800">
-                      Eligible Candidates Preview ({driveEligibilityRows.length} matching students)
-                    </h3>
-                    <span className="text-slate-500">
-                      Evaluated against {allStudents.length} registered students
-                    </span>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <h3 className="font-bold text-slate-800">
+                        Eligible Candidates Preview ({filteredDriveEligibilityRows.length} matching of {driveEligibilityRows.length})
+                      </h3>
+                      <span className="text-slate-500 text-[11px]">
+                        Evaluated against {allStudents.length} registered students
+                      </span>
+                    </div>
+
+                    {driveEligibilityRows.length > 0 && (
+                      <div className="w-full sm:w-72">
+                        <SearchBar
+                          value={previewSearchQuery}
+                          onChange={(e) => setPreviewSearchQuery(e.target.value)}
+                          onClear={() => setPreviewSearchQuery('')}
+                          placeholder="Search candidate, roll #, branch..."
+                          size="sm"
+                          resultCount={filteredDriveEligibilityRows.length}
+                          totalCount={driveEligibilityRows.length}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {driveEligibilityRows.length === 0 ? (
                     <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
                       No registered students meet the eligibility thresholds for this drive with the selected filters.
+                    </div>
+                  ) : filteredDriveEligibilityRows.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                      <p className="font-semibold text-slate-700">No candidates matched "{previewSearchQuery.trim()}".</p>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSearchQuery('')}
+                        className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                      >
+                        Clear Search
+                      </button>
                     </div>
                   ) : (
                     <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-80 overflow-y-auto">
@@ -347,7 +410,7 @@ export default function ReportsExporterPage({ onNavigate }) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {driveEligibilityRows.map((stu, i) => (
+                          {filteredDriveEligibilityRows.map((stu, i) => (
                             <tr key={i} className="hover:bg-slate-50 font-medium">
                               <td className="py-2.5 px-3 font-mono font-bold text-slate-700">
                                 {stu['University Roll Number']}
@@ -475,13 +538,40 @@ export default function ReportsExporterPage({ onNavigate }) {
 
                 {/* Live Preview Table */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-slate-800">
-                    Placed Candidates Records ({placedRows.length} confirmed selections)
-                  </h3>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                    <h3 className="font-bold text-slate-800">
+                      Placed Candidates Records ({filteredPlacedRows.length} matching of {placedRows.length})
+                    </h3>
+
+                    {placedRows.length > 0 && (
+                      <div className="w-full sm:w-72">
+                        <SearchBar
+                          value={previewSearchQuery}
+                          onChange={(e) => setPreviewSearchQuery(e.target.value)}
+                          onClear={() => setPreviewSearchQuery('')}
+                          placeholder="Search student, company, role..."
+                          size="sm"
+                          resultCount={filteredPlacedRows.length}
+                          totalCount={placedRows.length}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   {placedRows.length === 0 ? (
                     <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
                       No placement records found matching the selected company filter.
+                    </div>
+                  ) : filteredPlacedRows.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                      <p className="font-semibold text-slate-700">No placed candidates matched "{previewSearchQuery.trim()}".</p>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSearchQuery('')}
+                        className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                      >
+                        Clear Search
+                      </button>
                     </div>
                   ) : (
                     <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-80 overflow-y-auto">
@@ -497,7 +587,7 @@ export default function ReportsExporterPage({ onNavigate }) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {placedRows.map((r, i) => (
+                          {filteredPlacedRows.map((r, i) => (
                             <tr key={i} className="hover:bg-slate-50 font-medium">
                               <td className="py-2.5 px-3 font-bold text-slate-900">
                                 {r['Student Name']}
@@ -622,13 +712,40 @@ export default function ReportsExporterPage({ onNavigate }) {
 
                 {/* Live Preview Table */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-slate-800">
-                    Cohort Roster Preview for {MONTH_NAMES[attendanceMonth - 1]} {attendanceYear} ({attendanceRows.length} students)
-                  </h3>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                    <h3 className="font-bold text-slate-800">
+                      Cohort Roster Preview for {MONTH_NAMES[attendanceMonth - 1]} {attendanceYear} ({filteredAttendanceRows.length} matching of {attendanceRows.length})
+                    </h3>
+
+                    {attendanceRows.length > 0 && (
+                      <div className="w-full sm:w-72">
+                        <SearchBar
+                          value={previewSearchQuery}
+                          onChange={(e) => setPreviewSearchQuery(e.target.value)}
+                          onClear={() => setPreviewSearchQuery('')}
+                          placeholder="Search roll #, student name, dept..."
+                          size="sm"
+                          resultCount={filteredAttendanceRows.length}
+                          totalCount={attendanceRows.length}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   {attendanceRows.length === 0 ? (
                     <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
                       No attendance sessions or records recorded for {MONTH_NAMES[attendanceMonth - 1]} {attendanceYear}.
+                    </div>
+                  ) : filteredAttendanceRows.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                      <p className="font-semibold text-slate-700">No attendance records matched "{previewSearchQuery.trim()}".</p>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSearchQuery('')}
+                        className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                      >
+                        Clear Search
+                      </button>
                     </div>
                   ) : (
                     <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-80 overflow-y-auto">
@@ -647,7 +764,7 @@ export default function ReportsExporterPage({ onNavigate }) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {attendanceRows.map((r, i) => (
+                          {filteredAttendanceRows.map((r, i) => (
                             <tr key={i} className="hover:bg-slate-50 font-medium">
                               <td className="py-2 px-3 font-mono font-bold text-slate-700">
                                 {r['Student Roll Number']}

@@ -25,6 +25,8 @@ import {
   Zap
 } from 'lucide-react';
 import { QuestionApi } from '../services/api';
+import SearchBar from '../components/ui/SearchBar';
+import EmptyState from '../components/ui/EmptyState';
 import { 
   getInterviewQuestions, 
   getPracticedQuestions, 
@@ -45,6 +47,7 @@ export default function CompanyHubPage({
 }) {
   const [activeTab, setActiveTab] = useState('rounds');
   const [selectedRoundFilter, setSelectedRoundFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [allCompanyQuestions, setAllCompanyQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const currentBatch = getGraduationBatch();
@@ -87,9 +90,17 @@ export default function CompanyHubPage({
   const hrQuestions = allCompanyQuestions.filter(q => q.round === 'hr');
   const managerialQuestions = allCompanyQuestions.filter(q => q.round === 'managerial');
 
-  const filteredQuestions = selectedRoundFilter === 'all' 
-    ? allCompanyQuestions 
-    : allCompanyQuestions.filter(q => q.round === selectedRoundFilter);
+  const filteredQuestions = React.useMemo(() => {
+    const q = (searchQuery || '').trim().toLowerCase();
+    return allCompanyQuestions.filter(item => {
+      const matchRound = selectedRoundFilter === 'all' || item.round === selectedRoundFilter;
+      const questionText = (item.questionText || item.question || '').toLowerCase();
+      const categoryText = (item.category || '').toLowerCase();
+      const skillsMatch = (item.skills || []).some(s => s.toLowerCase().includes(q));
+      const matchSearch = !q || questionText.includes(q) || categoryText.includes(q) || skillsMatch;
+      return matchRound && matchSearch;
+    });
+  }, [allCompanyQuestions, selectedRoundFilter, searchQuery]);
 
   const handleToggleSave = () => {
     toggleSavedCompany(company?.companyId || company?.id);
@@ -450,69 +461,100 @@ export default function CompanyHubPage({
       {/* SECTION C: QUESTION BANK TAB */}
       {activeTab === 'questions' && (
         <div className="space-y-4 font-mono">
-          {/* Round Filter Tabs */}
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-200 text-xs font-semibold">
-            {[
-              { id: 'all', label: `All Questions (${allCompanyQuestions.length})` },
-              { id: 'technical', label: `Technical (${technicalQuestions.length})` },
-              { id: 'hr', label: `HR (${hrQuestions.length})` },
-              { id: 'managerial', label: `Managerial (${managerialQuestions.length})` },
-            ].map(r => (
-              <button
-                key={r.id}
-                onClick={() => setSelectedRoundFilter(r.id)}
-                className={`px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${
-                  selectedRoundFilter === r.id
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs font-bold'
-                    : 'bg-white text-slate-700 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
+          {/* Controls: Round Filter Tabs & Search Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="w-full md:w-80">
+              <SearchBar
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onClear={() => setSearchQuery('')}
+                placeholder="Search questions, categories, skills..."
+                size="sm"
+                resultCount={filteredQuestions.length}
+                totalCount={allCompanyQuestions.length}
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-semibold pb-1 md:pb-0">
+              {[
+                { id: 'all', label: `All (${allCompanyQuestions.length})` },
+                { id: 'technical', label: `Tech (${technicalQuestions.length})` },
+                { id: 'hr', label: `HR (${hrQuestions.length})` },
+                { id: 'managerial', label: `Managerial (${managerialQuestions.length})` },
+              ].map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => setSelectedRoundFilter(r.id)}
+                  className={`px-3 py-1.5 rounded-xl transition-all border whitespace-nowrap cursor-pointer ${
+                    selectedRoundFilter === r.id
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs font-bold'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredQuestions.map(q => {
-              const isPracticed = practicedIds.includes(q.questionId || q.id);
-              return (
-                <div
-                  key={q.questionId || q.id}
-                  onClick={() => onSelectQuestion && onSelectQuestion(q)}
-                  className="surface-card p-5 shadow-xl hover:border-indigo-500/50 cursor-pointer transition-all flex flex-col justify-between group"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200 text-xs font-bold uppercase">
-                          {q.round}
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs border border-slate-200">
-                          {q.category}
+          {filteredQuestions.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No questions found"
+              description={
+                searchQuery.trim()
+                  ? `No questions matched "${searchQuery.trim()}". Try searching another topic or reset filters.`
+                  : 'No questions available for this round filter.'
+              }
+              actionLabel="Clear Search"
+              onAction={() => {
+                setSearchQuery('');
+                setSelectedRoundFilter('all');
+              }}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredQuestions.map(q => {
+                const isPracticed = practicedIds.includes(q.questionId || q.id);
+                return (
+                  <div
+                    key={q.questionId || q.id}
+                    onClick={() => onSelectQuestion && onSelectQuestion(q)}
+                    className="surface-card p-5 shadow-xl hover:border-indigo-500/50 cursor-pointer transition-all flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200 text-xs font-bold uppercase">
+                            {q.round}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs border border-slate-200">
+                            {q.category}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                          <Flame className="w-3 h-3" /> {q.frequencyScore || 90}%
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                        <Flame className="w-3 h-3" /> {q.frequencyScore || 90}%
-                      </span>
+
+                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors leading-snug">
+                        {q.questionText || q.question}
+                      </h4>
                     </div>
 
-                    <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors leading-snug">
-                      {q.questionText || q.question}
-                    </h4>
+                    <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                      <span className={isPracticed ? "text-emerald-700 font-bold flex items-center gap-1" : "text-slate-500"}>
+                        {isPracticed ? "✓ Practiced" : "Pending practice"}
+                      </span>
+                      <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                        Practice Now <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-                    <span className={isPracticed ? "text-emerald-700 font-bold flex items-center gap-1" : "text-slate-500"}>
-                      {isPracticed ? "✓ Practiced" : "Pending practice"}
-                    </span>
-                    <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      Practice Now <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

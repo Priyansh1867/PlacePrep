@@ -44,6 +44,7 @@ import {
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import SearchBar from '../components/ui/SearchBar';
 
 export default function AdminPage() {
   const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
@@ -52,6 +53,13 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(false);
+
+  // Search states for management tabs
+  const [companySearchQuery, setCompanySearchQuery] = useState('');
+  const [driveSearchQuery, setDriveSearchQuery] = useState('');
+  const [questionSearchQuery, setQuestionSearchQuery] = useState('');
+  const [moderationSearchQuery, setModerationSearchQuery] = useState('');
+  const [feedbackSearchQuery, setFeedbackSearchQuery] = useState('');
 
   // Live entity states
   const [companies, setCompanies] = useState(() => getCompanies());
@@ -347,6 +355,71 @@ export default function AdminPage() {
 
   const isAdmin = currentUser?.role === 'admin';
 
+  // Filtered lists for management tabs
+  const filteredCompanies = companies.filter(c => {
+    const q = (companySearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    const batches = Array.isArray(c.eligibleBatches) ? c.eligibleBatches.join(' ') : String(c.eligibleBatches || '');
+    const roles = Array.isArray(c.roles) ? c.roles.join(' ') : String(c.roles || '');
+    return (
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.tier || '').toLowerCase().includes(q) ||
+      (c.ctcRange || '').toLowerCase().includes(q) ||
+      roles.toLowerCase().includes(q) ||
+      batches.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredDrives = drives.filter(d => {
+    const q = (driveSearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (d.companyName || '').toLowerCase().includes(q) ||
+      (d.role || '').toLowerCase().includes(q) ||
+      (d.ctc || '').toLowerCase().includes(q) ||
+      (d.venue || '').toLowerCase().includes(q) ||
+      (d.status || '').toLowerCase().includes(q) ||
+      (d.driveDate || '').toLowerCase().includes(q)
+    );
+  });
+
+  const filteredQuestions = questions.filter(qItem => {
+    const q = (questionSearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    const text = qItem.questionText || qItem.question || '';
+    return (
+      text.toLowerCase().includes(q) ||
+      (qItem.category || '').toLowerCase().includes(q) ||
+      (qItem.round || '').toLowerCase().includes(q) ||
+      (qItem.difficulty || '').toLowerCase().includes(q) ||
+      (qItem.companyId || '').toLowerCase().includes(q)
+    );
+  });
+
+  const filteredExperiences = experiences.filter(exp => {
+    const q = (moderationSearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (exp.companyName || '').toLowerCase().includes(q) ||
+      (exp.role || '').toLowerCase().includes(q) ||
+      (exp.studentName || '').toLowerCase().includes(q) ||
+      (exp.college || '').toLowerCase().includes(q) ||
+      (exp.tips || '').toLowerCase().includes(q) ||
+      (exp.reportReason || '').toLowerCase().includes(q) ||
+      (exp.moderationStatus || '').toLowerCase().includes(q)
+    );
+  });
+
+  const filteredFeedbackList = feedbackList.filter(fb => {
+    const q = (feedbackSearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (fb.category || '').toLowerCase().includes(q) ||
+      (fb.message || '').toLowerCase().includes(q) ||
+      (fb.batch || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
@@ -579,39 +652,65 @@ export default function AdminPage() {
           </div>
 
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-            <h3 className="font-extrabold text-base text-slate-900 mb-2">
-              Registered Recruiter Hubs ({companies.length})
-            </h3>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {companies.map(c => {
-                const cId = c.companyId || c.id;
-                return (
-                  <div key={cId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs hover:border-slate-300 transition-colors">
-                    <div>
-                      <span className="font-extrabold text-slate-900">{c.name}</span>
-                      <span className="text-slate-500 ml-2">({c.tier} • {c.ctcRange})</span>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Batches: {Array.isArray(c.eligibleBatches) ? c.eligibleBatches.join(', ') : '2026, 2027'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[11px] font-bold">
-                        Active
-                      </span>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleDeleteCompany(cId)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Delete company profile"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+              <h3 className="font-extrabold text-base text-slate-900">
+                Registered Recruiter Hubs ({companies.length})
+              </h3>
             </div>
+
+            <SearchBar
+              value={companySearchQuery}
+              onChange={(e) => setCompanySearchQuery(e.target.value)}
+              onClear={() => setCompanySearchQuery('')}
+              placeholder="Search companies by name, tier, roles, batches..."
+              resultCount={filteredCompanies.length}
+              totalCount={companies.length}
+              size="sm"
+              ariaLabel="Search companies"
+            />
+
+            {filteredCompanies.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No companies matched "{companySearchQuery.trim()}".</p>
+                <button
+                  onClick={() => setCompanySearchQuery('')}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                {filteredCompanies.map(c => {
+                  const cId = c.companyId || c.id;
+                  return (
+                    <div key={cId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs hover:border-slate-300 transition-colors">
+                      <div>
+                        <span className="font-extrabold text-slate-900">{c.name}</span>
+                        <span className="text-slate-500 ml-2">({c.tier} • {c.ctcRange})</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Batches: {Array.isArray(c.eligibleBatches) ? c.eligibleBatches.join(', ') : '2026, 2027'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[11px] font-bold">
+                          Active
+                        </span>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteCompany(cId)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete company profile"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -735,39 +834,65 @@ export default function AdminPage() {
           </div>
 
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-            <h3 className="font-extrabold text-base text-slate-900 mb-2">
-              Active Placement Drives ({drives.length})
-            </h3>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {drives.map(d => {
-                const dId = d.driveId || d.id;
-                return (
-                  <div key={dId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs hover:border-slate-300 transition-colors">
-                    <div>
-                      <span className="font-extrabold text-slate-900">{d.companyName}</span>
-                      <span className="text-slate-600 ml-2 font-medium">• {d.role} ({d.ctc})</span>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Drive: {d.driveDate} • Deadline: {d.deadline}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px]">
-                        {d.status || 'Verified'}
-                      </span>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleDeleteDrive(dId)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Remove placement drive"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+              <h3 className="font-extrabold text-base text-slate-900">
+                Active Placement Drives ({drives.length})
+              </h3>
             </div>
+
+            <SearchBar
+              value={driveSearchQuery}
+              onChange={(e) => setDriveSearchQuery(e.target.value)}
+              onClear={() => setDriveSearchQuery('')}
+              placeholder="Search drives by company, role, package, venue, date..."
+              resultCount={filteredDrives.length}
+              totalCount={drives.length}
+              size="sm"
+              ariaLabel="Search drives"
+            />
+
+            {filteredDrives.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No placement drives matched "{driveSearchQuery.trim()}".</p>
+                <button
+                  onClick={() => setDriveSearchQuery('')}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                {filteredDrives.map(d => {
+                  const dId = d.driveId || d.id;
+                  return (
+                    <div key={dId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs hover:border-slate-300 transition-colors">
+                      <div>
+                        <span className="font-extrabold text-slate-900">{d.companyName}</span>
+                        <span className="text-slate-600 ml-2 font-medium">• {d.role} ({d.ctc})</span>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Drive: {d.driveDate} • Deadline: {d.deadline}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px]">
+                          {d.status || 'Verified'}
+                        </span>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteDrive(dId)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Remove placement drive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -881,42 +1006,68 @@ export default function AdminPage() {
           </div>
 
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-            <h3 className="font-extrabold text-base text-slate-900 mb-2">
-              Indexed Questions in Bank ({questions.length})
-            </h3>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {questions.map((q, qIdx) => {
-                const qId = q.questionId || q.id || `q-${qIdx}`;
-                return (
-                  <div key={qId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 text-xs hover:border-slate-300 transition-colors">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-extrabold text-[10px] uppercase">
-                          {q.category || 'General'}
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold text-[10px]">
-                          {q.round || 'Technical'}
-                        </span>
-                        <span className="text-[11px] font-bold text-amber-600">
-                          {q.difficulty || 'Medium'}
-                        </span>
-                      </div>
-                      <p className="font-bold text-slate-900">{q.questionText || q.question}</p>
-                    </div>
-
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteQuestion(qId)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
-                        title="Delete question"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+              <h3 className="font-extrabold text-base text-slate-900">
+                Indexed Questions in Bank ({questions.length})
+              </h3>
             </div>
+
+            <SearchBar
+              value={questionSearchQuery}
+              onChange={(e) => setQuestionSearchQuery(e.target.value)}
+              onClear={() => setQuestionSearchQuery('')}
+              placeholder="Search questions by text, category, round, difficulty..."
+              resultCount={filteredQuestions.length}
+              totalCount={questions.length}
+              size="sm"
+              ariaLabel="Search questions in bank"
+            />
+
+            {filteredQuestions.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No questions matched "{questionSearchQuery.trim()}".</p>
+                <button
+                  onClick={() => setQuestionSearchQuery('')}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                {filteredQuestions.map((q, qIdx) => {
+                  const qId = q.questionId || q.id || `q-${qIdx}`;
+                  return (
+                    <div key={qId} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 text-xs hover:border-slate-300 transition-colors">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-extrabold text-[10px] uppercase">
+                            {q.category || 'General'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold text-[10px]">
+                            {q.round || 'Technical'}
+                          </span>
+                          <span className="text-[11px] font-bold text-amber-600">
+                            {q.difficulty || 'Medium'}
+                          </span>
+                        </div>
+                        <p className="font-bold text-slate-900">{q.questionText || q.question}</p>
+                      </div>
+
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteQuestion(qId)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                          title="Delete question"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -924,100 +1075,152 @@ export default function AdminPage() {
       {/* TAB 5: MODERATION */}
       {activeTab === 'moderation' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-extrabold text-base text-slate-900">
-              Candidate Interview Debriefs & Content Moderation ({experiences.length})
-            </h3>
-            <span className="text-xs text-slate-500 font-medium">Enforcing Quality & Community Standards</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-extrabold text-base text-slate-900">
+                Candidate Interview Debriefs & Content Moderation ({experiences.length})
+              </h3>
+              <span className="text-xs text-slate-500 font-medium">Enforcing Quality & Community Standards</span>
+            </div>
+            <div className="sm:w-72">
+              <SearchBar
+                value={moderationSearchQuery}
+                onChange={(e) => setModerationSearchQuery(e.target.value)}
+                onClear={() => setModerationSearchQuery('')}
+                placeholder="Search debriefs..."
+                resultCount={filteredExperiences.length}
+                totalCount={experiences.length}
+                size="sm"
+                ariaLabel="Search interview debriefs"
+              />
+            </div>
           </div>
 
-          <div className="space-y-3">
-            {experiences.map((exp, idx) => {
-              const expId = exp.experienceId || exp.id || `exp-${idx}`;
-              const isApproved = (exp.moderationStatus || 'APPROVED') === 'APPROVED';
-              const isReported = exp.reported;
+          {filteredExperiences.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs space-y-2">
+              <p className="font-semibold text-slate-700">No debriefs matched "{moderationSearchQuery.trim()}".</p>
+              <button
+                onClick={() => setModerationSearchQuery('')}
+                className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+              >
+                Clear Search
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredExperiences.map((exp, idx) => {
+                const expId = exp.experienceId || exp.id || `exp-${idx}`;
+                const isApproved = (exp.moderationStatus || 'APPROVED') === 'APPROVED';
+                const isReported = exp.reported;
 
-              return (
-                <div
-                  key={expId}
-                  className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs transition-colors ${
-                    isReported ? 'bg-rose-50/50 border-rose-200' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-extrabold text-slate-900">{exp.companyName}</span>
-                      <span className="text-slate-500">• {exp.role}</span>
-                      <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px]">
-                        Batch {exp.batch}
-                      </span>
-                      {isReported && (
-                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] flex items-center gap-1">
-                          <Flag className="w-3 h-3 text-rose-600" />
-                          <span>Flagged: {exp.reportReason || 'Reported Content'}</span>
+                return (
+                  <div
+                    key={expId}
+                    className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs transition-colors ${
+                      isReported ? 'bg-rose-50/50 border-rose-200' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-slate-900">{exp.companyName}</span>
+                        <span className="text-slate-500">• {exp.role}</span>
+                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px]">
+                          Batch {exp.batch}
                         </span>
-                      )}
-                    </div>
-                    <p className="text-slate-600">"{exp.tips}"</p>
-                    <p className="text-[11px] text-slate-400">
-                      Author: {exp.studentName} {exp.college ? `• ${exp.college}` : ''}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                      isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                    }`}>
-                      {exp.moderationStatus || 'APPROVED'}
-                    </span>
-
-                    {isAdmin && (
-                      <div className="flex items-center gap-1">
-                        {!isApproved && (
-                          <button
-                            onClick={() => handleModerateExperience(expId, 'APPROVED')}
-                            className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Approve this post"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Approve</span>
-                          </button>
-                        )}
-                        {isApproved && (
-                          <button
-                            onClick={() => handleModerateExperience(expId, 'REJECTED')}
-                            className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Reject/Hide this post"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
+                        {isReported && (
+                          <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] flex items-center gap-1">
+                            <Flag className="w-3 h-3 text-rose-600" />
+                            <span>Flagged: {exp.reportReason || 'Reported Content'}</span>
+                          </span>
                         )}
                       </div>
-                    )}
+                      <p className="text-slate-600">"{exp.tips}"</p>
+                      <p className="text-[11px] text-slate-400">
+                        Author: {exp.studentName} {exp.college ? `• ${exp.college}` : ''}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {exp.moderationStatus || 'APPROVED'}
+                      </span>
+
+                      {isAdmin && (
+                        <div className="flex items-center gap-1">
+                          {!isApproved && (
+                            <button
+                              onClick={() => handleModerateExperience(expId, 'APPROVED')}
+                              className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Approve this post"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          )}
+                          {isApproved && (
+                            <button
+                              onClick={() => handleModerateExperience(expId, 'REJECTED')}
+                              className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Reject/Hide this post"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Reject</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 6: FEEDBACK */}
       {activeTab === 'feedback' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-base text-slate-900">
-            Student Feedback & Platform Reports ({feedbackList.length})
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="font-extrabold text-base text-slate-900">
+              Student Feedback & Platform Reports ({feedbackList.length})
+            </h3>
+            {feedbackList.length > 0 && (
+              <div className="sm:w-72">
+                <SearchBar
+                  value={feedbackSearchQuery}
+                  onChange={(e) => setFeedbackSearchQuery(e.target.value)}
+                  onClear={() => setFeedbackSearchQuery('')}
+                  placeholder="Search feedback..."
+                  resultCount={filteredFeedbackList.length}
+                  totalCount={feedbackList.length}
+                  size="sm"
+                  ariaLabel="Search student feedback"
+                />
+              </div>
+            )}
+          </div>
           {feedbackList.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
               title="No Feedback Submissions Recorded"
               description="Feedback sent by students via the Experience Vault will populate here for review."
             />
+          ) : filteredFeedbackList.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs space-y-2">
+              <p className="font-semibold text-slate-700">No feedback matched "{feedbackSearchQuery.trim()}".</p>
+              <button
+                onClick={() => setFeedbackSearchQuery('')}
+                className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+              >
+                Clear Search
+              </button>
+            </div>
           ) : (
             <div className="space-y-3">
-              {feedbackList.map((fb, idx) => (
+              {filteredFeedbackList.map((fb, idx) => (
                 <div key={fb.feedbackId || fb.id || idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
                   <div className="flex justify-between items-center font-bold text-slate-800">
                     <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-extrabold text-[10px]">

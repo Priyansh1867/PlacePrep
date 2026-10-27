@@ -595,3 +595,20 @@ export const ResumeAtsApi = {
     return await request('/resume-ats/sample-jds');
   }
 };
+
+// 16. HOD Faculty Operations Monitoring API
+export const HodMonitoringApi = {
+  async getFacultyOperations(params = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.facultyName) searchParams.append('facultyName', params.facultyName);
+    if (params.operationType) searchParams.append('operationType', params.operationType);
+    if (params.department) searchParams.append('department', params.department);
+    if (params.status) searchParams.append('status', params.status);
+    const qs = searchParams.toString();
+    return await request(`/hod/faculty-operations${qs ? `?${qs}` : ''}`);
+  },
+
+  async getMetrics() {
+    return await request('/hod/faculty-operations/metrics');
+  }
+};

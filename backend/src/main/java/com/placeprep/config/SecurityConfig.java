@@ -78,6 +78,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/report").authenticated()
                         .requestMatchers("/api/workflow/**").authenticated()
 
+                        // HOD Faculty Operations Monitoring - restricted strictly to HOD & ADMIN
+                        .requestMatchers("/api/hod/**").hasAnyRole("HOD", "ADMIN")
+
                         // Attendance Portal Role Authorization:
                         // Marking class attendance requires TEACHER, HOD, or ADMIN role
                         .requestMatchers(HttpMethod.POST, "/api/attendance/class/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY")

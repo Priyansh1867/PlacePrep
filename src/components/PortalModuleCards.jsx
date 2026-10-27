@@ -19,7 +19,8 @@ const CARD_IMAGE_MAP = {
   'internships': cardInternships,
   'feedback-loop': cardFeedback,
   'off-campus': cardOffcampus,
-  'push-notifications': cardNotifications
+  'push-notifications': cardNotifications,
+  'faculty-monitoring': cardReports
 };
 
 export default function PortalModuleCards({ items, activeId, onSelect, tone = 'emerald' }) {

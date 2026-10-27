@@ -35,18 +35,19 @@ import {
 
 describe('PlacePrep AI — Task 1: Role-Specific Feature Filtering & Tile Visibility', () => {
   const allNavTabs = [
-    { id: 'student-data', label: 'Student Data', roles: ['teacher', 'hod'] },
+    { id: 'student-data', label: 'Student Data', roles: ['teacher', 'faculty', 'hod'] },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', roles: ['hod'] },
-    { id: 'reports-exporter', label: 'Reports Exporter', roles: ['teacher', 'hod'] },
-    { id: 'upcoming-drives', label: 'Upcoming Drives' },
-    { id: 'question-bank', label: 'Question Bank' },
+    { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', roles: ['hod'] },
+    { id: 'reports-exporter', label: 'Reports Exporter', roles: ['teacher', 'faculty', 'hod'] },
+    { id: 'upcoming-drives', label: 'Upcoming Drives', excludedRoles: ['teacher', 'faculty'] },
+    { id: 'question-bank', label: 'Question Bank', excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'crt-attendance', label: 'CRT Attendance' },
     { id: 'class-attendance', label: 'Class Attendance' },
     { id: 'resume-ats', label: 'Resume ATS Status', roles: ['student'] },
     { id: 'round-details', label: 'Round Details' },
-    { id: 'hackathons', label: 'Hackathons', excludedRoles: ['teacher', 'hod'] },
-    { id: 'internships', label: 'Internships', excludedRoles: ['teacher', 'hod'] },
-    { id: 'off-campus', label: 'Off-Campus (Final Year)', excludedRoles: ['teacher', 'hod'] }
+    { id: 'hackathons', label: 'Hackathons', excludedRoles: ['teacher', 'faculty', 'hod'] },
+    { id: 'internships', label: 'Internships', excludedRoles: ['teacher', 'faculty', 'hod'] },
+    { id: 'off-campus', label: 'Off-Campus (Final Year)', excludedRoles: ['teacher', 'faculty', 'hod'] }
   ];
 
   function getVisibleTabsForRole(role) {
@@ -61,10 +62,15 @@ describe('PlacePrep AI — Task 1: Role-Specific Feature Filtering & Tile Visibi
     });
   }
 
-  test('Teacher dashboard hides Hackathons, Internships, and Off-Campus Jobs', () => {
+  test('Teacher dashboard hides Upcoming Drives, Question Bank, Hackathons, Internships, Off-Campus, and HOD tiles', () => {
     const teacherTabs = getVisibleTabsForRole('teacher');
     const teacherTabIds = teacherTabs.map(t => t.id);
 
+    // Removed per requirement
+    assert.ok(!teacherTabIds.includes('upcoming-drives'), 'Teacher must not see Upcoming Drives');
+    assert.ok(!teacherTabIds.includes('question-bank'), 'Teacher must not see Question Bank');
+    assert.ok(!teacherTabIds.includes('faculty-monitoring'), 'Teacher must not see Faculty Operations Monitoring');
+    assert.ok(!teacherTabIds.includes('curriculum-governance'), 'Teacher must not have HOD Curriculum Governance');
     assert.ok(!teacherTabIds.includes('hackathons'), 'Teacher must not see Hackathons');
     assert.ok(!teacherTabIds.includes('internships'), 'Teacher must not see Internships');
     assert.ok(!teacherTabIds.includes('off-campus'), 'Teacher must not see Off-Campus');
@@ -72,33 +78,40 @@ describe('PlacePrep AI — Task 1: Role-Specific Feature Filtering & Tile Visibi
     // Core features remain available
     assert.ok(teacherTabIds.includes('student-data'), 'Teacher retains Student Data');
     assert.ok(teacherTabIds.includes('reports-exporter'), 'Teacher retains Reports Exporter');
-    assert.ok(teacherTabIds.includes('upcoming-drives'), 'Teacher retains Upcoming Drives');
     assert.ok(teacherTabIds.includes('class-attendance'), 'Teacher retains Class Attendance');
-    assert.ok(!teacherTabIds.includes('curriculum-governance'), 'Teacher must not have HOD Curriculum Governance');
+    assert.ok(teacherTabIds.includes('crt-attendance'), 'Teacher retains CRT Attendance');
+    assert.ok(teacherTabIds.includes('round-details'), 'Teacher retains Round Details');
   });
 
-  test('HOD dashboard hides Hackathons, Internships, and Off-Campus Jobs, and includes Curriculum Governance', () => {
+  test('HOD dashboard hides Question Bank, includes Faculty Monitoring & Curriculum Governance, and retains Upcoming Drives', () => {
     const hodTabs = getVisibleTabsForRole('hod');
     const hodTabIds = hodTabs.map(t => t.id);
 
+    // Removed per requirement
+    assert.ok(!hodTabIds.includes('question-bank'), 'HOD must not see Question Bank');
     assert.ok(!hodTabIds.includes('hackathons'), 'HOD must not see Hackathons');
     assert.ok(!hodTabIds.includes('internships'), 'HOD must not see Internships');
     assert.ok(!hodTabIds.includes('off-campus'), 'HOD must not see Off-Campus');
 
-    // HOD receives Curriculum & Syllabus Governance tile
+    // HOD receives Faculty Operations Monitoring & Curriculum Governance
+    assert.ok(hodTabIds.includes('faculty-monitoring'), 'HOD must see Faculty Operations Monitoring tile');
     assert.ok(hodTabIds.includes('curriculum-governance'), 'HOD must see Curriculum & Syllabus Governance tile');
+    assert.ok(hodTabIds.includes('upcoming-drives'), 'HOD retains Upcoming Drives');
     assert.ok(hodTabIds.includes('student-data'), 'HOD retains Student Data');
     assert.ok(hodTabIds.includes('reports-exporter'), 'HOD retains Reports Exporter');
   });
 
-  test('Student dashboard retains Hackathons, Internships, and Off-Campus Jobs', () => {
+  test('Student dashboard retains Upcoming Drives, Question Bank, Hackathons, Internships, and Off-Campus Jobs', () => {
     const studentTabs = getVisibleTabsForRole('student');
     const studentTabIds = studentTabs.map(t => t.id);
 
+    assert.ok(studentTabIds.includes('upcoming-drives'), 'Student must see Upcoming Drives');
+    assert.ok(studentTabIds.includes('question-bank'), 'Student must see Question Bank');
     assert.ok(studentTabIds.includes('hackathons'), 'Student must see Hackathons');
     assert.ok(studentTabIds.includes('internships'), 'Student must see Internships');
     assert.ok(studentTabIds.includes('off-campus'), 'Student must see Off-Campus');
     assert.ok(studentTabIds.includes('resume-ats'), 'Student retains Resume ATS Status');
+    assert.ok(!studentTabIds.includes('faculty-monitoring'), 'Student must not see Faculty Operations Monitoring');
     assert.ok(!studentTabIds.includes('curriculum-governance'), 'Student must not see Curriculum Governance');
   });
 });

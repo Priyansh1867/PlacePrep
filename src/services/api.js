@@ -1,5 +1,5 @@
 // PlacePrep REST API Client
-// Connects with Spring Boot backend at http://localhost:8080/api/*
+// API requests are routed through the Vite proxy to the Spring Boot backend.
 // Attaches auth tokens and provides clean, explicit error handling.
 
 const API_BASE = '/api';
@@ -94,6 +94,10 @@ export const AuthApi = {
     return await request('/auth/me');
   },
 
+  async getAllUsers() {
+    return await request('/auth/users');
+  },
+
   logout() {
     setAuthToken(null);
   }
@@ -101,6 +105,13 @@ export const AuthApi = {
 
 // 2. User & Student Dashboard API
 export const UserApi = {
+  async createUser(userData) {
+    return await AuthApi.register({
+      password: 'password123',
+      ...userData
+    }).catch(() => null);
+  },
+
   async getMe() {
     return await request('/users/me');
   },
@@ -182,6 +193,10 @@ export const DriveApi = {
   async getAll(batch = null) {
     const qs = batch && batch !== 'all' ? `?batch=${encodeURIComponent(batch)}` : '';
     return await request(`/drives${qs}`);
+  },
+
+  async getDrives(batch = null) {
+    return await this.getAll(batch);
   },
 
   async getById(driveId) {
@@ -282,6 +297,10 @@ export const QuestionApi = {
   async getAll(params = {}) {
     const qs = new URLSearchParams(params).toString();
     return await request(`/questions${qs ? `?${qs}` : ''}`);
+  },
+
+  async getQuestions(params = {}) {
+    return await this.getAll(params);
   },
 
   async getByCompanyAndRound(companyId, round) {
@@ -582,7 +601,36 @@ export const AttendanceApi = {
   }
 };
 
-// 15. Resume Status & ATS Compatibility API
+// 15. Management & GPS Attendance API
+export const ManagementApi = {
+  async getInstituteLocation() {
+    return await request('/management/institute/location');
+  },
+
+  async updateInstituteLocation(locationData) {
+    return await request('/management/institute/location', {
+      method: 'PUT',
+      body: JSON.stringify(locationData)
+    });
+  },
+
+  async getLocationHistory() {
+    return await request('/management/institute/location/history');
+  },
+
+  async getGeofenceInfo() {
+    return await request('/management/institute/geofence');
+  },
+
+  async verifyStudentLocation(latitude, longitude) {
+    return await request('/management/attendance/verify-location', {
+      method: 'POST',
+      body: JSON.stringify({ latitude, longitude })
+    });
+  }
+};
+
+// 16. Resume Status & ATS Compatibility API
 export const ResumeAtsApi = {
   async analyze(formData) {
     return await request('/resume-ats/analyze', {
@@ -612,3 +660,32 @@ export const HodMonitoringApi = {
     return await request('/hod/faculty-operations/metrics');
   }
 };
+
+// 17. Student Geofence & Face-Verified Attendance API
+export const StudentAttendanceApi = {
+  async getStatus() {
+    return await request('/student/attendance/status');
+  },
+
+  async verifyLocation(latitude, longitude) {
+    return await request('/student/attendance/verify-location', {
+      method: 'POST',
+      body: JSON.stringify({ latitude, longitude })
+    });
+  },
+
+  async verifyFace(photo) {
+    return await request('/student/attendance/verify-face', {
+      method: 'POST',
+      body: JSON.stringify({ photo })
+    });
+  },
+
+  async markAttendance(payload) {
+    return await request('/student/attendance/mark', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+};
+

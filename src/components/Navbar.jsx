@@ -25,10 +25,12 @@ import {
   UserCheck,
   Award,
   FileSpreadsheet,
+  Code2,
   FileCheck
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
+import UserProfileModal from './profile/UserProfileModal';
 
 export default function Navbar({ 
   currentRoute, 
@@ -42,9 +44,18 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [exploreDropdownOpen, setExploreDropdownOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [user, setUser] = useState(getCurrentUser());
   const [batch, setBatch] = useState(getGraduationBatch());
   const [unreadNotifCount, setUnreadNotifCount] = useState(2);
+
+  useEffect(() => {
+    const handleProfileUpdated = () => {
+      setUser(getCurrentUser());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdated);
+  }, []);
 
   useEffect(() => {
     const handleBatchChange = (e) => {
@@ -80,11 +91,18 @@ export default function Navbar({
     { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
     { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
     { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },
+    { id: 'dsa-studio', label: 'DSA & Coding Practice', desc: 'Pattern-based coding studio, live editor & tracking', icon: Code2, studentOnly: true },
     { id: 'drives', label: 'Placement Drives', desc: 'Campus drive schedules, packages & criteria', icon: Briefcase },
     { id: 'prep', label: 'Question Bank', desc: 'Technical, Aptitude & Company rounds', icon: BookOpen },
     { id: 'experiences', label: 'Interview Experiences', desc: 'Senior student placement debriefs', icon: MessageSquare },
     { id: 'mock-interview', label: 'AI Mock Interview', desc: 'Real-time voice & text interview simulation', icon: Bot, isNew: true },
   ];
+
+  const userRole = (user?.role || 'student').toLowerCase();
+  const visibleModules = moreModules.filter(m => {
+    if (m.studentOnly && userRole !== 'student') return false;
+    return true;
+  });
 
   return (
     <header className="sticky top-3 z-50 px-3 sm:px-6 max-w-6xl mx-auto w-full transition-all">
@@ -150,7 +168,7 @@ export default function Navbar({
             <button
               onClick={() => setExploreDropdownOpen(!exploreDropdownOpen)}
               className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
-                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'resume-ats', 'resume-checker'].includes(currentRoute)
+                exploreDropdownOpen || ['workflow', 'academic-records', 'drives', 'prep', 'experiences', 'mock-interview', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker'].includes(currentRoute)
                   ? 'bg-black/[0.06] text-[#111439] font-semibold'
                   : 'hover:text-[#111439] hover:bg-black/[0.04]'
               }`}
@@ -169,7 +187,7 @@ export default function Navbar({
                   All Specialized Engines
                 </div>
                 <div className="space-y-1">
-                  {moreModules.map(mod => {
+                  {visibleModules.map(mod => {
                     const Icon = mod.icon;
                     const isActive = currentRoute === mod.id;
                     return (
@@ -293,7 +311,10 @@ export default function Navbar({
                     Placement Dashboard
                   </button>
                   <button
-                    onClick={() => handleNavigate('dashboard')}
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      setIsProfileModalOpen(true);
+                    }}
                     className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
                   >
                     <User className="w-3.5 h-3.5 text-indigo-600" />
@@ -385,7 +406,7 @@ export default function Navbar({
 
           <div className="pt-2 border-t border-black/[0.05] space-y-1">
             <p className="text-[10px] font-semibold text-slate-400 uppercase px-2 mb-1">More Engines</p>
-            {moreModules.map(mod => (
+            {visibleModules.map(mod => (
               <button
                 key={mod.id}
                 onClick={() => handleNavigate(mod.id)}
@@ -410,6 +431,13 @@ export default function Navbar({
           </div>
         </div>
       )}
+
+      {/* Comprehensive Student Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdated={() => setUser(getCurrentUser())}
+      />
     </header>
   );
 }

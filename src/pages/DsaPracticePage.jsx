@@ -1,465 +1,252 @@
-import React, { useState, useEffect, useMemo } from 'react';
+// PlacePrep AI - Student-Only DSA and Coding Practice Studio
+// Restricts access exclusively to Student users.
+// Provides DSA Question Explorer, Multi-Language Coding Workspace,
+// student-isolated progress tracking, and honest execution environment reporting.
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Code2,
-  Search,
-  Filter,
-  CheckCircle2,
-  Bookmark,
-  RotateCcw,
   Sparkles,
-  ChevronRight,
-  Clock,
-  Layers,
-  ArrowRight,
-  TrendingUp,
-  Award
+  RotateCcw,
+  Bot,
+  School,
+  AlertTriangle,
+  ArrowLeft
 } from 'lucide-react';
-import { QuestionApi, UserApi } from '../services/api';
+import { QuestionApi } from '../services/api.js';
 import {
-  getPracticedQuestions,
-  togglePracticedQuestion,
-  getRevisionList,
-  toggleRevisionQuestion,
   getCurrentUser,
-  getInitialQuestions
-} from '../services/storage';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Input from '../components/ui/Input';
-import ProgressBar from '../components/ui/ProgressBar';
-import Skeleton from '../components/ui/Skeleton';
-import EmptyState from '../components/ui/EmptyState';
-import ErrorState from '../components/ui/ErrorState';
+  getInterviewQuestions
+} from '../services/storage.js';
+import {
+  isUserAuthorizedStudent,
+  normalizeDsaQuestion,
+  getStudentPracticedList,
+  toggleStudentPracticed,
+  getStudentRevisionList,
+  toggleStudentRevision,
+  getRecentlyAttemptedQuestions,
+  computeDsaProgressMetrics
+} from '../services/dsaService.js';
 import PageHeader from '../components/ui/PageHeader';
+import Button from '../components/ui/Button';
+import DsaQuestionExplorer from '../components/dsa/DsaQuestionExplorer';
+import DsaCodingWorkspace from '../components/dsa/DsaCodingWorkspace';
 
-const DSA_TOPICS = [
-  'All Topics',
-  'Arrays & Hashing',
-  'Two Pointers',
-  'Linked Lists',
-  'Trees & Graphs',
-  'Dynamic Programming',
-  'Stack & Queue',
-  'Recursion'
-];
+export default function DsaPracticePage({ onNavigate, onSelectGlobalQuestion }) {
+  const currentUser = getCurrentUser();
+  const isAuthorized = isUserAuthorizedStudent(currentUser);
+  const studentId = currentUser?.id || currentUser?.email || 'default_student';
 
-export default function DsaPracticePage({ onSelectQuestion, onNavigate }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Studio Navigation State
+  const [activeQuestion, setActiveQuestion] = useState(null);
+
+  // Filter States for Question Explorer
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('All Topics');
   const [selectedDifficulty, setSelectedDifficulty] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedCompany, setSelectedCompany] = useState('ALL');
 
-  const [practicedIds, setPracticedIds] = useState(getPracticedQuestions());
-  const [revisionIds, setRevisionIds] = useState(getRevisionList());
+  // Student-specific Progress States
+  const [practicedIds, setPracticedIds] = useState(() => getStudentPracticedList(studentId));
+  const [revisionIds, setRevisionIds] = useState(() => getStudentRevisionList(studentId));
+  const [recentIds, setRecentIds] = useState(() => getRecentlyAttemptedQuestions(studentId));
 
-  const currentUser = getCurrentUser();
-
-  const loadData = async () => {
+  // Load and normalize questions from backend API or local dataset
+  const loadQuestions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await QuestionApi.getAll({ round: 'technical' }).catch(() => []);
-      const pool = data && data.length > 0 ? data : getInitialQuestions();
-      
+      const pool = data && data.length > 0 ? data : getInterviewQuestions();
+
       // Filter and normalize technical/coding problems
-      const normalized = (pool || []).map((q, idx) => {
-        const rawTitle = q.title || q.question || q.questionText || `Coding Problem #${idx + 1}`;
-        const rawCategory = q.category || (Array.isArray(q.skills) && q.skills.length > 0 ? q.skills[0] : 'Algorithms');
-        
-        let derivedTopic = q.topic;
-        if (!derivedTopic) {
-          const lower = (rawTitle + ' ' + rawCategory + ' ' + (Array.isArray(q.skills) ? q.skills.join(' ') : '')).toLowerCase();
-          if (lower.includes('array') || lower.includes('hash')) derivedTopic = 'Arrays & Hashing';
-          else if (lower.includes('pointer') || lower.includes('sliding window')) derivedTopic = 'Two Pointers';
-          else if (lower.includes('linked list') || lower.includes('loop')) derivedTopic = 'Linked Lists';
-          else if (lower.includes('tree') || lower.includes('graph') || lower.includes('bst') || lower.includes('traversal')) derivedTopic = 'Trees & Graphs';
-          else if (lower.includes('dynamic programming') || lower.includes('dp') || lower.includes('knapsack') || lower.includes('memoiz')) derivedTopic = 'Dynamic Programming';
-          else if (lower.includes('stack') || lower.includes('queue')) derivedTopic = 'Stack & Queue';
-          else if (lower.includes('recursion') || lower.includes('backtrack')) derivedTopic = 'Recursion';
-          else derivedTopic = rawCategory;
-        }
+      const normalized = (pool || []).map((q, idx) => normalizeDsaQuestion(q, idx));
 
-        const snippet = q.expectedAnswerSnippet || q.approach || (q.suggestedAnswer ? (q.suggestedAnswer.length > 110 ? q.suggestedAnswer.substring(0, 110) + '...' : q.suggestedAnswer) : '');
-        const compName = q.companyName || (q.companyId ? q.companyId.toUpperCase() : 'General');
-
-        return {
-          ...q,
-          id: q.id || q.questionId || `q-${idx}`,
-          title: rawTitle,
-          topic: derivedTopic,
-          companyName: compName,
-          difficulty: q.difficulty || 'Medium',
-          expectedAnswerSnippet: snippet,
-          skills: Array.isArray(q.skills) ? q.skills : []
-        };
-      });
-
+      // Filter for technical & algorithmic problems
       const dsaQuestions = normalized.filter(q => {
         const cat = (q.category || '').toLowerCase();
         const round = (q.round || '').toLowerCase();
         const title = (q.title || '').toLowerCase();
-        return round === 'technical' || 
-               cat.includes('dsa') || 
-               cat.includes('data structure') || 
+        return round === 'technical' ||
+               cat.includes('dsa') ||
                cat.includes('algorithm') ||
-               title.includes('array') || title.includes('list') || title.includes('tree') || title.includes('graph') || title.includes('dp');
+               cat.includes('data structure') ||
+               title.includes('array') ||
+               title.includes('list') ||
+               title.includes('tree') ||
+               title.includes('graph') ||
+               title.includes('dp') ||
+               title.includes('sql') ||
+               title.includes('stack') ||
+               title.includes('queue') ||
+               title.includes('recursion');
       });
 
       setQuestions(dsaQuestions.length > 0 ? dsaQuestions : normalized);
     } catch (err) {
-      console.error('Failed to load DSA questions:', err);
-      setError('Failed to load DSA coding questions. Please check your connection.');
-      const fallback = (getInitialQuestions() || []).map((q, idx) => ({
-        ...q,
-        id: q.id || `q-${idx}`,
-        title: q.title || q.question || 'Coding Problem',
-        topic: q.category || 'Algorithms',
-        companyName: q.companyId ? q.companyId.toUpperCase() : 'General',
-        difficulty: q.difficulty || 'Medium',
-        expectedAnswerSnippet: q.approach || ''
-      }));
+      console.error('Failed to load DSA problems:', err);
+      setError('Failed to load DSA question repository. Using fallback offline dataset.');
+      const fallback = (getInterviewQuestions() || []).map((q, idx) => normalizeDsaQuestion(q, idx));
       setQuestions(fallback);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
 
-  const handleTogglePracticed = (id) => {
-    togglePracticedQuestion(id);
-    setPracticedIds(getPracticedQuestions());
-    if (currentUser) {
-      UserApi.togglePracticedQuestion(id).catch(() => {});
-    }
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
+
+  // Sync student lists on student change
+  useEffect(() => {
+    setPracticedIds(getStudentPracticedList(studentId));
+    setRevisionIds(getStudentRevisionList(studentId));
+    setRecentIds(getRecentlyAttemptedQuestions(studentId));
+  }, [studentId]);
+
+  // Handle Practice Toggle
+  const handleTogglePracticed = (questionId) => {
+    toggleStudentPracticed(studentId, questionId);
+    setPracticedIds(getStudentPracticedList(studentId));
   };
 
-  const handleToggleRevision = (id) => {
-    toggleRevisionQuestion(id);
-    setRevisionIds(getRevisionList());
-    if (currentUser) {
-      UserApi.toggleRevisionQuestion(id).catch(() => {});
-    }
+  // Handle Revision Toggle
+  const handleToggleRevision = (questionId) => {
+    toggleStudentRevision(studentId, questionId);
+    setRevisionIds(getStudentRevisionList(studentId));
   };
 
-  const filteredQuestions = useMemo(() => {
-    const qLower = searchQuery.toLowerCase().trim();
-    return questions.filter(q => {
-      const title = (q.title || '').toLowerCase();
-      const topic = (q.topic || '').toLowerCase();
-      const company = (q.companyName || '').toLowerCase();
-      const skillsStr = (Array.isArray(q.skills) ? q.skills.join(' ') : '').toLowerCase();
+  // Select question for coding workspace
+  const handleSelectQuestion = (q) => {
+    setActiveQuestion(q);
+    setRecentIds(getRecentlyAttemptedQuestions(studentId));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-      const matchesSearch = !qLower || 
-                            title.includes(qLower) || 
-                            topic.includes(qLower) || 
-                            company.includes(qLower) ||
-                            skillsStr.includes(qLower);
-      
-      const matchesTopic = selectedTopic === 'All Topics' ? true : 
-        topic.includes(selectedTopic.toLowerCase().split(' ')[0]) ||
-        title.includes(selectedTopic.toLowerCase().split(' ')[0]) ||
-        skillsStr.includes(selectedTopic.toLowerCase().split(' ')[0]);
+  // Active question index in current questions pool
+  const currentQuestionIndex = useMemo(() => {
+    if (!activeQuestion) return 0;
+    const idx = questions.findIndex(q => q.id === activeQuestion.id);
+    return idx >= 0 ? idx : 0;
+  }, [activeQuestion, questions]);
 
-      const matchesDiff = selectedDifficulty === 'ALL' ? true :
-        ((q.difficulty || '').toUpperCase() === selectedDifficulty.toUpperCase());
+  // Calculate Progress Metrics
+  const metrics = useMemo(() => {
+    return computeDsaProgressMetrics(questions, practicedIds);
+  }, [questions, practicedIds]);
 
-      return matchesSearch && matchesTopic && matchesDiff;
-    });
-  }, [questions, searchQuery, selectedTopic, selectedDifficulty]);
-
-  // Statistics
-  const totalCount = questions.length;
-  const isQuestionPracticed = (q) => practicedIds.includes(q.id) || (q.questionId && practicedIds.includes(q.questionId));
-  const practicedCount = questions.filter(isQuestionPracticed).length;
-  const progressPercent = totalCount > 0 ? Math.round((practicedCount / totalCount) * 100) : 0;
-
-  const easyCount = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy');
-  const easyPracticed = easyCount.filter(isQuestionPracticed).length;
-
-  const medCount = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium');
-  const medPracticed = medCount.filter(isQuestionPracticed).length;
-
-  const hardCount = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard');
-  const hardPracticed = hardCount.filter(isQuestionPracticed).length;
+  // STRICT ACCESS CONTROL GATE: Restrict non-students
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 animate-in fade-in">
+        <div className="bg-white rounded-3xl p-8 border border-rose-200 shadow-sm text-center max-w-xl mx-auto space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900">Student Access Required</h2>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            The <strong>DSA & Coding Practice Studio</strong> is strictly restricted to enrolled Student candidates. Your current profile role (<strong className="text-slate-900 uppercase">{currentUser?.role || 'Guest'}</strong>) is not authorized for student coding workspace activities.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => onNavigate && onNavigate('institute-portal')}
+              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              Return to Institute Portal
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
-      {/* Header */}
-      <PageHeader
-        badge="Technical Screening"
-        badgeIcon={Code2}
-        title="DSA & Algorithmic Problem Solving"
-        description="Master pattern-based coding problems frequently asked in technical rounds at HCLTech, TCS, Accenture, and product recruiters."
-        actions={
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => onNavigate && onNavigate('revision')}
-            >
-              Revision Queue ({revisionIds.length})
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => onNavigate && onNavigate('mock-interview')}
-            >
-              AI Coding Mock
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Progress Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-5 border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall Solved</span>
-            <span className="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">
-              {progressPercent}%
-            </span>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-slate-900">
-            {practicedCount} <span className="text-sm font-semibold text-slate-400">/ {totalCount}</span>
-          </div>
-          <ProgressBar progress={progressPercent} color="indigo" size="sm" className="mt-3" />
-        </Card>
-
-        <Card className="p-5 border-emerald-100 bg-emerald-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Easy</span>
-            <Badge variant="emerald" size="sm">{easyPracticed}/{easyCount.length}</Badge>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-emerald-950">
-            {easyCount.length > 0 ? Math.round((easyPracticed / easyCount.length) * 100) : 0}%
-          </div>
-          <ProgressBar
-            progress={easyCount.length > 0 ? Math.round((easyPracticed / easyCount.length) * 100) : 0}
-            color="emerald"
-            size="sm"
-            className="mt-3"
-          />
-        </Card>
-
-        <Card className="p-5 border-amber-100 bg-amber-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Medium</span>
-            <Badge variant="amber" size="sm">{medPracticed}/{medCount.length}</Badge>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-amber-950">
-            {medCount.length > 0 ? Math.round((medPracticed / medCount.length) * 100) : 0}%
-          </div>
-          <ProgressBar
-            progress={medCount.length > 0 ? Math.round((medPracticed / medCount.length) * 100) : 0}
-            color="amber"
-            size="sm"
-            className="mt-3"
-          />
-        </Card>
-
-        <Card className="p-5 border-rose-100 bg-rose-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">Hard</span>
-            <Badge variant="rose" size="sm">{hardPracticed}/{hardCount.length}</Badge>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-rose-950">
-            {hardCount.length > 0 ? Math.round((hardPracticed / hardCount.length) * 100) : 0}%
-          </div>
-          <ProgressBar
-            progress={hardCount.length > 0 ? Math.round((hardPracticed / hardCount.length) * 100) : 0}
-            color="rose"
-            size="sm"
-            className="mt-3"
-          />
-        </Card>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <Card className="p-4 sm:p-5 border-slate-200">
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="w-full md:w-96">
-              <Input
-                type="text"
-                placeholder="Search by algorithm, problem name, or company..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                leftIcon={Search}
-              />
-            </div>
-
-            {/* Difficulty Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto text-xs">
-              <span className="text-slate-400 font-semibold mr-1">Difficulty:</span>
-              {['ALL', 'EASY', 'MEDIUM', 'HARD'].map((diff) => (
-                <button
-                  key={diff}
-                  onClick={() => setSelectedDifficulty(diff)}
-                  className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                    selectedDifficulty === diff
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {diff}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Topics Row */}
-          <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-slate-100 text-xs">
-            <span className="text-slate-400 font-semibold shrink-0">Topic:</span>
-            {DSA_TOPICS.map((topic) => (
-              <button
-                key={topic}
-                onClick={() => setSelectedTopic(topic)}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
-                  selectedTopic === topic
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fadeIn">
+      
+      {/* Studio Header (Only shown on Question Explorer view) */}
+      {!activeQuestion && (
+        <PageHeader
+          badge="Student-Only DSA Studio"
+          badgeIcon={Code2}
+          title="DSA & Coding Practice Studio"
+          description="Master canonical data structures, algorithmic patterns, and practice code problems asked in campus technical screening rounds."
+          actions={
+            <div className="flex items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setSelectedStatus(selectedStatus === 'REVISION' ? 'ALL' : 'REVISION')}
               >
-                {topic}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Questions List */}
-      {error && questions.length === 0 ? (
-        <ErrorState
-          title="Unable to Load DSA Problems"
-          message={error}
-          onRetry={loadData}
-        />
-      ) : loading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
-        </div>
-      ) : filteredQuestions.length === 0 ? (
-        <EmptyState
-          icon={Code2}
-          title="No problems found"
-          description="Try adjusting your topic or difficulty filters to see more practice questions."
-          action={
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedTopic('All Topics');
-                setSelectedDifficulty('ALL');
-                setSearchQuery('');
-              }}
-            >
-              Reset Filters
-            </Button>
+                Revision Queue ({revisionIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="md"
+                icon={School}
+                onClick={() => onNavigate && onNavigate('institute-portal')}
+              >
+                Institute Portal
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                icon={Bot}
+                onClick={() => onNavigate && onNavigate('mock-interview')}
+              >
+                AI Coding Mock
+              </Button>
+            </div>
           }
         />
-      ) : (
-        <div className="space-y-3.5">
-          {filteredQuestions.map((q) => {
-            const isPracticed = practicedIds.includes(q.id) || (q.questionId && practicedIds.includes(q.questionId));
-            const isRevision = revisionIds.includes(q.id) || (q.questionId && revisionIds.includes(q.questionId));
-
-            return (
-              <Card
-                key={q.id}
-                className="p-5 border-slate-200 hover:border-slate-300 hover:shadow-md transition-all group"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <button
-                      onClick={() => handleTogglePracticed(q.id)}
-                      className={`p-2.5 rounded-xl border mt-0.5 transition-colors shrink-0 ${
-                        isPracticed
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
-                          : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'
-                      }`}
-                      title={isPracticed ? 'Mark as unpracticed' : 'Mark as solved'}
-                    >
-                      <CheckCircle2 className="w-5 h-5" />
-                    </button>
-
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {q.difficulty && (
-                          <Badge
-                            variant={
-                              (q.difficulty || '').toLowerCase() === 'easy'
-                                ? 'emerald'
-                                : (q.difficulty || '').toLowerCase() === 'medium'
-                                ? 'amber'
-                                : 'rose'
-                            }
-                            size="sm"
-                          >
-                            {q.difficulty}
-                          </Badge>
-                        )}
-                        <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-                          {q.companyName}
-                        </span>
-                        {q.topic && (
-                          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                            {q.topic}
-                          </span>
-                        )}
-                        {q.frequencyScore && (
-                          <span className="text-xs text-amber-600 font-bold">
-                            ★ {q.frequencyScore}% Frequency
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="font-extrabold text-slate-900 text-base mt-1.5 group-hover:text-indigo-600 transition-colors">
-                        {q.title}
-                      </h3>
-
-                      {q.expectedAnswerSnippet && (
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-1 font-mono">
-                          {q.expectedAnswerSnippet}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                    <button
-                      onClick={() => handleToggleRevision(q.id)}
-                      className={`p-2 rounded-xl border transition-colors ${
-                        isRevision
-                          ? 'bg-amber-50 border-amber-200 text-amber-600'
-                          : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
-                      }`}
-                      title={isRevision ? 'Remove from revision' : 'Flag for revision'}
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      icon={ArrowRight}
-                      onClick={() => onSelectQuestion && onSelectQuestion(q)}
-                    >
-                      Solve Problem
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
       )}
+
+      {/* VIEW SWITCHER: QUESTION EXPLORER vs CODING WORKSPACE */}
+      {activeQuestion ? (
+        <DsaCodingWorkspace
+          question={activeQuestion}
+          allQuestions={questions}
+          currentIndex={currentQuestionIndex}
+          currentUser={currentUser}
+          isPracticed={practicedIds.includes(activeQuestion.id) || (activeQuestion.questionId && practicedIds.includes(activeQuestion.questionId))}
+          isRevision={revisionIds.includes(activeQuestion.id) || (activeQuestion.questionId && revisionIds.includes(activeQuestion.questionId))}
+          onTogglePracticed={handleTogglePracticed}
+          onToggleRevision={handleToggleRevision}
+          onBackToExplorer={() => setActiveQuestion(null)}
+          onSelectQuestion={handleSelectQuestion}
+        />
+      ) : (
+        <DsaQuestionExplorer
+          questions={questions}
+          loading={loading}
+          error={error}
+          onRetry={loadQuestions}
+          metrics={metrics}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedTopic={selectedTopic}
+          setSelectedTopic={setSelectedTopic}
+          selectedDifficulty={selectedDifficulty}
+          setSelectedDifficulty={setSelectedDifficulty}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          selectedCompany={selectedCompany}
+          setSelectedCompany={setSelectedCompany}
+          practicedIds={practicedIds}
+          revisionIds={revisionIds}
+          recentIds={recentIds}
+          onTogglePracticed={handleTogglePracticed}
+          onToggleRevision={handleToggleRevision}
+          onSelectQuestion={handleSelectQuestion}
+          onOpenRevision={() => setSelectedStatus('REVISION')}
+        />
+      )}
+
     </div>
   );
 }

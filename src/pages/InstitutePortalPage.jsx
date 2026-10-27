@@ -9,6 +9,7 @@ import {
   XCircle,
   Clock,
   ArrowRight,
+  ArrowLeft,
   Search,
   Filter,
   FileText,
@@ -16,6 +17,7 @@ import {
   Award,
   Layers,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
   AlertTriangle,
   Upload,
@@ -30,7 +32,11 @@ import {
   Briefcase,
   FileSpreadsheet,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  LogOut,
+  UserCheck,
+  Compass,
+  Radio
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -48,6 +54,7 @@ import {
   getInterviewQuestions,
   broadcastPushNotification
 } from '../services/storage';
+import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi } from '../services/api';
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
 import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
@@ -55,31 +62,42 @@ import BulkImportModal from '../components/BulkImportModal';
 import ReportsExporterPage from './ReportsExporterPage';
 import CurriculumGovernanceView from '../components/curriculum/CurriculumGovernanceView';
 import FacultyOperationsMonitoringView from '../components/monitoring/FacultyOperationsMonitoringView';
+import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
+import UserProfileModal from '../components/profile/UserProfileModal';
+import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setCurrentUser(getCurrentUser() || {});
+    };
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+  }, []);
   const [activeTab, setActiveTab] = useState(() => {
-    if (currentUser.role === 'student') return 'upcoming-drives';
-    if (currentUser.role === 'hod') return 'curriculum-governance';
+    if (currentUser?.role === 'student') return 'upcoming-drives';
+    if (currentUser?.role === 'hod') return 'curriculum-governance';
     return 'student-data';
   }); 
   // 'student-data', 'curriculum-governance', 'reports-exporter', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus'
   
-  const studentBatch = getGraduationBatch();
+  const studentBatch = getGraduationBatch() || '2028';
   const isFinalYear = studentBatch === '2025' || studentBatch === '2026';
 
   // Datasets from storage
-  const [crtSessions, setCrtSessions] = useState(getCrtSessions());
-  const [studentCrt, setStudentCrt] = useState(getStudentCrtAttendance());
-  const [classAttendance, setClassAttendance] = useState(getClassAttendance());
-  const [resumeStatus, setResumeStatus] = useState(getResumeStatus());
-  const [studentRounds, setStudentRounds] = useState(getStudentRounds());
-  const [hackathons, setHackathons] = useState(getHackathons());
-  const [internships, setInternships] = useState(getInternships());
-  const [offCampusCompanies, setOffCampusCompanies] = useState(getOffCampusCompanies());
-  const [upcomingDrives, setUpcomingDrives] = useState(getUpcomingDrives());
-  const [questions, setQuestions] = useState(getInterviewQuestions());
+  const [crtSessions, setCrtSessions] = useState(() => getCrtSessions() || []);
+  const [studentCrt, setStudentCrt] = useState(() => getStudentCrtAttendance() || { percentage: 80 });
+  const [classAttendance, setClassAttendance] = useState(() => getClassAttendance() || []);
+  const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: 85 });
+  const [studentRounds, setStudentRounds] = useState(() => getStudentRounds() || []);
+  const [hackathons, setHackathons] = useState(() => getHackathons() || []);
+  const [internships, setInternships] = useState(() => getInternships() || []);
+  const [offCampusCompanies, setOffCampusCompanies] = useState(() => getOffCampusCompanies() || []);
+  const [upcomingDrives, setUpcomingDrives] = useState(() => getUpcomingDrives() || []);
+  const [questions, setQuestions] = useState(() => getInterviewQuestions() || []);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +107,93 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [resumeTextInput, setResumeTextInput] = useState('');
   const [isAnalyzingResume, setIsAnalyzingResume] = useState(false);
   const [resumeSuccessMsg, setResumeSuccessMsg] = useState('');
+
+  // Top-Right Profile & Backend Connection States
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [databaseUsers, setDatabaseUsers] = useState([]);
+
+  const refreshDatabaseUsers = () => {
+    if (AuthApi?.getAllUsers) {
+      AuthApi.getAllUsers()
+        .then((users) => {
+          if (Array.isArray(users)) {
+            setDatabaseUsers(users);
+          }
+        })
+        .catch((err) => console.log('Backend users fetch note:', err?.message));
+    }
+  };
+
+  // Sync with Spring Boot Backend (:8082)
+  useEffect(() => {
+    // 1. Fetch drives from Spring Boot
+    if (DriveApi?.getAll) {
+      DriveApi.getAll()
+        .then((liveDrives) => {
+          if (Array.isArray(liveDrives) && liveDrives.length > 0) {
+            setUpcomingDrives(liveDrives);
+            setIsBackendConnected(true);
+          }
+        })
+        .catch((err) => console.log('Backend drives fallback to local:', err?.message));
+    }
+
+    // 2. Fetch CRT training sessions from Spring Boot
+    if (AttendanceApi?.getCrtSessions) {
+      AttendanceApi.getCrtSessions()
+        .then((liveSessions) => {
+          if (Array.isArray(liveSessions) && liveSessions.length > 0) {
+            setCrtSessions(liveSessions);
+            setIsBackendConnected(true);
+          }
+        })
+        .catch((err) => console.log('Backend CRT fallback to local:', err?.message));
+    }
+
+    // 3. Fetch interview questions from Spring Boot
+    if (QuestionApi?.getAll) {
+      QuestionApi.getAll()
+        .then((liveQuestions) => {
+          if (Array.isArray(liveQuestions) && liveQuestions.length > 0) {
+            setQuestions(liveQuestions);
+            setIsBackendConnected(true);
+          }
+        })
+        .catch((err) => console.log('Backend questions fallback to local:', err?.message));
+    }
+
+    // 4. Fetch registered database users from Spring Boot
+    refreshDatabaseUsers();
+  }, []);
+
+  const getInitials = (name = 'User') => {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'U';
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('placeprep_current_user');
+    localStorage.removeItem('placeprep_portal_role');
+    onNavigate('auth-portal');
+  };
+
+  // Smooth scroll handler on card selection
+  const handleCardSelect = (tabId) => {
+    setActiveTab(tabId);
+    setTimeout(() => {
+      const target = document.getElementById('institute-feature-content');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
 
   // Student Registration Modal Form State
   const [isRegisterStudentModalOpen, setIsRegisterStudentModalOpen] = useState(false);
@@ -104,12 +209,32 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
   const [registrationErrorMsg, setRegistrationErrorMsg] = useState('');
 
-  const handleRegisterStudent = (e) => {
+  const handleRegisterStudent = async (e) => {
     e.preventDefault();
     setRegistrationErrorMsg('');
+
+    // 1. Sync directly to Spring Boot backend database
+    try {
+      await AuthApi.register({
+        name: newStudentForm.name,
+        email: newStudentForm.email.trim().toLowerCase(),
+        password: 'password123',
+        college: currentUser?.college || 'Delhi Technological University (DTU)',
+        branch: newStudentForm.branch,
+        graduationBatch: newStudentForm.batch,
+        role: 'student',
+        rollNumber: newStudentForm.rollNumber
+      });
+    } catch (backendErr) {
+      console.log('Spring Boot backend user sync note:', backendErr.message);
+    }
+
+    refreshDatabaseUsers();
+
+    // 2. Also register in local storage / academic records
     const res = registerSingleStudent(newStudentForm, currentUser);
     if (res.success) {
-      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in Institute records!`);
+      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in database & Institute records!`);
       setIsRegisterStudentModalOpen(false);
       setNewStudentForm({
         name: '',
@@ -150,18 +275,19 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
     { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
     { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
-    { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives.length}`, excludedRoles: ['teacher', 'faculty'] },
+    { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}`, excludedRoles: ['teacher', 'faculty'] },
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
-    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt.percentage}%` },
+    { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
+    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage ?? 80}%` },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
-    { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus.atsScore}/100`, roles: ['student'] },
+    { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus?.atsScore || 85}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
     { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'faculty', 'hod'] }
   ];
 
-  const userRole = currentUser.role || 'student';
+  const userRole = currentUser?.role || 'student';
   const visibleNavTabs = navTabs.filter((tab) => {
     if (tab.excludedRoles && tab.excludedRoles.includes(userRole)) {
       return false;
@@ -194,49 +320,172 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
       
-      {/* Top Banner & Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 1. UPPER LEFT BACK BUTTON & SYSTEM STATUS */}
+      <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => onNavigate('gateway')}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-indigo-900 font-bold text-xs shadow-xs transition cursor-pointer group"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-indigo-600 transition-transform group-hover:-translate-x-0.5" />
+          <span>Back to Portals</span>
+        </button>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+        {/* Backend Connection Status Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 shadow-xs">
+          <span className={`w-2 h-2 rounded-full ${isBackendConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+          <span>{isBackendConnected ? 'Spring Boot Connected (:8082)' : 'Local Storage Mode'}</span>
+        </div>
+      </div>
+
+      {/* 2. TOP BANNER & RIGHT-SIDE PROFILE DROPDOWN */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
+          <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+            <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-3">
                 <School className="w-3.5 h-3.5" />
-                <span>Institute Portal • Teacher, HOD, Students</span>
+                <span>Institute Portal • {currentUser.role?.toUpperCase() || 'STUDENT'} Workspace</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-black text-white">
                 Academic & Training Operations Hub
               </h1>
               <p className="text-xs sm:text-sm text-indigo-200 mt-1 max-w-2xl">
-                Logged in as <strong className="text-white">{currentUser.name}</strong> ({currentUser.role?.toUpperCase() || 'STUDENT'}) • Batch: <strong className="text-amber-300">{studentBatch}</strong>
+                Logged in as <strong className="text-white">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-indigo-500/30 text-indigo-100 font-bold uppercase text-[11px]">{currentUser.role || 'STUDENT'}</span> • Batch: <strong className="text-amber-300">{studentBatch}</strong>
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Right Side: Quick Action & Profile Component */}
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={() => setIsRegisterStudentModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition items-center gap-1.5 cursor-pointer border border-indigo-400/30"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>Register Student</span>
               </button>
               {currentUser.role !== 'student' && (
                 <button
                   type="button"
                   onClick={() => setIsBulkImportModalOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                  className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 shadow-md transition items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Bulk Import</span>
                 </button>
               )}
-              <button
-                onClick={() => onNavigate('gateway')}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>Switch Portal</span>
-              </button>
+
+              {/* Dedicated Top-Right Profile Pill & Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md transition shadow-md group text-left cursor-pointer"
+                  aria-label="User profile menu"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0 border border-white/20">
+                    {getInitials(currentUser.name)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white truncate max-w-[130px]">{currentUser.name}</span>
+                    </div>
+                    <span className="text-[10px] text-indigo-300 font-semibold block truncate uppercase">
+                      {currentUser.role || 'STUDENT'}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3.5 h-3.5 text-indigo-300 group-hover:text-white transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Profile Dropdown Popup (Non-clipped) */}
+                {isProfileDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-slate-900 text-xs animate-in fade-in zoom-in-95 duration-150">
+                      {/* Header info */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
+                          {getInitials(currentUser.name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-slate-900 text-sm truncate">{currentUser.name}</h4>
+                          <p className="text-[11px] text-slate-500 truncate font-mono">{currentUser.email}</p>
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase tracking-wide">
+                            {currentUser.role?.toUpperCase() || 'STUDENT'} Workspace
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Profile details */}
+                      <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Institute:</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || 'Delhi Technological University'}</span>
+                        </div>
+                        {currentUser.role === 'student' ? (
+                          <>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Roll Number:</span>
+                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || '2024/CSE/084'}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Branch & Batch:</span>
+                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Academic Standing:</span>
+                              <span className="font-bold text-emerald-600">Active • 0 Backlogs</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Department:</span>
+                              <span className="font-semibold text-slate-800">{currentUser.department || 'Computer Science & Engineering'}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Designation:</span>
+                              <span className="font-semibold text-slate-800">{currentUser.designation || (currentUser.role === 'hod' ? 'Head of Department (HOD)' : 'Faculty & Class Incharge')}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="pt-2 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => { setIsProfileDropdownOpen(false); setIsFullProfileModalOpen(true); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-bold transition text-left cursor-pointer"
+                        >
+                          <UserCheck className="w-4 h-4 text-indigo-600" />
+                          <span>View Complete Profile</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsProfileDropdownOpen(false); onNavigate('gateway'); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold transition text-left cursor-pointer"
+                        >
+                          <Compass className="w-4 h-4 text-emerald-600" />
+                          <span>Switch Portal</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsProfileDropdownOpen(false); handleSignOut(); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold transition text-left cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -271,12 +520,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         )}
       </div>
 
-      {/* Image-first role-aware workspace cards */}
+      {/* 3. MODULE CARDS WITH SMOOTH SCROLLING */}
       <div className="max-w-7xl mx-auto mb-8">
         <PortalModuleCards items={visibleNavTabs} activeId={activeTab} onSelect={handleCardSelect} tone="indigo" />
       </div>
 
-      {/* Tab Contents */}
+      {/* 4. TAB CONTENTS WITH SCROLL TARGET ANCHOR */}
       <div id="institute-module-content" className="max-w-7xl mx-auto scroll-mt-24">
         
         {/* TAB 1: STUDENT DATA */}
@@ -406,6 +655,65 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
               </div>
 
+              {/* Enrolled Students & Database Users Table */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">Registered Candidates in Database ({databaseUsers.length})</h4>
+                    <p className="text-xs text-slate-500">Live records synced with Spring Boot MySQL database.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={refreshDatabaseUsers}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                  >
+                    Refresh List
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 uppercase font-semibold text-[10px]">
+                        <th className="py-2.5 px-3">Student Name</th>
+                        <th className="py-2.5 px-3">Email Address</th>
+                        <th className="py-2.5 px-3">Roll No</th>
+                        <th className="py-2.5 px-3">Branch & Batch</th>
+                        <th className="py-2.5 px-3">Database Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {databaseUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-slate-50 transition">
+                          <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">
+                              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <span>{user.name}</span>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{user.rollNumber || 'N/A'}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || '2028'})</td>
+                          <td className="py-2.5 px-3">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Synced in DB
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {databaseUsers.length === 0 && (
+                        <tr>
+                          <td colSpan="5" className="py-6 text-center text-slate-400">
+                            No students registered yet. Click 'Register Form' to add candidates.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           </div>
           </div>
@@ -498,9 +806,18 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+                {currentUser.role === 'student' && (
+                  <button
+                    onClick={() => setActiveTab('dsa-studio')}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>DSA Studio</span>
+                  </button>
+                )}
                 <button
                   onClick={() => onNavigate('prep')}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shrink-0"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition shrink-0"
                 >
                   Full Hub
                 </button>
@@ -547,16 +864,32 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
+        {/* TAB: DSA & CODING PRACTICE STUDIO (STUDENT ONLY) */}
+        {activeTab === 'dsa-studio' && (
+          <div className="space-y-6">
+            <DsaPracticePage
+              onNavigate={onNavigate}
+              onSelectGlobalQuestion={onSelectQuestion}
+            />
+          </div>
+        )}
+
         {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
-          <div id="institute-tab-crt-attendance" className="scroll-mt-24">
+          <div id="institute-tab-crt-attendance" className="space-y-6 scroll-mt-24">
+            {userRole === 'student' && (
+              <StudentGpsAttendanceWidget sessionTitle="Campus Recruitment Training (CRT)" sessionType="CRT" />
+            )}
             <CrtAttendancePortalView onNavigate={onNavigate} />
           </div>
         )}
 
         {/* TAB 5: CLASS ATTENDANCE (Teacher & HOD Daily Class Attendance Portal) */}
         {activeTab === 'class-attendance' && (
-          <div id="institute-tab-class-attendance" className="scroll-mt-24">
+          <div id="institute-tab-class-attendance" className="space-y-6 scroll-mt-24">
+            {userRole === 'student' && (
+              <StudentGpsAttendanceWidget sessionTitle="Regular Classroom Academic Attendance" sessionType="CLASS" />
+            )}
             <DailyAttendancePortalView onNavigate={onNavigate} />
           </div>
         )}
@@ -1064,6 +1397,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           setRegistrationSuccessMsg(`Successfully registered ${count} students into university database!`);
           setTimeout(() => setRegistrationSuccessMsg(''), 5000);
         }}
+      />
+
+      {/* 5. COMPLETE PROFILE MODAL */}
+      <UserProfileModal
+        isOpen={isFullProfileModalOpen}
+        onClose={() => setIsFullProfileModalOpen(false)}
+        onProfileUpdated={() => setCurrentUser(getCurrentUser() || {})}
       />
 
     </div>

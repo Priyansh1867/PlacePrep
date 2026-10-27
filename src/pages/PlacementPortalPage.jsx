@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Briefcase,
   Building2,
@@ -8,6 +8,7 @@ import {
   XCircle,
   Clock,
   ArrowRight,
+  ArrowLeft,
   Search,
   Filter,
   FileText,
@@ -71,6 +72,7 @@ import {
 import { INITIAL_CANDIDATES_PIPELINE } from '../data/selectionWorkflowData';
 import PortalModuleCards from '../components/PortalModuleCards';
 import ReportsExporterPage from './ReportsExporterPage';
+import UserProfileModal from '../components/profile/UserProfileModal';
 
 // Standard Role Metadata for labels
 const ROLE_METAS = {
@@ -84,7 +86,7 @@ const ROLE_METAS = {
 
 export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   // User profile strictly fixed based on authentic logged in session
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
   const rawRole = (currentUser?.role || 'tpo').toLowerCase();
   const activeRole = ['hr', 'recruiter'].includes(rawRole) ? 'hr' :
                      ['coordinator', 'student', 'director'].includes(rawRole) ? rawRole : 'tpo';
@@ -99,6 +101,15 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const [activeTab, setActiveTab] = useState('drives');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
+
+  // Keep currentUser synced when profile is saved
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setCurrentUserState(getCurrentUser());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+  }, []);
 
   // State collections
   const [drives, setDrives] = useState(() => getUpcomingDrives());
@@ -118,7 +129,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       id: 'soc-1',
       companyName: 'Atlassian',
       role: 'Associate Software Engineer',
-      ctc: '₹22.5 LPA',
+      ctc: 'â‚¹22.5 LPA',
       appliedDate: '2026-10-14',
       status: 'Interview Scheduled',
       link: 'https://atlassian.com/careers'
@@ -127,7 +138,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       id: 'soc-2',
       companyName: 'Zomato',
       role: 'Backend SDE Trainee',
-      ctc: '₹14.0 LPA',
+      ctc: 'â‚¹14.0 LPA',
       appliedDate: '2026-10-18',
       status: 'Online Assessment Cleared',
       link: 'https://zomato.com/careers'
@@ -185,7 +196,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const [internForm, setInternForm] = useState({
     companyName: isRecruiter ? (currentUser?.company || 'HCLTech') : '',
     role: '',
-    stipend: '₹50,000 / month',
+    stipend: 'â‚¹50,000 / month',
     duration: '2 Months (Summer 2027)',
     location: 'Bengaluru / Hybrid',
     minCgpa: 7.0,
@@ -235,8 +246,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   };
 
   // Tab definitions strictly mapped to user's RBAC matrix table:
-  // - Student has ❌ on Reports Exporter -> Filtered out for student
-  // - Recruiter has ❌ on Off-Campus Finder -> Filtered out for recruiter
+  // - Student has âŒ on Reports Exporter -> Filtered out for student
+  // - Recruiter has âŒ on Off-Campus Finder -> Filtered out for recruiter
   const allNavTabs = [
     {
       id: 'drives',
@@ -363,7 +374,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       companyId: driveForm.companyName.toLowerCase().replace(/\s+/g, '-'),
       companyName: driveForm.companyName,
       role: driveForm.role,
-      ctc: driveForm.ctc || '₹6.00 LPA - ₹10.00 LPA',
+      ctc: driveForm.ctc || 'â‚¹6.00 LPA - â‚¹10.00 LPA',
       driveDate: driveForm.driveDate,
       venue: driveForm.venue,
       status: 'Verified Upcoming Drive',
@@ -476,6 +487,24 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
       
+      {/* 0. UPPER LEFT BACK BUTTON */}
+      <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => onNavigate('gateway')}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-emerald-900 font-bold text-xs shadow-xs transition cursor-pointer group"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-emerald-600 transition-transform group-hover:-translate-x-0.5" />
+          <span>Back to Portals</span>
+        </button>
+
+        {/* Workspace Mode Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 shadow-xs">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Spring Boot Connected (:8082)</span>
+        </div>
+      </div>
+
       {/* 1. TOP HEADER BANNER WITH RIGHT-HAND PROFILE CARD */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-gradient-to-r from-[#111439] via-[#0E2829] to-[#162740] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
@@ -488,13 +517,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
                 <Briefcase className="w-3.5 h-3.5" />
-                <span>Placement Portal • {roleMeta.label} Workspace</span>
+                <span>Placement Portal â€¢ {roleMeta.label} Workspace</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-black text-white">
                 Corporate Hiring & Placement Control Center
               </h1>
               <p className="text-xs sm:text-sm text-emerald-200 mt-1 max-w-2xl">
-                Logged in as <strong className="text-white">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-100 font-bold uppercase text-[11px]">{roleMeta.label}</span> • Placement Season 2026-2027
+                Logged in as <strong className="text-white">{currentUser.name}</strong> â€¢ Role: <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-100 font-bold uppercase text-[11px]">{roleMeta.label}</span> â€¢ Placement Season 2026-2027
               </p>
             </div>
 
@@ -579,7 +608,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                             </div>
                             <div className="flex justify-between text-slate-500">
                               <span>Academic Standing:</span>
-                              <span className="font-bold text-emerald-600">CGPA 8.4 • 0 Backlogs</span>
+                              <span className="font-bold text-emerald-600">CGPA 8.4 â€¢ 0 Backlogs</span>
                             </div>
                           </>
                         )}
@@ -649,7 +678,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div>
                   <span className="text-emerald-300 block">Verified Status:</span>
-                  <span className="font-black text-base text-white">CGPA 8.4 • 0 Backlogs</span>
+                  <span className="font-black text-base text-white">CGPA 8.4 â€¢ 0 Backlogs</span>
                 </div>
               </>
             ) : isDirector ? (
@@ -660,11 +689,11 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div>
                   <span className="text-emerald-300 block">Average Package:</span>
-                  <span className="font-black text-base text-emerald-400">₹8.60 LPA</span>
+                  <span className="font-black text-base text-emerald-400">â‚¹8.60 LPA</span>
                 </div>
                 <div>
                   <span className="text-emerald-300 block">Highest Package:</span>
-                  <span className="font-black text-base text-amber-300">₹44.0 LPA (Microsoft)</span>
+                  <span className="font-black text-base text-amber-300">â‚¹44.0 LPA (Microsoft)</span>
                 </div>
                 <div>
                   <span className="text-emerald-300 block">Corporate Partners:</span>
@@ -922,7 +951,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   </div>
                   <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-xs">
                     <span className="text-emerald-300 block">Candidate Verification:</span>
-                    <span className="font-bold text-white">{studentProfile.name} • {studentProfile.rollNumber}</span>
+                    <span className="font-bold text-white">{studentProfile.name} â€¢ {studentProfile.rollNumber}</span>
                   </div>
                 </div>
 
@@ -1056,7 +1085,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                       <div className="space-y-1 text-xs text-slate-500 bg-white p-3 rounded-xl border border-slate-100 mb-4">
                         <div className="flex justify-between">
                           <span>Date & Time:</span>
-                          <span className="font-semibold text-slate-800">{session.date} • {session.time}</span>
+                          <span className="font-semibold text-slate-800">{session.date} â€¢ {session.time}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Student RSVPs:</span>
@@ -1151,7 +1180,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 <div className="p-6 rounded-3xl bg-white border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 block mb-1">Offers Extended:</span>
                   <span className="text-2xl font-black text-emerald-600">68 Final Selections</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Highest package: ₹44 LPA</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Highest package: â‚¹44 LPA</p>
                 </div>
               </div>
             )}
@@ -1173,7 +1202,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     </div>
 
                     <h4 className="font-bold text-slate-900 text-base mb-0.5">{cand.name}</h4>
-                    <p className="text-xs text-slate-500 mb-3">{cand.branch} • {cand.college}</p>
+                    <p className="text-xs text-slate-500 mb-3">{cand.branch} â€¢ {cand.college}</p>
 
                     <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1.5 mb-4 border border-slate-100">
                       <div className="flex justify-between">
@@ -1282,8 +1311,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Average Stipend:</span>
-                  <span className="text-3xl font-black text-emerald-600">₹68,500 / mo</span>
-                  <p className="text-xs text-slate-500 mt-2">Highest stipend recorded: ₹1,25,000 / mo (Microsoft).</p>
+                  <span className="text-3xl font-black text-emerald-600">â‚¹68,500 / mo</span>
+                  <p className="text-xs text-slate-500 mt-2">Highest stipend recorded: â‚¹1,25,000 / mo (Microsoft).</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 uppercase block mb-1">PPO Conversion Rate:</span>
@@ -1369,7 +1398,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         )}
 
         {/* ========================================================================= */}
-        {/* FEATURE 7: FEEDBACK (TPO ↔ COMPANY ↔ STUDENT)                            */}
+        {/* FEATURE 7: FEEDBACK (TPO â†” COMPANY â†” STUDENT)                            */}
         {/* ========================================================================= */}
         {activeTab === 'feedback-loop' && (
           <div className="space-y-6">
@@ -1380,7 +1409,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     <span className="px-3 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold uppercase">
                       Quality Intelligence Loop
                     </span>
-                    <span className="text-xs text-slate-500">Student ↔ TPO Cell ↔ Company Recruiter</span>
+                    <span className="text-xs text-slate-500">Student â†” TPO Cell â†” Company Recruiter</span>
                   </div>
                   <h3 className="text-2xl font-black text-slate-900">3-Way Campus Recruitment Feedback System</h3>
                 </div>
@@ -1480,7 +1509,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                           </td>
                           <td className="p-3 text-right">
                             <a href={item.link || '#'} target="_blank" rel="noreferrer" className="text-indigo-600 font-bold hover:underline">
-                              Careers Portal ↗
+                              Careers Portal â†—
                             </a>
                           </td>
                         </tr>
@@ -1596,101 +1625,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL: COMPLETE PROFILE VIEW MODAL                                        */}
+      {/* MODAL: COMPLETE USER PROFILE MANAGEMENT (11 SECTIONS)                     */}
       {/* ========================================================================= */}
-      {isFullProfileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow-md">
-                  {getInitials(currentUser.name)}
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">{currentUser.name}</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
-                    {roleMeta.label}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsFullProfileModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-2xl space-y-2 border border-slate-100">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Email Address:</span>
-                  <span className="font-semibold text-slate-900 font-mono">{currentUser.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Institute / College:</span>
-                  <span className="font-semibold text-slate-900">{currentUser.college || 'Delhi Technological University (DTU)'}</span>
-                </div>
-                {isStudent && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Roll Number:</span>
-                      <span className="font-bold text-slate-900 font-mono">{currentUser.rollNumber || '2024/CSE/084'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Department / Branch:</span>
-                      <span className="font-semibold text-slate-900">{currentUser.branch || 'Computer Science and Engineering'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Graduation Batch:</span>
-                      <span className="font-bold text-slate-900">{currentUser.graduationBatch || '2028'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Cumulative CGPA:</span>
-                      <span className="font-black text-emerald-600">8.40 / 10.0</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Active Backlogs:</span>
-                      <span className="font-bold text-emerald-600">0 (Clean Record)</span>
-                    </div>
-                  </>
-                )}
-                {isRecruiter && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Recruiting Organization:</span>
-                    <span className="font-bold text-slate-900">{currentUser.company || 'HCLTech'}</span>
-                  </div>
-                )}
-                {(isTPO || isCoordinator || isDirector) && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Designation / Role:</span>
-                    <span className="font-semibold text-slate-900">{currentUser.designation || 'Corporate Placement Governance'}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setIsFullProfileModalOpen(false); handleSignOut(); }}
-                  className="flex-1 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold transition flex items-center justify-center gap-1.5"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsFullProfileModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserProfileModal
+        isOpen={isFullProfileModalOpen}
+        onClose={() => setIsFullProfileModalOpen(false)}
+        onProfileUpdated={() => setCurrentUserState(getCurrentUser())}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL: CREATE CAMPUS DRIVE (TPO / COORDINATOR)                            */}
@@ -1734,7 +1675,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     type="text"
                     value={driveForm.ctc}
                     onChange={(e) => setDriveForm({ ...driveForm, ctc: e.target.value })}
-                    placeholder="e.g. ₹18.00 LPA"
+                    placeholder="e.g. â‚¹18.00 LPA"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -2020,11 +1961,11 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: parseFloat(e.target.value) })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   >
-                    <option value={5}>⭐⭐⭐⭐⭐ (5 - Exceptional)</option>
-                    <option value={4}>⭐⭐⭐⭐ (4 - Very Good)</option>
-                    <option value={3}>⭐⭐⭐ (3 - Average)</option>
-                    <option value={2}>⭐⭐ (2 - Needs Improvement)</option>
-                    <option value={1}>⭐ (1 - Unsatisfactory)</option>
+                    <option value={5}>â­â­â­â­â­ (5 - Exceptional)</option>
+                    <option value={4}>â­â­â­â­ (4 - Very Good)</option>
+                    <option value={3}>â­â­â­ (3 - Average)</option>
+                    <option value={2}>â­â­ (2 - Needs Improvement)</option>
+                    <option value={1}>â­ (1 - Unsatisfactory)</option>
                   </select>
                 </div>
               </div>
@@ -2103,7 +2044,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     type="text"
                     value={offCampusForm.ctc}
                     onChange={(e) => setOffCampusForm({ ...offCampusForm, ctc: e.target.value })}
-                    placeholder="e.g. ₹16.0 LPA"
+                    placeholder="e.g. â‚¹16.0 LPA"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -2117,7 +2058,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     <option value="Application Submitted">Application Submitted</option>
                     <option value="Online Assessment Cleared">Online Assessment Cleared</option>
                     <option value="Interview Scheduled">Interview Scheduled</option>
-                    <option value="Offer Received">Offer Received 🎉</option>
+                    <option value="Offer Received">Offer Received ðŸŽ‰</option>
                   </select>
                 </div>
               </div>
@@ -2195,7 +2136,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     type="text"
                     value={internForm.stipend}
                     onChange={(e) => setInternForm({ ...internForm, stipend: e.target.value })}
-                    placeholder="₹60,000 / month"
+                    placeholder="â‚¹60,000 / month"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>

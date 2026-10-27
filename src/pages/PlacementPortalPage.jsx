@@ -70,6 +70,7 @@ import {
   addInternship
 } from '../services/storage';
 import { INITIAL_CANDIDATES_PIPELINE } from '../data/selectionWorkflowData';
+import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import ReportsExporterPage from './ReportsExporterPage';
 import UserProfileModal from '../components/profile/UserProfileModal';
@@ -123,6 +124,11 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   // Student specific mock applications / tracking
   const [appliedDrives, setAppliedDrives] = useState({});
+  const [portalDriveSearch, setPortalDriveSearch] = useState('');
+  const [portalCriteriaSearch, setPortalCriteriaSearch] = useState('');
+  const [portalCandidateSearch, setPortalCandidateSearch] = useState('');
+  const [portalInternshipSearch, setPortalInternshipSearch] = useState('');
+  const [portalOffCampusSearch, setPortalOffCampusSearch] = useState('');
   const [appliedInternships, setAppliedInternships] = useState({});
   const [studentOffCampusList, setStudentOffCampusList] = useState([
     {
@@ -1009,7 +1015,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {eligibilityMatrix.map((item, idx) => {
+                    {eligibilityMatrix.filter(item => {
+                      const q = portalCriteriaSearch.trim().toLowerCase();
+                      return !q || (item.companyName || '').toLowerCase().includes(q) || (item.role || '').toLowerCase().includes(q);
+                    }).map((item, idx) => {
                       const isEligible = studentProfile.cgpa >= item.minCgpa && studentProfile.backlogs <= item.maxActiveBacklogs;
                       return (
                         <tr key={idx} className="hover:bg-slate-50/70 transition">

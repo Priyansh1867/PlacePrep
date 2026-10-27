@@ -23,6 +23,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Input from '../ui/Input';
+import SearchBar from '../ui/SearchBar';
 import ProgressBar from '../ui/ProgressBar';
 import Skeleton from '../ui/Skeleton';
 import EmptyState from '../ui/EmptyState';

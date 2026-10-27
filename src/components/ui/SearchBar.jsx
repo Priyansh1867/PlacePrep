@@ -19,7 +19,8 @@ export default function SearchBar({
   resultCount,
   totalCount,
   id,
-  'aria-label': ariaLabel,
+  'aria-label': ariaLabelProp,
+  ariaLabel,
   ...props
 }) {
   const inputRef = useRef(null);
@@ -89,7 +90,7 @@ export default function SearchBar({
         placeholder={placeholder}
         disabled={disabled}
         autoFocus={autoFocus}
-        aria-label={ariaLabel || placeholder}
+        aria-label={ariaLabelProp || ariaLabel || placeholder}
         className={`w-full rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 placeholder-slate-400 hover:bg-white hover:border-slate-300 focus:bg-white focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium disabled:bg-slate-100 disabled:cursor-not-allowed ${
           activeSize.iconGap
         } ${hasValue ? 'pr-20' : 'pr-3'} ${activeSize.container} ${inputClassName}`}

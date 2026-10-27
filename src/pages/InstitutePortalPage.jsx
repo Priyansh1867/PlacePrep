@@ -113,6 +113,19 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   // Top-Right Profile & Backend Connection States
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
+
+  // Reset scroll to top on tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [databaseUsers, setDatabaseUsers] = useState([]);
 

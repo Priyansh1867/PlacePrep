@@ -48,7 +48,20 @@ import SearchBar from '../components/ui/SearchBar';
 
 export default function AdminPage() {
   const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'companies', 'drives', 'questions', 'moderation', 'feedback'
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Reset scroll to top on tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]); // 'overview', 'companies', 'drives', 'questions', 'moderation', 'feedback'
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);

@@ -56,7 +56,20 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
   const currentBatch = getGraduationBatch();
 
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState('drives'); // 'drives', 'calendar', 'eligibility', 'applications', 'conflicts', 'team-controls'
+  const [activeTab, setActiveTab] = useState('drives');
+
+  // Reset scroll to top on mount and tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]); // 'drives', 'calendar', 'eligibility', 'applications', 'conflicts', 'team-controls'
   
   // Drives list and filter states
   const [selectedBatchFilter, setSelectedBatchFilter] = useState(currentBatch);

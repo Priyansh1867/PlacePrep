@@ -40,7 +40,20 @@ import PortalModuleCards from '../components/PortalModuleCards';
 import SearchBar from '../components/ui/SearchBar';
 
 export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) {
-  const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline', 'engine', 'evaluations', 'feedback', 'questions'
+  const [activeTab, setActiveTab] = useState('pipeline');
+
+  // Reset scroll to top on tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]); // 'pipeline', 'engine', 'evaluations', 'feedback', 'questions'
   const [selectedRoundFilter, setSelectedRoundFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [evalSearchQuery, setEvalSearchQuery] = useState('');

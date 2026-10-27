@@ -35,6 +35,19 @@ export default function ReportsExporterPage({ onNavigate }) {
 
   // Active Report Type: 'drive-eligibility' | 'final-placed' | 'monthly-attendance'
   const [activeReport, setActiveReport] = useState('drive-eligibility');
+
+  // Reset scroll to top on report change so preview and SearchBar are in view
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeReport]);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [downloadSuccessMsg, setDownloadSuccessMsg] = useState('');
   const [previewSearchQuery, setPreviewSearchQuery] = useState('');

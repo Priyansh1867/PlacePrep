@@ -100,6 +100,19 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const isStudent = activeRole === 'student';
 
   const [activeTab, setActiveTab] = useState('drives');
+
+  // Reset scroll to top on portal tab change so SearchBar and top content stay in view
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
 
@@ -804,7 +817,14 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   </button>
                 )}
                 <button
-                  onClick={() => onNavigate('drives')}
+                  onClick={() => {
+                    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch { window.scrollTo(0, 0); }
+                    if (typeof document !== 'undefined') {
+                      if (document.documentElement) document.documentElement.scrollTop = 0;
+                      if (document.body) document.body.scrollTop = 0;
+                    }
+                    onNavigate('drives');
+                  }}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                 >
                   <span>All Campus Drives</span>

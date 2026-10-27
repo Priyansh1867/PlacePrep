@@ -5,12 +5,14 @@ import BatchSelectionModal from './components/BatchSelectionModal';
 import AuthModal from './components/AuthModal';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import PushNotificationDrawer from './components/PushNotificationDrawer';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Unified Portal Pages
 import PortalGatewayPage from './pages/PortalGatewayPage';
 import AuthPortalPage from './pages/AuthPortalPage';
 import InstitutePortalPage from './pages/InstitutePortalPage';
 import PlacementPortalPage from './pages/PlacementPortalPage';
+import ManagementPortalPage from './pages/ManagementPortalPage';
 import RemiiLandingPage from './pages/RemiiLandingPage';
 
 // Specialized Placement Prep Pages
@@ -73,6 +75,8 @@ export default function App() {
       setCurrentRoute('institute-portal');
     } else if (portal === 'placement') {
       setCurrentRoute('placement-portal');
+    } else if (portal === 'management') {
+      setCurrentRoute('management-portal');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -89,6 +93,8 @@ export default function App() {
       setCurrentRoute('institute-portal');
     } else if (portalBranch === 'placement') {
       setCurrentRoute('placement-portal');
+    } else if (portalBranch === 'management') {
+      setCurrentRoute('management-portal');
     } else {
       setCurrentRoute('dashboard');
     }
@@ -152,7 +158,7 @@ export default function App() {
     );
   }
 
-  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal'].includes(currentRoute);
+  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
@@ -171,7 +177,8 @@ export default function App() {
 
       {/* Main Content Router */}
       <main className="flex-1">
-        
+        <ErrorBoundary resetKey={currentRoute}>
+                
         {/* 1. MASTER HOME PAGE: Portal Gateway (Institute & Placement Options) */}
         {(currentRoute === 'gateway' || currentRoute === 'home') && (
           <PortalGatewayPage
@@ -180,6 +187,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 2. DEDICATED LOGIN / REGISTER PAGE for selected portal */}
         {currentRoute === 'auth-portal' && (
           <AuthPortalPage
@@ -189,6 +197,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 3. INSTITUTE PORTAL (Teacher, HOD, Students) */}
         {currentRoute === 'institute-portal' && (
           <InstitutePortalPage
@@ -198,6 +207,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 4. PLACEMENT PORTAL (HR, Director, TPO, Coordinator) */}
         {currentRoute === 'placement-portal' && (
           <PlacementPortalPage
@@ -207,6 +217,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 5. CLASSIC PLACEMENT HOMEPAGE */}
         {currentRoute === 'classic-home' && (
           <HomePage
@@ -216,6 +227,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 6. SELECTION WORKFLOW ENGINE */}
         {currentRoute === 'workflow' && (
           <SelectionWorkflowPage
@@ -224,6 +236,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 7. DRIVES & PLACEMENT CALENDAR */}
         {currentRoute === 'drives' && (
           <PlacementDrivesPage
@@ -231,6 +244,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 8. COMPANIES LISTING */}
         {currentRoute === 'companies' && (
           <CompaniesPage
@@ -239,6 +253,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 9. COMPANY PREPARATION HUB */}
         {currentRoute === 'company-hub' && selectedCompany && (
           <CompanyHubPage
@@ -252,6 +267,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 10. QUESTION PREPARATION & PRACTICE */}
         {currentRoute === 'prep' && (
           <QuestionPrepPage
@@ -266,11 +282,13 @@ export default function App() {
           />
         )}
 
+        
         {/* 11. INTERVIEW EXPERIENCES */}
         {currentRoute === 'experiences' && (
           <ExperiencesPage />
         )}
 
+        
         {/* 12. AI INSIGHTS */}
         {currentRoute === 'ai-insights' && (
           <AiInsightsPage
@@ -280,6 +298,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 13. MOCK INTERVIEW */}
         {currentRoute === 'mock-interview' && (
           <MockInterviewPage
@@ -289,6 +308,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 14. STUDENT DASHBOARD */}
         {currentRoute === 'dashboard' && (
           <StudentDashboardPage
@@ -298,36 +318,43 @@ export default function App() {
           />
         )}
 
+        
         {/* 15. ACADEMIC RECORDS */}
         {currentRoute === 'academic-records' && (
           <AcademicRecordsPage />
         )}
 
+        
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
           <AdminPage />
         )}
 
+        
         {/* 17. TEACHER & HOD DAILY CLASS ATTENDANCE PORTAL */}
         {(currentRoute === 'attendance' || currentRoute === 'daily-attendance' || currentRoute === 'class-attendance') && (
           <DailyAttendancePage onNavigate={setCurrentRoute} />
         )}
 
+        
         {/* 18. CRT TRAINING ATTENDANCE & ELIGIBILITY PORTAL */}
         {(currentRoute === 'crt-attendance' || currentRoute === 'crt-training-attendance') && (
           <CrtAttendancePage onNavigate={setCurrentRoute} />
         )}
 
+        
         {/* 19. REPORTS EXPORTER (DRIVE ELIGIBILITY, PLACEMENTS & ATTENDANCE) */}
         {(currentRoute === 'reports' || currentRoute === 'reports-exporter') && (
           <ReportsExporterPage onNavigate={setCurrentRoute} />
         )}
 
+        
         {/* 20. HOD CURRICULUM & SYLLABUS GOVERNANCE */}
         {(currentRoute === 'curriculum-governance' || currentRoute === 'syllabus-governance') && (
           <CurriculumGovernancePage onNavigate={setCurrentRoute} />
         )}
 
+        
         {/* 21. STUDENT-ONLY DSA & CODING PRACTICE STUDIO */}
         {(currentRoute === 'dsa-studio' || currentRoute === 'dsa-practice') && (
           <DsaPracticePage
@@ -336,6 +363,15 @@ export default function App() {
           />
         )}
 
+        
+        {/* 23. MANAGEMENT PORTAL (COLLEGE LOCATION & GEOFENCING) */}
+        {currentRoute === 'management-portal' && (
+          <ManagementPortalPage
+            onNavigate={setCurrentRoute}
+          />
+        )}
+
+        
         {/* 22. RESUME STATUS & ATS COMPATIBILITY CHECKER */}
         {(currentRoute === 'resume-ats' || currentRoute === 'resume-checker' || currentRoute === 'ats-checker') && (
           <ResumeAtsCheckerPage
@@ -344,6 +380,8 @@ export default function App() {
           />
         )}
 
+        
+              </ErrorBoundary>
       </main>
 
       {!isGuidedFlowRoute && <Footer onNavigate={setCurrentRoute} />}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, BriefcaseBusiness, CheckCircle2, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, Building2, CheckCircle2, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import instituteImage from '../assets/images/institute_hero.jpg';
 import placementImage from '../assets/images/placement_hero.jpg';
@@ -56,10 +56,20 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
         {/* Header Bar */}
         <header className="flex items-center justify-between px-1 shrink-0 py-1">
           <PlacePrepLogo className="h-8 sm:h-9 w-auto" theme="dark" />
-          <span className="hidden items-center gap-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white shadow-sm sm:inline-flex">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            SECURE INSTITUTION ACCESS
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigateAuth('institute')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-teal-400/30 bg-teal-500/20 hover:bg-teal-500/30 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-teal-200 transition cursor-pointer"
+            >
+              <Building2 className="h-3.5 w-3.5 text-teal-400" />
+              <span>Management Portal</span>
+            </button>
+            <span className="hidden items-center gap-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white shadow-sm sm:inline-flex">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+              SECURE INSTITUTION ACCESS
+            </span>
+          </div>
         </header>
 
         {/* Main Hero Header */}

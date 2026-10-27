@@ -300,7 +300,7 @@ export function getInitialFullStudentProfile(currentUser = null) {
 }
 
 export function getFullStudentProfile() {
-  const current = getCurrentUser();
+  const current = getCurrentUser() || {};
   const saved = getStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, null);
   if (saved) {
     if (!saved.uniqueStudentId) {
@@ -319,7 +319,7 @@ export function getFullStudentProfile() {
 
 export function saveFullStudentProfile(profile) {
   setStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, profile);
-  const current = getCurrentUser();
+  const current = getCurrentUser() || {};
   if (profile?.basicDetails) {
     current.name = profile.basicDetails.fullName || current.name;
     current.email = profile.basicDetails.email || current.email;

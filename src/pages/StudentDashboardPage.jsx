@@ -49,6 +49,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
+import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
 
 export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [user, setUser] = useState(getCurrentUser());
@@ -274,6 +275,9 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           </div>
         </div>
       </div>
+
+      {/* Mandatory Geofence & Facial Identity Attendance Section */}
+      <StudentGpsAttendanceWidget sessionTitle="Today's Academic & Campus Recruitment Training Attendance" />
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

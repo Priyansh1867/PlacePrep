@@ -81,6 +81,20 @@ public class DataInitializer {
                 userRepository.save(hod);
             }
 
+            if (userRepository.findByEmail("management@placeprep.com").isEmpty()) {
+                User mgmt = new User();
+                mgmt.setName("Dr. Ramesh Gupta");
+                mgmt.setEmail("management@placeprep.com");
+                mgmt.setPassword("demo123");
+                mgmt.setCollege("Delhi Technological University (DTU)");
+                mgmt.setBranch("Institute Administration");
+                mgmt.setGraduationBatch("2026");
+                mgmt.setRole("management");
+                mgmt.setRollNumber("MGMT-DTU-001");
+                mgmt.setOnboardingCompleted(true);
+                userRepository.save(mgmt);
+            }
+
             if (companyRepository.count() == 0) {
                 Company hcl = new Company();
                 hcl.setCompanyId("hcltech");

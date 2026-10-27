@@ -37,6 +37,7 @@ import {
 } from '../../services/attendanceStorage';
 import { getCurrentUser, setCurrentUser, setPortalRole } from '../../services/storage';
 import { AuthApi } from '../../services/api';
+import SearchBar from '../ui/SearchBar';
 
 export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current logged in user & role
@@ -931,24 +932,17 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
             {/* Table Actions Header */}
             <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search by student name or roll #..."
+                <div className="w-full sm:w-64">
+                  <SearchBar
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 focus:bg-white"
+                    onClear={() => setSearchFilter('')}
+                    placeholder="Search student name or roll #..."
+                    size="sm"
+                    resultCount={filteredRoster.length}
+                    totalCount={roster.length}
                   />
                 </div>
-                {searchFilter && (
-                  <button
-                    onClick={() => setSearchFilter('')}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                )}
                 {isLoading && (
                   <span className="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold animate-pulse">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1209,14 +1203,15 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
             {/* Report Toolbar */}
             <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="relative w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search report by name or roll..."
+                <div className="w-64">
+                  <SearchBar
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 focus:bg-white"
+                    onClear={() => setSearchFilter('')}
+                    placeholder="Search report by name or roll..."
+                    size="sm"
+                    resultCount={filteredReportRows.length}
+                    totalCount={cumulativeReport?.roster?.length || 0}
                   />
                 </div>
 

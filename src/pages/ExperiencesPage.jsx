@@ -31,6 +31,7 @@ import { ExperienceApi, CompanyApi, FeedbackApi } from '../services/api';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import SearchBar from '../components/ui/SearchBar';
 
 export default function ExperiencesPage() {
   const currentBatch = getGraduationBatch();
@@ -133,12 +134,24 @@ export default function ExperiencesPage() {
 
   // Filtered experiences
   const filtered = experiences.filter(exp => {
+    const q = (searchQuery || '').trim().toLowerCase();
     const companyName = exp.companyName || '';
     const role = exp.role || '';
     const tips = exp.tips || '';
-    const matchSearch = companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        tips.toLowerCase().includes(searchQuery.toLowerCase());
+    const studentName = exp.studentName || '';
+    const difficulty = exp.difficulty || '';
+    const outcome = exp.outcome || '';
+    const questionsMatched = (exp.questionsAsked || []).some(quest => quest.toLowerCase().includes(q));
+
+    const matchSearch = !q ||
+      companyName.toLowerCase().includes(q) ||
+      role.toLowerCase().includes(q) ||
+      tips.toLowerCase().includes(q) ||
+      studentName.toLowerCase().includes(q) ||
+      difficulty.toLowerCase().includes(q) ||
+      outcome.toLowerCase().includes(q) ||
+      questionsMatched;
+
     const compId = exp.companyId;
     const matchCompany = companyFilter === 'all' || compId === companyFilter;
     const matchBatch = batchFilter === 'all' || exp.batch === batchFilter;
@@ -346,14 +359,14 @@ export default function ExperiencesPage() {
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           
-          <div className="relative w-full md:w-96">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-            <input
-              type="text"
+          <div className="w-full md:w-96">
+            <SearchBar
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by company, role, or interview advice..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onClear={() => setSearchQuery('')}
+              placeholder="Search by company, role, question, or tips..."
+              resultCount={filtered.length}
+              totalCount={experiences.length}
             />
           </div>
 
@@ -422,11 +435,23 @@ export default function ExperiencesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon={MessageSquare}
-            title="No Interview Experiences Match Filters"
-            description="Be the first student to contribute an authentic debrief for this company or batch."
-            actionLabel="Submit First Experience"
-            onAction={() => setIsSubmitModalOpen(true)}
+            icon={Search}
+            title={searchQuery.trim() ? "No Experiences Match Search" : "No Interview Experiences Match Filters"}
+            description={
+              searchQuery.trim()
+                ? `No debriefs matched "${searchQuery.trim()}". Try checking spelling or clear search.`
+                : "Be the first student to contribute an authentic debrief for this company or batch."
+            }
+            actionLabel={searchQuery.trim() ? "Clear Search" : "Submit First Experience"}
+            onAction={() => {
+              if (searchQuery.trim()) {
+                setSearchQuery('');
+                setCompanyFilter('all');
+                setBatchFilter('all');
+              } else {
+                setIsSubmitModalOpen(true);
+              }
+            }}
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

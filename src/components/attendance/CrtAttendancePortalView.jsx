@@ -55,6 +55,7 @@ import {
 } from '../../services/crtAttendanceStorage';
 import { DEPARTMENTS } from '../../services/attendanceStorage';
 import { getCurrentUser, setCurrentUser, setPortalRole } from '../../services/storage';
+import SearchBar from '../ui/SearchBar';
 
 export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current user & active role
@@ -889,14 +890,15 @@ export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
 
           {/* Table Action Controls */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search student or roll number..."
+            <div className="w-full sm:w-72">
+              <SearchBar
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-violet-500"
+                onClear={() => setSearchFilter('')}
+                placeholder="Search student or roll number..."
+                size="sm"
+                resultCount={filteredRoster.length}
+                totalCount={roster.length}
               />
             </div>
 
@@ -1312,6 +1314,54 @@ export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
               </div>
             </div>
           )}
+
+          {/* Cumulative Table Toolbar */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="w-full sm:w-72">
+              <SearchBar
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                onClear={() => setSearchFilter('')}
+                placeholder="Search cumulative roster by name or roll..."
+                size="sm"
+                resultCount={filteredCumulativeRoster.length}
+                totalCount={cumulativeReport?.roster?.length || 0}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+              <span>Filter:</span>
+              <button
+                onClick={() => setCumulativeStatusFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  cumulativeStatusFilter === 'ALL'
+                    ? 'bg-violet-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                All ({cumulativeReport?.roster?.length || 0})
+              </button>
+              <button
+                onClick={() => setCumulativeStatusFilter('SHORTAGE')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  cumulativeStatusFilter === 'SHORTAGE'
+                    ? 'bg-rose-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Shortage (&lt;75%)
+              </button>
+              <button
+                onClick={() => setCumulativeStatusFilter('ELIGIBLE')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  cumulativeStatusFilter === 'ELIGIBLE'
+                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Eligible
+              </button>
+            </div>
+          </div>
 
           {/* Cumulative Table */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

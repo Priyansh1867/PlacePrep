@@ -37,11 +37,28 @@ import {
 import { getCompanies, getInterviewQuestions } from '../services/storage';
 import { WorkflowApi } from '../services/api';
 import PortalModuleCards from '../components/PortalModuleCards';
+import SearchBar from '../components/ui/SearchBar';
 
 export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) {
-  const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline', 'engine', 'evaluations', 'feedback', 'questions'
+  const [activeTab, setActiveTab] = useState('pipeline');
+
+  // Reset scroll to top on tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]); // 'pipeline', 'engine', 'evaluations', 'feedback', 'questions'
   const [selectedRoundFilter, setSelectedRoundFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [evalSearchQuery, setEvalSearchQuery] = useState('');
+  const [questionSearchQuery, setQuestionSearchQuery] = useState('');
+  const [feedbackSearchQuery, setFeedbackSearchQuery] = useState('');
   const [candidates, setCandidates] = useState(() => {
     try {
       const saved = localStorage.getItem('placeprep_candidates_pipeline');
@@ -341,21 +358,54 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
   // Filter candidates
   const filteredCandidates = candidates.filter(cand => {
     const matchesRound = selectedRoundFilter === 'all' || cand.currentRound === selectedRoundFilter;
-    const matchesSearch = !searchQuery.trim() ||
-      cand.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cand.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cand.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cand.status.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = (searchQuery || '').trim().toLowerCase();
+    const matchesSearch = !q ||
+      cand.name.toLowerCase().includes(q) ||
+      cand.college.toLowerCase().includes(q) ||
+      cand.companyName.toLowerCase().includes(q) ||
+      cand.status.toLowerCase().includes(q);
     return matchesRound && matchesSearch;
   });
 
-  // Filter feedback by role
-  const filteredFeedbackList = stakeholderFeedback.filter(fb =>
-    activeFeedbackRole === 'All' || fb.role.toLowerCase() === activeFeedbackRole.toLowerCase()
-  );
+  // Filter evaluator records
+  const filteredEvaluatorRecords = evaluatorRecords.filter(rec => {
+    const q = (evalSearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (rec.candidateName || '').toLowerCase().includes(q) ||
+      (rec.companyName || '').toLowerCase().includes(q) ||
+      (rec.evaluatorName || '').toLowerCase().includes(q) ||
+      (rec.round || '').toLowerCase().includes(q) ||
+      (rec.feedbackNotes || '').toLowerCase().includes(q) ||
+      (rec.recommendation || '').toLowerCase().includes(q)
+    );
+  });
+
+  // Filter feedback by role & search
+  const filteredFeedbackList = stakeholderFeedback.filter(fb => {
+    const matchRole = activeFeedbackRole === 'All' || fb.role.toLowerCase() === activeFeedbackRole.toLowerCase();
+    const q = (feedbackSearchQuery || '').trim().toLowerCase();
+    const matchQuery = !q ||
+      (fb.author || '').toLowerCase().includes(q) ||
+      (fb.companyName || '').toLowerCase().includes(q) ||
+      (fb.roundDiscussed || '').toLowerCase().includes(q) ||
+      (fb.feedback || '').toLowerCase().includes(q);
+    return matchRole && matchQuery;
+  });
 
   // All questions for question bank view
   const allQuestions = getInterviewQuestions();
+
+  const filteredWorkflowQuestions = allQuestions.filter(q => {
+    const query = (questionSearchQuery || '').trim().toLowerCase();
+    if (!query) return true;
+    return (
+      (q.question || '').toLowerCase().includes(query) ||
+      (q.companyId || '').toLowerCase().includes(query) ||
+      (q.category || '').toLowerCase().includes(query) ||
+      (q.round || '').toLowerCase().includes(query)
+    );
+  });
   const workflowSections = [
     { id: 'pipeline', label: 'Selection Pipeline', icon: Users, badge: `${candidates.length} candidates`, description: 'Live candidate decisions' },
     { id: 'engine', label: '4-Round Interview Engine', icon: Layers, badge: '4 rounds', description: 'Configure the process' },
@@ -469,9 +519,19 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
               </div>
 
               <div className="flex w-full items-center gap-2 md:w-auto">
-                <div className="relative flex-1 md:w-72"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search candidate, college, company..." className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" /></div>
+                <div className="flex-1 md:w-72">
+                  <SearchBar
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClear={() => setSearchQuery('')}
+                    placeholder="Search candidate, college, company..."
+                    size="sm"
+                    resultCount={filteredCandidates.length}
+                    totalCount={candidates.length}
+                  />
+                </div>
                 <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={handleCandidateCsvSelect} className="hidden" />
-                <button type="button" onClick={() => csvInputRef.current?.click()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700"><Upload className="h-3.5 w-3.5" />Import CSV</button>
+                <button type="button" onClick={() => csvInputRef.current?.click()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 cursor-pointer"><Upload className="h-3.5 w-3.5" />Import CSV</button>
               </div>
             </div>
 
@@ -604,19 +664,43 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
                 <p className="text-xs text-slate-500">Official scorecard archives filled by technical leads, managers, and HR panels.</p>
               </div>
 
-              <button
-                onClick={() => {
-                  setSelectedCandidateForEval(candidates[0]);
-                  setIsEvaluationModalOpen(true);
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
-              >
-                <PlusCircle className="w-4 h-4" /> Record New Evaluation
-              </button>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                <div className="w-full sm:w-64">
+                  <SearchBar
+                    value={evalSearchQuery}
+                    onChange={(e) => setEvalSearchQuery(e.target.value)}
+                    onClear={() => setEvalSearchQuery('')}
+                    placeholder="Search candidate, evaluator, role..."
+                    size="sm"
+                    resultCount={filteredEvaluatorRecords.length}
+                    totalCount={evaluatorRecords.length}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedCandidateForEval(candidates[0]);
+                    setIsEvaluationModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" /> Record New Evaluation
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {evaluatorRecords.map((rec) => (
+            {filteredEvaluatorRecords.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-lg border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No evaluation scorecards matched "{evalSearchQuery.trim()}".</p>
+                <button
+                  onClick={() => setEvalSearchQuery('')}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredEvaluatorRecords.map((rec) => (
                 <div key={rec.id} className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm space-y-4 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -666,6 +750,7 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 
@@ -686,43 +771,67 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {allQuestions.map(q => (
-                <div
-                  key={q.id}
-                  onClick={() => onSelectQuestion && onSelectQuestion(q)}
-                  className="p-5 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group"
+            <div className="w-full">
+              <SearchBar
+                value={questionSearchQuery}
+                onChange={(e) => setQuestionSearchQuery(e.target.value)}
+                onClear={() => setQuestionSearchQuery('')}
+                placeholder="Search questions by text, company, category, or round..."
+                resultCount={filteredWorkflowQuestions.length}
+                totalCount={allQuestions.length}
+                ariaLabel="Search interview questions"
+              />
+            </div>
+
+            {filteredWorkflowQuestions.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-lg border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No questions matched "{questionSearchQuery.trim()}".</p>
+                <button
+                  onClick={() => setQuestionSearchQuery('')}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
                 >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-bold uppercase">
-                          {q.companyId}
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-semibold uppercase">
-                          {q.round} Round
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-50 text-slate-500 text-xs">
-                          {q.category}
-                        </span>
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredWorkflowQuestions.map(q => (
+                  <div
+                    key={q.id}
+                    onClick={() => onSelectQuestion && onSelectQuestion(q)}
+                    className="p-5 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-bold uppercase">
+                            {q.companyId}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-semibold uppercase">
+                            {q.round} Round
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-slate-50 text-slate-500 text-xs">
+                            {q.category}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold text-indigo-600">{q.frequencyScore}% freq</span>
                       </div>
-                      <span className="text-xs font-bold text-indigo-600">{q.frequencyScore}% freq</span>
+
+                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors leading-snug">
+                        {q.question}
+                      </h4>
                     </div>
 
-                    <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors leading-snug">
-                      {q.question}
-                    </h4>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                      <span>Reported {q.timesReported} times</span>
+                      <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                        Practice <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                    <span>Reported {q.timesReported} times</span>
-                    <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      Practice <ChevronRight className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -743,26 +852,56 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
               </button>
             </div>
 
-            {/* Role Filter Tabs */}
-            <div className="flex gap-2 pb-1 overflow-x-auto">
-              {['All', 'Student', 'TPO', 'Faculty', 'Company'].map(role => (
-                <button
-                  key={role}
-                  onClick={() => setActiveFeedbackRole(role)}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                    activeFeedbackRole === role
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                  }`}
-                >
-                  {role} Reviews
-                </button>
-              ))}
+            {/* Role Filter Tabs & Search */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex gap-2 pb-1 overflow-x-auto">
+                {['All', 'Student', 'TPO', 'Faculty', 'Company'].map(role => (
+                  <button
+                    key={role}
+                    onClick={() => setActiveFeedbackRole(role)}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+                      activeFeedbackRole === role
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                  >
+                    {role} Reviews
+                  </button>
+                ))}
+              </div>
+              <div className="sm:w-72">
+                <SearchBar
+                  value={feedbackSearchQuery}
+                  onChange={(e) => setFeedbackSearchQuery(e.target.value)}
+                  onClear={() => setFeedbackSearchQuery('')}
+                  placeholder="Search feedback..."
+                  resultCount={filteredFeedbackList.length}
+                  totalCount={stakeholderFeedback.length}
+                  size="sm"
+                  ariaLabel="Search stakeholder feedback"
+                />
+              </div>
             </div>
 
             {/* Feedback Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredFeedbackList.map(item => (
+            {filteredFeedbackList.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-lg border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No reviews found matching the current criteria.</p>
+                {(feedbackSearchQuery || activeFeedbackRole !== 'All') && (
+                  <button
+                    onClick={() => {
+                      setFeedbackSearchQuery('');
+                      setActiveFeedbackRole('All');
+                    }}
+                    className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                  >
+                    Reset Filters & Search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredFeedbackList.map(item => (
                 <div key={item.id} className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -800,6 +939,7 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 

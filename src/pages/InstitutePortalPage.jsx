@@ -54,6 +54,7 @@ import {
   broadcastPushNotification
 } from '../services/storage';
 import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi } from '../services/api';
+import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
 import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
@@ -99,6 +100,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [hackathonSearchQuery, setHackathonSearchQuery] = useState('');
+  const [internshipSearchQuery, setInternshipSearchQuery] = useState('');
+  const [offCampusSearchQuery, setOffCampusSearchQuery] = useState('');
   const [questionCategoryFilter, setQuestionCategoryFilter] = useState('All');
 
   // Resume Simulator State
@@ -109,6 +113,19 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   // Top-Right Profile & Backend Connection States
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
+
+  // Reset scroll to top on tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [databaseUsers, setDatabaseUsers] = useState([]);
 
@@ -780,14 +797,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               </div>
 
               <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
+                <div className="w-full md:w-72">
+                  <SearchBar
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search JVM, SQL, Streams..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
+                    onClear={() => setSearchQuery('')}
+                    placeholder="Search questions by topic or keyword..."
+                    size="sm"
                   />
                 </div>
                 {currentUser.role === 'student' && (

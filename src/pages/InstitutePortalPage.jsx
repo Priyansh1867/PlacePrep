@@ -184,16 +184,6 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     onNavigate('auth-portal');
   };
 
-  // Smooth scroll handler on card selection
-  const handleCardSelect = (tabId) => {
-    setActiveTab(tabId);
-    setTimeout(() => {
-      const target = document.getElementById('institute-feature-content');
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 60);
-  };
 
   // Student Registration Modal Form State
   const [isRegisterStudentModalOpen, setIsRegisterStudentModalOpen] = useState(false);

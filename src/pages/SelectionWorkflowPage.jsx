@@ -293,6 +293,16 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
     setTimeout(() => setFeedbackSuccessMsg(''), 4000);
   };
 
+  const handleWorkflowTabSelect = (tabId) => {
+    setActiveTab(tabId);
+    setTimeout(() => {
+      const target = document.getElementById(`workflow-tab-${tabId}`) || document.getElementById('workflow-module-content');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
+
   const handleCandidateCsvSelect = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -491,11 +501,12 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
         )}
 
         {/* Visual workflow navigation */}
-        <PortalModuleCards items={workflowSections} activeId={activeTab} onSelect={setActiveTab} tone="indigo" />
+        <PortalModuleCards items={workflowSections} activeId={activeTab} onSelect={handleWorkflowTabSelect} tone="indigo" />
 
+        <div id="workflow-module-content" className="scroll-mt-24">
         {/* TAB 1: CANDIDATE SELECTION PIPELINE */}
         {activeTab === 'pipeline' && (
-          <div className="space-y-6">
+          <div id="workflow-tab-pipeline" className="space-y-6 scroll-mt-24">
             
             {/* Filter & Search Bar */}
             <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
@@ -942,6 +953,7 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
             )}
           </div>
         )}
+        </div>
 
       </div>
 

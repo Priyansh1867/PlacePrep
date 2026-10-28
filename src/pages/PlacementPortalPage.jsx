@@ -779,7 +779,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       </div>
 
       {/* 3. TAB CONTENTS CORRESPONDING TO THE 9 MATRIX FEATURES */}
-      <div id="placement-feature-content" className="max-w-7xl mx-auto scroll-mt-6">
+      <div id="placement-feature-content" className="max-w-7xl mx-auto scroll-mt-24">
         
         {/* ========================================================================= */}
         {/* FEATURE 1: UPCOMING DRIVES                                                */}

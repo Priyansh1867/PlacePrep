@@ -9,7 +9,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test src/tests/attendance.test.js src/tests/crtAttendance.test.js src/tests/bulkImportAndExport.test.js src/tests/curriculumGovernance.test.js src/tests/dsaStudio.test.js"
+    "test": "node --test src/tests/attendance.test.js src/tests/crtAttendance.test.js src/tests/bulkImportAndExport.test.js src/tests/curriculumGovernance.test.js src/tests/dsaStudio.test.js src/tests/facultyMonitoring.test.js"
   },
   "dependencies": {
     "autoprefixer": "^10.6.1",

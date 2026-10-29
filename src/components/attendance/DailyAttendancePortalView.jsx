@@ -310,14 +310,11 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
 
   // --- Faculty Dynamic QR Session Controls ---
   const handleStartFacultyQr = async () => {
-    if (!currentSessionId) {
-      setToastMsg('Please wait for the class session to load.');
-      return;
-    }
+    const targetSessionId = currentSessionId || 1;
     setIsStartingQr(true);
     try {
       const res = await StudentAttendanceApi.startQrAttendance({
-        sessionId: currentSessionId,
+        sessionId: targetSessionId,
         durationMinutes: facultyQrDuration,
         geofenceRequired: facultyQrGeofenceRequired,
         facultyEmail: currentUser?.email || 'teacher@placeprep.com'
@@ -329,47 +326,54 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
       setFacultyQrTotalScans(res.totalScans || 0);
 
       if (res.qrToken) {
-        const url = await QRCode.toDataURL(res.qrToken, {
-          width: 320,
-          margin: 2,
-          color: { dark: '#0f172a', light: '#ffffff' }
-        });
-        setFacultyQrDataUrl(url);
+        try {
+          const url = await QRCode.toDataURL(res.qrToken, {
+            width: 320,
+            margin: 2,
+            color: { dark: '#0f172a', light: '#ffffff' }
+          });
+          setFacultyQrDataUrl(url);
+        } catch (e) {
+          console.warn('QR render error:', e);
+        }
       }
-      setToastMsg('⚡ Attendance turned ON! Dynamic QR code is active on screen.');
+      showToast('⚡ Attendance turned ON! Dynamic QR code is active on screen.', 'success');
     } catch (err) {
-      setToastMsg('Failed to turn on QR attendance: ' + (err.message || 'Error'));
+      console.error('Failed to turn on QR attendance:', err);
+      showToast('Failed to turn on QR attendance: ' + (err.message || 'Error'), 'error');
     } finally {
       setIsStartingQr(false);
     }
   };
 
   const handleStopFacultyQr = async () => {
-    if (!currentSessionId) return;
+    const targetSessionId = currentSessionId || 1;
     setIsStoppingQr(true);
     try {
       const res = await StudentAttendanceApi.stopQrAttendance({
-        sessionId: currentSessionId,
+        sessionId: targetSessionId,
         facultyEmail: currentUser?.email || 'teacher@placeprep.com'
       });
       setFacultyQrActive(false);
       setFacultyQrToken(null);
       setFacultyQrDataUrl(null);
       setFacultyQrRemainingSeconds(0);
-      setToastMsg(res.message || 'Attendance turned OFF.');
-      // Refresh class roster to show updated records
-      if (currentSessionId) {
-        const savedRecs = await fetchSessionRecords(currentSessionId);
-        const updatedMap = { ...attendanceRecords };
-        savedRecs.forEach(r => {
-          if (r.studentId) {
-            updatedMap[r.studentId] = { status: r.status || 'UNMARKED', remarks: r.remarks || '' };
-          }
-        });
-        setAttendanceRecords(updatedMap);
+      showToast(res?.message || 'Attendance turned OFF.', 'info');
+
+      if (targetSessionId) {
+        try {
+          const savedRecs = await fetchSessionRecords(targetSessionId);
+          const updatedMap = { ...attendanceRecords };
+          savedRecs.forEach(r => {
+            if (r.studentId) {
+              updatedMap[r.studentId] = { status: r.status || 'UNMARKED', remarks: r.remarks || '' };
+            }
+          });
+          setAttendanceRecords(updatedMap);
+        } catch {}
       }
     } catch (err) {
-      setToastMsg('Failed to stop attendance: ' + (err.message || 'Error'));
+      showToast('Failed to stop attendance: ' + (err.message || 'Error'), 'error');
     } finally {
       setIsStoppingQr(false);
     }
@@ -876,19 +880,22 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   return (
     <div className="space-y-6 pb-12">
       {/* Toast Notification Banner */}
-      {toastMsg && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-semibold transition-all transform animate-bounce ${
-          toastMsg.type === 'error'
-            ? 'bg-rose-900 text-rose-100 border border-rose-700'
-            : toastMsg.type === 'info'
-            ? 'bg-sky-900 text-sky-100 border border-sky-700'
-            : 'bg-emerald-900 text-emerald-100 border border-emerald-700'
-        }`}>
-          {toastMsg.type === 'error' ? <AlertCircle className="w-5 h-5 text-rose-300" /> : <CheckCircle2 className="w-5 h-5 text-emerald-300" />}
-          <span>{toastMsg.message}</span>
-        </div>
-      )}
-
+      {toastMsg && (() => {
+        const msg = typeof toastMsg === 'string' ? toastMsg : (toastMsg.message || 'Notification');
+        const type = typeof toastMsg === 'string' ? 'info' : (toastMsg.type || 'info');
+        return (
+          <div className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-semibold transition-all transform animate-bounce ${
+            type === 'error'
+              ? 'bg-rose-900 text-rose-100 border border-rose-700'
+              : type === 'info'
+              ? 'bg-sky-900 text-sky-100 border border-sky-700'
+              : 'bg-emerald-900 text-emerald-100 border border-emerald-700'
+          }`}>
+            {type === 'error' ? <AlertCircle className="w-5 h-5 text-rose-300" /> : <CheckCircle2 className="w-5 h-5 text-emerald-300" />}
+            <span>{msg}</span>
+          </div>
+        );
+      })()}
       {/* Dirty-Check Warning Modal */}
       {showDirtyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">

@@ -568,10 +568,15 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
             <div className="p-3 border-t border-slate-100 bg-slate-50/50">
               <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-1">
                 <span>Profile Readiness</span>
-                <span className="text-emerald-600 font-bold">96%</span>
+                <span className={completionInfo.isComplete ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                  {completionInfo.percentage}%
+                </span>
               </div>
               <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full w-[96%]" />
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${completionInfo.isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${completionInfo.percentage}%` }}
+                />
               </div>
             </div>
           </div>

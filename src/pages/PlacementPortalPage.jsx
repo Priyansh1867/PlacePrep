@@ -74,6 +74,7 @@ import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import ReportsExporterPage from './ReportsExporterPage';
 import UserProfileModal from '../components/profile/UserProfileModal';
+import placementWorkflowHero from '../assets/images/placement-workflow-hero.png';
 
 // Standard Role Metadata for labels
 const ROLE_METAS = {
@@ -526,7 +527,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 1. TOP HEADER BANNER WITH RIGHT-HAND PROFILE CARD (Dark + Light + Enhanced Triad Palette) */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-br from-[#070B19] via-[#0F172A] to-[#0A1828] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden backdrop-blur-xl">
+        <div className="dashboard-hero dashboard-hero--placement bg-gradient-to-br from-[#070B19] via-[#0F172A] to-[#0A1828] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative backdrop-blur-xl">
+          <img
+            src={placementWorkflowHero}
+            alt=""
+            className="dashboard-hero__art"
+          />
+          <span className="dashboard-hero__wash" />
           {/* Tri-Color Ambient Lighting Orbs */}
           <div className="absolute -right-16 -top-16 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute right-1/4 -bottom-16 w-72 h-72 bg-amber-500/12 rounded-full blur-3xl pointer-events-none" />
@@ -683,7 +690,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
           </div>
 
           {/* Quick Metrics Bar Adapting to Active User Role (Triad Bento Mini-Cards) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-6 pt-5 border-t border-white/10 text-xs">
+          <div className="pp-hero-stats relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-6 pt-5 border-t border-white/10 text-xs">
             {isStudent ? (
               <>
                 <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export default function Select({
   label,
@@ -13,7 +13,9 @@ export default function Select({
   required = false,
   ...props
 }) {
-  const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const selectId = id || generatedId;
+  const feedbackId = `${selectId}-feedback`;
 
   return (
     <div className="w-full space-y-1.5 text-left">
@@ -24,11 +26,13 @@ export default function Select({
       )}
       <select
         id={selectId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || helperText ? feedbackId : undefined}
         value={value}
         onChange={onChange}
         disabled={disabled}
         required={required}
-        className={`w-full rounded-xl border bg-white px-3.5 py-2 text-xs sm:text-sm text-[#0F172A] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+        className={`pp-field w-full rounded-xl border bg-white px-3.5 py-2 text-xs sm:text-sm text-[#0F172A] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:bg-slate-50 disabled:cursor-not-allowed ${
           error
             ? 'border-[#DC2626] focus:ring-red-400'
             : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-500'
@@ -45,8 +49,8 @@ export default function Select({
           );
         })}
       </select>
-      {error && <p className="text-[11px] font-medium text-[#DC2626]">{error}</p>}
-      {!error && helperText && <p className="text-[11px] text-[#64748B]">{helperText}</p>}
+      {error && <p id={feedbackId} role="alert" className="text-[11px] font-medium text-[#DC2626]">{error}</p>}
+      {!error && helperText && <p id={feedbackId} className="text-[11px] text-[#64748B]">{helperText}</p>}
     </div>
   );
 }

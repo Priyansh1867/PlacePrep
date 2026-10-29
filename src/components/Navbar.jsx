@@ -107,7 +107,7 @@ export default function Navbar({
   });
 
   return (
-    <header className="sticky top-3 z-50 px-3 sm:px-6 max-w-6xl mx-auto w-full transition-all">
+    <header className="pp-navbar sticky top-3 z-50 px-3 sm:px-6 max-w-6xl mx-auto w-full transition-all">
       {/* Remii-Style Floating Glass Island Navbar */}
       <div className="rounded-2xl border border-black/[0.07] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(17,20,57,0.06),0_2px_8px_rgba(17,20,57,0.03)] px-4 py-2.5 flex items-center justify-between">
         

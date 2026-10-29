@@ -84,7 +84,7 @@ export default function Sidebar({
   }
 
   return (
-    <aside
+    <aside data-design="sidebar"
       className={`hidden lg:flex flex-col bg-white border-r border-slate-200 transition-all duration-300 sticky top-0 h-screen select-none z-30 shrink-0 ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}

@@ -21,6 +21,7 @@ const CARD_IMAGE_MAP = {
   'feedback-loop': cardFeedback,
   'off-campus': cardOffcampus,
   'push-notifications': cardNotifications,
+  'faculty-monitoring': cardReports,
 
   // Institute Portal mappings
   'student-data': cardShortlists,

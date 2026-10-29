@@ -31,11 +31,12 @@ import {
   Plus,
   Briefcase,
   FileSpreadsheet,
+  RefreshCw,
+  ShieldCheck,
   LogOut,
   UserCheck,
   Compass,
-  Radio,
-  RefreshCw
+  Radio
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -54,12 +55,14 @@ import {
   broadcastPushNotification
 } from '../services/storage';
 import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi } from '../services/api';
+import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
 import CrtAttendancePortalView from '../components/attendance/CrtAttendancePortalView';
 import BulkImportModal from '../components/BulkImportModal';
 import ReportsExporterPage from './ReportsExporterPage';
 import CurriculumGovernanceView from '../components/curriculum/CurriculumGovernanceView';
+import FacultyOperationsMonitoringView from '../components/monitoring/FacultyOperationsMonitoringView';
 import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
 import UserProfileModal from '../components/profile/UserProfileModal';
@@ -99,6 +102,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [hackathonSearchQuery, setHackathonSearchQuery] = useState('');
+  const [internshipSearchQuery, setInternshipSearchQuery] = useState('');
+  const [offCampusSearchQuery, setOffCampusSearchQuery] = useState('');
   const [questionCategoryFilter, setQuestionCategoryFilter] = useState('All');
 
   // Resume Simulator State
@@ -109,6 +115,19 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   // Top-Right Profile & Backend Connection States
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
+
+  // Reset scroll to top on tab change so SearchBar is directly visible
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, [activeTab]);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [databaseUsers, setDatabaseUsers] = useState([]);
 
@@ -182,16 +201,6 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     onNavigate('auth-portal');
   };
 
-  // Smooth scroll handler on card selection
-  const handleCardSelect = (tabId) => {
-    setActiveTab(tabId);
-    setTimeout(() => {
-      const target = document.getElementById('institute-feature-content');
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 60);
-  };
 
   // Student Registration Modal Form State
   const [isRegisterStudentModalOpen, setIsRegisterStudentModalOpen] = useState(false);
@@ -269,19 +278,20 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   };
 
   const navTabs = [
-    { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'hod'] },
+    { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
-    { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'hod'] },
-    { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}` },
-    { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
+    { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
+    { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
+    { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}`, excludedRoles: ['teacher', 'faculty'] },
+    { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
     { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage ?? 80}%` },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus?.atsScore || 85}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
-    { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'hod'] },
-    { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'hod'] },
-    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'hod'] }
+    { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'faculty', 'hod'] },
+    { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'faculty', 'hod'] },
+    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'faculty', 'hod'] }
   ];
 
   const userRole = currentUser?.role || 'student';
@@ -302,6 +312,17 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       setActiveTab(visibleNavTabs[0].id);
     }
   }, [userRole, visibleNavTabs, activeTab]);
+
+  // Smooth scroll handler on module card selection
+  const handleCardSelect = (tabId) => {
+    setActiveTab(tabId);
+    setTimeout(() => {
+      const target = document.getElementById(`institute-tab-${tabId}`) || document.getElementById('institute-module-content');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
 
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
@@ -512,11 +533,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       </div>
 
       {/* 4. TAB CONTENTS WITH SCROLL TARGET ANCHOR */}
-      <div id="institute-feature-content" className="max-w-7xl mx-auto scroll-mt-6">
+      <div id="institute-module-content" className="max-w-7xl mx-auto scroll-mt-24">
         
         {/* TAB 1: STUDENT DATA */}
         {activeTab === 'student-data' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div id="institute-tab-student-data" className="scroll-mt-24">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Student Profile Card */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <div className="flex items-center gap-4 mb-6">
@@ -701,11 +723,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
             </div>
           </div>
+          </div>
         )}
 
         {/* TAB 2: UPCOMING DRIVES (STUDENTS) */}
         {activeTab === 'upcoming-drives' && (
-          <div className="space-y-6">
+          <div id="institute-tab-upcoming-drives" className="space-y-6 scroll-mt-24">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200">
               <div>
                 <h3 className="font-bold text-slate-900 text-lg">Upcoming Campus Recruitment Drives</h3>
@@ -772,7 +795,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 3: QUESTION BANK (STUDENTS) */}
         {activeTab === 'question-bank' && (
-          <div className="space-y-6">
+          <div id="institute-tab-question-bank" className="space-y-6 scroll-mt-24">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <h3 className="font-bold text-slate-900 text-lg">Student Technical & Aptitude Question Bank</h3>
@@ -780,14 +803,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               </div>
 
               <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
+                <div className="w-full md:w-72">
+                  <SearchBar
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search JVM, SQL, Streams..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
+                    onClear={() => setSearchQuery('')}
+                    placeholder="Search questions by topic or keyword..."
+                    size="sm"
                   />
                 </div>
                 {currentUser.role === 'student' && (
@@ -860,7 +882,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
-          <div className="space-y-6">
+          <div id="institute-tab-crt-attendance" className="space-y-6 scroll-mt-24">
             {userRole === 'student' && (
               <StudentGpsAttendanceWidget sessionTitle="Campus Recruitment Training (CRT)" sessionType="CRT" />
             )}
@@ -870,7 +892,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 5: CLASS ATTENDANCE (Teacher & HOD Daily Class Attendance Portal) */}
         {activeTab === 'class-attendance' && (
-          <div className="space-y-6">
+          <div id="institute-tab-class-attendance" className="space-y-6 scroll-mt-24">
             {userRole === 'student' && (
               <StudentGpsAttendanceWidget sessionTitle="Regular Classroom Academic Attendance" sessionType="CLASS" />
             )}
@@ -880,7 +902,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 6: RESUME STATUS (ATS) */}
         {activeTab === 'resume-ats' && (
-          <div className="space-y-6">
+          <div id="institute-tab-resume-ats" className="space-y-6 scroll-mt-24">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
                 <div>
@@ -976,7 +998,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 7: ROUND DETAILS (STUDENT LIVE TRACKER) */}
         {activeTab === 'round-details' && (
-          <div className="space-y-6">
+          <div id="institute-tab-round-details" className="space-y-6 scroll-mt-24">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <h3 className="text-xl font-black text-slate-900 mb-1">Live Round Details & Interview Stage Tracker</h3>
               <p className="text-xs text-slate-500 mb-6">Track your real-time shortlisting status across active campus recruitment rounds.</p>
@@ -1044,7 +1066,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 8: UPCOMING HACKATHONS */}
         {activeTab === 'hackathons' && (
-          <div className="space-y-6">
+          <div id="institute-tab-hackathons" className="space-y-6 scroll-mt-24">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <h3 className="text-xl font-black text-slate-900 mb-1">National & Campus Hackathons</h3>
               <p className="text-xs text-slate-500 mb-6">Build real-world projects, win cash prizes, and secure direct PPI/PPO interview calls.</p>
@@ -1093,7 +1115,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 9: UPCOMING INTERNSHIPS */}
         {activeTab === 'internships' && (
-          <div className="space-y-6">
+          <div id="institute-tab-internships" className="space-y-6 scroll-mt-24">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <h3 className="text-xl font-black text-slate-900 mb-1">Corporate Summer & Winter Internships</h3>
               <p className="text-xs text-slate-500 mb-6">Gain industry experience with high Pre-Placement Offer (PPO) conversion rates.</p>
@@ -1146,7 +1168,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB 10: OFF-CAMPUS COMPANIES (ONLY FOR FINAL YEAR STUDENTS) */}
         {activeTab === 'off-campus' && (
-          <div className="space-y-6">
+          <div id="institute-tab-off-campus" className="space-y-6 scroll-mt-24">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
@@ -1226,12 +1248,23 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
         {/* TAB: REPORTS EXPORTER */}
         {activeTab === 'reports-exporter' && (
-          <ReportsExporterPage onNavigate={onNavigate} />
+          <div id="institute-tab-reports-exporter" className="scroll-mt-24">
+            <ReportsExporterPage onNavigate={onNavigate} />
+          </div>
         )}
 
         {/* TAB: CURRICULUM & SYLLABUS GOVERNANCE (HOD ONLY) */}
         {activeTab === 'curriculum-governance' && (
-          <CurriculumGovernanceView onNavigate={onNavigate} />
+          <div id="institute-tab-curriculum-governance" className="scroll-mt-24">
+            <CurriculumGovernanceView onNavigate={onNavigate} />
+          </div>
+        )}
+
+        {/* TAB: FACULTY OPERATIONS MONITORING (HOD ONLY) */}
+        {activeTab === 'faculty-monitoring' && (
+          <div id="institute-tab-faculty-monitoring" className="scroll-mt-24">
+            <FacultyOperationsMonitoringView onNavigate={onNavigate} />
+          </div>
         )}
 
       </div>

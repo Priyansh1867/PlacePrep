@@ -24,6 +24,7 @@ import { QuestionApi, UserApi } from '../services/api';
 import { getInterviewQuestions, getRevisionList, toggleRevisionQuestion } from '../services/storage';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import SearchBar from '../components/ui/SearchBar';
 
 const CORE_SUBJECTS = [
   {
@@ -128,26 +129,28 @@ export default function CoreCsPage({ onSelectQuestion, onNavigate }) {
   }, []);
 
   // Filter questions for active subject
-  const subjectQuestions = questions.filter(q => {
+  const allSubjectQuestions = questions.filter(q => {
     const cat = (q.category || '').toLowerCase();
     const text = (q.questionText || q.question || '').toLowerCase();
-    let matchesSubject = false;
 
     if (activeSubjectId === 'dbms') {
-      matchesSubject = cat.includes('dbms') || cat.includes('database') || cat.includes('sql') || text.includes('sql') || text.includes('join');
+      return cat.includes('dbms') || cat.includes('database') || cat.includes('sql') || text.includes('sql') || text.includes('join');
     } else if (activeSubjectId === 'oop') {
-      matchesSubject = cat.includes('oop') || cat.includes('object') || cat.includes('java') || text.includes('polymorphism') || text.includes('interface');
+      return cat.includes('oop') || cat.includes('object') || cat.includes('java') || text.includes('polymorphism') || text.includes('interface');
     } else if (activeSubjectId === 'os') {
-      matchesSubject = cat.includes('operating') || cat.includes('os') || text.includes('thread') || text.includes('process') || text.includes('deadlock') || text.includes('paging');
+      return cat.includes('operating') || cat.includes('os') || text.includes('thread') || text.includes('process') || text.includes('deadlock') || text.includes('paging');
     } else if (activeSubjectId === 'cn') {
-      matchesSubject = cat.includes('network') || cat.includes('cn') || text.includes('tcp') || text.includes('osi') || text.includes('http');
+      return cat.includes('network') || cat.includes('cn') || text.includes('tcp') || text.includes('osi') || text.includes('http');
     }
+    return true;
+  });
 
-    const matchesSearch = !searchQuery.trim() || 
-      text.includes(searchQuery.toLowerCase()) || 
-      cat.includes(searchQuery.toLowerCase());
-
-    return matchesSubject && matchesSearch;
+  const subjectQuestions = allSubjectQuestions.filter(q => {
+    const cat = (q.category || '').toLowerCase();
+    const text = (q.questionText || q.question || '').toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return text.includes(query) || cat.includes(query);
   });
 
   const handleToggleRevision = async (questionId) => {
@@ -301,14 +304,16 @@ export default function CoreCsPage({ onSelectQuestion, onNavigate }) {
                 </p>
               </div>
 
-              <div className="relative w-full sm:w-60">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
+              <div className="w-full sm:w-72">
+                <SearchBar
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter questions..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onClear={() => setSearchQuery('')}
+                  placeholder={`Search ${activeSubject.shortName} questions...`}
+                  resultCount={subjectQuestions.length}
+                  totalCount={allSubjectQuestions.length}
+                  size="sm"
+                  ariaLabel={`Search ${activeSubject.shortName} questions`}
                 />
               </div>
             </div>
@@ -324,10 +329,16 @@ export default function CoreCsPage({ onSelectQuestion, onNavigate }) {
                 ))}
               </div>
             ) : subjectQuestions.length === 0 ? (
-              <div className="text-center py-10 space-y-2">
+              <div className="text-center py-10 space-y-3 bg-slate-50 rounded-xl border border-slate-200">
                 <HelpCircle className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-xs font-bold text-slate-700">No questions found matching search.</p>
+                <p className="text-xs font-bold text-slate-700">No questions found matching "{searchQuery.trim()}".</p>
                 <p className="text-[11px] text-slate-400">Clear search filter to display all {activeSubject.shortName} questions.</p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  Clear Search
+                </button>
               </div>
             ) : (
               <div className="space-y-3 pt-1">

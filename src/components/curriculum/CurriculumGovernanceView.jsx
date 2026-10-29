@@ -43,6 +43,7 @@ import {
 } from '../../services/curriculumGovernanceService.js';
 import { BRANCH_SEMESTER_SUBJECTS } from '../../data/initialAcademicRecords.js';
 import { getCurrentUser } from '../../services/storage.js';
+import SearchBar from '../ui/SearchBar';
 
 export default function CurriculumGovernanceView({ onNavigate }) {
   const currentUser = getCurrentUser();
@@ -64,6 +65,7 @@ export default function CurriculumGovernanceView({ onNavigate }) {
   const [semesterFilter, setSemesterFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [labSearchQuery, setLabSearchQuery] = useState('');
   const [expandedTargetId, setExpandedTargetId] = useState(null);
 
   // Modals
@@ -120,6 +122,16 @@ export default function CurriculumGovernanceView({ onNavigate }) {
       status: statusFilter === 'ALL' ? undefined : statusFilter
     });
   }, [selectedDept, semesterFilter, statusFilter, dataVersion]);
+
+  const filteredLabs = useMemo(() => {
+    const q = (labSearchQuery || '').trim().toLowerCase();
+    if (!q) return labs;
+    return labs.filter(l =>
+      (l.labName || '').toLowerCase().includes(q) ||
+      (l.subjectCode || '').toLowerCase().includes(q) ||
+      (l.assignedFaculty || '').toLowerCase().includes(q)
+    );
+  }, [labs, labSearchQuery]);
 
   const assessments = useMemo(() => {
     return getInternalAssessments({
@@ -531,14 +543,14 @@ export default function CurriculumGovernanceView({ onNavigate }) {
               </select>
             </div>
 
-            <div className="relative min-w-[240px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
+            <div className="w-full sm:w-72">
+              <SearchBar
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onClear={() => setSearchQuery('')}
                 placeholder="Search subject code, title or faculty..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                size="sm"
+                resultCount={targets.length}
               />
             </div>
           </div>
@@ -738,13 +750,35 @@ export default function CurriculumGovernanceView({ onNavigate }) {
                   Track weekly practical sessions held, code execution checks, and lab journals in {selectedDept}
                 </p>
               </div>
-              <div className="text-xs font-bold text-slate-400">
-                14 Mandatory Practical Sessions per Course
+              <div className="w-full sm:w-72">
+                <SearchBar
+                  value={labSearchQuery}
+                  onChange={(e) => setLabSearchQuery(e.target.value)}
+                  onClear={() => setLabSearchQuery('')}
+                  placeholder="Search lab name, subject, faculty..."
+                  size="sm"
+                  resultCount={filteredLabs.length}
+                  totalCount={labs.length}
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {labs.map(lab => {
+            {filteredLabs.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-2">
+                <p className="font-semibold text-slate-700">No laboratory courses match the search query.</p>
+                {labSearchQuery.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setLabSearchQuery('')}
+                    className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-xs hover:bg-indigo-100 transition cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredLabs.map(lab => {
                 const statusBadge = getStatusBadge(lab.status);
                 return (
                   <div key={lab.id} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-300 transition shadow-xs flex flex-col justify-between">
@@ -809,6 +843,7 @@ export default function CurriculumGovernanceView({ onNavigate }) {
                 );
               })}
             </div>
+            )}
           </div>
         </div>
       )}

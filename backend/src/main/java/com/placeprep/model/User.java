@@ -85,4 +85,7 @@ public class User {
     private Double twelfthPercentage = 86.0;
 
     private Integer activeBacklogs = 0;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String fullProfileJson;
 }

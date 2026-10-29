@@ -28,9 +28,13 @@ import {
   AlertCircle,
   Search,
   Filter,
-  CheckSquare
+  CheckSquare,
+  QrCode,
+  Scan,
+  Zap
 } from 'lucide-react';
 import { StudentAttendanceApi } from '../../services/api';
+import jsQR from 'jsqr';
 import { getCurrentUser, getFullStudentProfile } from '../../services/storage';
 
 export default function StudentGpsAttendanceWidget({
@@ -87,6 +91,12 @@ export default function StudentGpsAttendanceWidget({
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const isScanningRef = useRef(false);
+  const qrAnimFrameRef = useRef(null);
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [qrError, setQrError] = useState('');
+  const [manualQrInput, setManualQrInput] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   // Load Enrolled Subjects & Geofence Status on mount
   useEffect(() => {
@@ -148,15 +158,110 @@ export default function StudentGpsAttendanceWidget({
     };
   }, []);
 
+
+
   const stopCamera = () => {
+    isScanningRef.current = false;
+    if (qrAnimFrameRef.current) {
+      cancelAnimationFrame(qrAnimFrameRef.current);
+      qrAnimFrameRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     setCameraActive(false);
+    setIsScanningQr(false);
   };
 
   const startCamera = async () => {
+    setQrError('');
+    setIsSubmitting(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+      setIsScanningQr(true);
+      isScanningRef.current = true;
+      runQrScanLoop();
+    } catch (err) {
+      console.warn('QR camera error:', err);
+      setQrError('Camera access unavailable. You can enter the unique session code manually below.');
+      setShowManualInput(true);
+    }
+  };
+
+  const runQrScanLoop = () => {
+    if (!isScanningRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (video && video.readyState >= 2 && canvas) {
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (code && code.data && code.data.trim().length > 0) {
+          isScanningRef.current = false;
+          processQrSubmission(code.data.trim());
+          return;
+        }
+      }
+    }
+    qrAnimFrameRef.current = requestAnimationFrame(runQrScanLoop);
+  };
+
+  const processQrSubmission = async (qrToken) => {
+    setIsSubmitting(true);
+    setQrError('');
+    try {
+      const payload = {
+        sessionId: activeLecture?.sessionId || 1,
+        qrToken: qrToken,
+        studentEmail: currentUser.email || 'priyansh.jain@example.edu',
+        latitude: gpsResult.studentLat,
+        longitude: gpsResult.studentLon,
+        gpsAccuracy: gpsResult.gpsAccuracy
+      };
+
+      const record = await StudentAttendanceApi.scanQrAttendance(payload);
+      stopCamera();
+      setAttendanceResult(record);
+      setMarkingStep(3);
+
+      loadSubjectsData();
+      if (selectedSubjectCode) {
+        loadSubjectDetails(selectedSubjectCode);
+      }
+
+      if (onAttendanceMarked) onAttendanceMarked(record);
+      window.dispatchEvent(new CustomEvent('student-attendance-marked', { detail: record }));
+    } catch (err) {
+      setQrError(err.message || 'QR code verification failed. Code may have rotated. Please scan the current code.');
+      setTimeout(() => {
+        if (isScanningQr || !isScanningRef.current) {
+          isScanningRef.current = true;
+          runQrScanLoop();
+        }
+      }, 1800);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const startCameraOriginal = async () => {
     setFaceError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -803,7 +908,7 @@ export default function StudentGpsAttendanceWidget({
               }`}
             >
               {markingStep === 3 ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Camera className="w-3.5 h-3.5" />}
-              <span>2. Photo Face Match</span>
+              <span>2. Dynamic QR Scan</span>
             </div>
 
             <ArrowRight className="w-3.5 h-3.5 text-slate-300" />

@@ -327,4 +327,97 @@ public class StudentAttendanceController {
         return ResponseEntity.ok(history);
     }
 
+
+    /**
+     * POST /api/student/attendance/qr/start
+     * Faculty starts live attendance with dynamic QR code for a class session.
+     */
+    @PostMapping("/qr/start")
+    public ResponseEntity<?> startQrAttendance(@RequestBody Map<String, Object> body, Principal principal) {
+        try {
+            Long sessionId = Long.parseLong(body.get("sessionId").toString());
+            Integer durationMinutes = body.get("durationMinutes") != null ? Integer.parseInt(body.get("durationMinutes").toString()) : 10;
+            Boolean geofenceRequired = body.get("geofenceRequired") != null ? Boolean.parseBoolean(body.get("geofenceRequired").toString()) : true;
+            String facultyEmail = principal != null ? principal.getName() : (String) body.getOrDefault("facultyEmail", "teacher@placeprep.com");
+
+            Map<String, Object> res = attendanceService.startQrAttendanceSession(sessionId, facultyEmail, durationMinutes, geofenceRequired);
+            return ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", "Failed to start QR attendance: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * GET /api/student/attendance/qr/status?sessionId=X
+     * Returns real-time status of QR attendance session, remaining timer, current QR token, and live student scan count.
+     */
+    @GetMapping("/qr/status")
+    public ResponseEntity<?> getQrAttendanceStatus(@RequestParam Long sessionId) {
+        try {
+            Map<String, Object> status = attendanceService.getQrSessionStatus(sessionId);
+            return ResponseEntity.ok(status);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", "Failed to get QR status: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/student/attendance/qr/stop
+     * Faculty manually turns attendance OFF for a class session.
+     */
+    @PostMapping("/qr/stop")
+    public ResponseEntity<?> stopQrAttendance(@RequestBody Map<String, Object> body, Principal principal) {
+        try {
+            Long sessionId = Long.parseLong(body.get("sessionId").toString());
+            String facultyEmail = principal != null ? principal.getName() : (String) body.getOrDefault("facultyEmail", "teacher@placeprep.com");
+
+            Map<String, Object> res = attendanceService.stopQrAttendanceSession(sessionId, facultyEmail);
+            return ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", "Failed to stop QR attendance: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/student/attendance/qr/scan
+     * Student submits scanned QR code + GPS coordinates (100m Geofencing).
+     * On success, marks student PRESENT and immediately rotates QR token!
+     */
+    @PostMapping("/qr/scan")
+    public ResponseEntity<?> scanQrAttendance(@RequestBody Map<String, Object> body, Principal principal) {
+        try {
+            Long sessionId = Long.parseLong(body.get("sessionId").toString());
+            String qrToken = (String) body.get("qrToken");
+            String studentEmail = principal != null ? principal.getName() : (String) body.getOrDefault("studentEmail", "priyansh.jain@example.edu");
+            Double lat = body.get("latitude") != null ? Double.parseDouble(body.get("latitude").toString()) : null;
+            Double lon = body.get("longitude") != null ? Double.parseDouble(body.get("longitude").toString()) : null;
+            Double accuracy = body.get("gpsAccuracy") != null ? Double.parseDouble(body.get("gpsAccuracy").toString()) : null;
+
+            Map<String, Object> res = attendanceService.markStudentLectureAttendanceViaQr(
+                    sessionId, studentEmail, qrToken, lat, lon, accuracy
+            );
+            return ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", "Failed to process QR scan: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * GET /api/student/attendance/qr/active-sessions
+     * Returns list of all lecture sessions currently open with active QR attendance.
+     */
+    @GetMapping("/qr/active-sessions")
+    public ResponseEntity<?> getActiveQrSessions() {
+        return ResponseEntity.ok(attendanceService.getActiveQrSessions());
+    }
 }

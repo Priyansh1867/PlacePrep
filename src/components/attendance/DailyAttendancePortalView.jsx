@@ -27,7 +27,14 @@ import {
   MapPin,
   ScanFace,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  QrCode,
+  Scan,
+  Timer,
+  Play,
+  Square,
+  Radio,
+  Zap
 } from 'lucide-react';
 import {
   SHORTAGE_THRESHOLD_PERCENT,
@@ -46,6 +53,8 @@ import {
 import { getCurrentUser, setCurrentUser, setPortalRole } from '../../services/storage';
 import { AuthApi, StudentAttendanceApi } from '../../services/api';
 import SearchBar from '../ui/SearchBar';
+import QRCode from 'qrcode';
+import jsQR from 'jsqr';
 
 export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current logged in user & role
@@ -99,6 +108,27 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   const [viewingSubjectLectures, setViewingSubjectLectures] = useState(null);
   const [subjectLecturesList, setSubjectLecturesList] = useState([]);
   const [loadingLectures, setLoadingLectures] = useState(false);
+
+  // --- Dynamic QR Attendance & Real-Time Faculty Controls ---
+  const [facultyQrActive, setFacultyQrActive] = useState(false);
+  const [facultyQrToken, setFacultyQrToken] = useState(null);
+  const [facultyQrDataUrl, setFacultyQrDataUrl] = useState(null);
+  const [facultyQrRemainingSeconds, setFacultyQrRemainingSeconds] = useState(0);
+  const [facultyQrDuration, setFacultyQrDuration] = useState(10); // minutes
+  const [facultyQrGeofenceRequired, setFacultyQrGeofenceRequired] = useState(true);
+  const [facultyQrTotalScans, setFacultyQrTotalScans] = useState(0);
+  const [facultyQrRecentScans, setFacultyQrRecentScans] = useState([]);
+  const [isStartingQr, setIsStartingQr] = useState(false);
+  const [isStoppingQr, setIsStoppingQr] = useState(false);
+
+  // Student QR Scanner State
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [isSubmittingQr, setIsSubmittingQr] = useState(false);
+  const [qrError, setQrError] = useState('');
+  const [manualQrInput, setManualQrInput] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
+  const isScanningRef = useRef(false);
+  const qrAnimFrameRef = useRef(null);
 
   const modalVideoRef = useRef(null);
   const modalCanvasRef = useRef(null);
@@ -178,32 +208,238 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     };
   }, [displaySubjects]);
 
+  // Stop Student QR Camera & Scanner
   const stopModalCamera = () => {
+    isScanningRef.current = false;
+    if (qrAnimFrameRef.current) {
+      cancelAnimationFrame(qrAnimFrameRef.current);
+      qrAnimFrameRef.current = null;
+    }
     if (modalStreamRef.current) {
       modalStreamRef.current.getTracks().forEach((track) => track.stop());
       modalStreamRef.current = null;
     }
     setCameraActive(false);
+    setIsScanningQr(false);
   };
 
-  const startModalCamera = async () => {
-    setFaceError('');
+  // Start Student QR Camera & Scanner
+  const startModalQrScanner = async () => {
+    setQrError('');
+    setIsSubmittingQr(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
       modalStreamRef.current = stream;
       if (modalVideoRef.current) {
         modalVideoRef.current.srcObject = stream;
-        modalVideoRef.current.play();
+        modalVideoRef.current.setAttribute('playsinline', 'true');
+        await modalVideoRef.current.play();
       }
       setCameraActive(true);
+      setIsScanningQr(true);
+      isScanningRef.current = true;
+      runQrScanLoop();
     } catch (err) {
-      console.warn('Camera stream error:', err);
-      setFaceError('Unable to access webcam. Please allow camera permissions in browser settings.');
+      console.warn('Camera stream error for QR scanner:', err);
+      setQrError('Camera access unavailable. You can enter the unique session code manually below.');
+      setShowManualInput(true);
     }
   };
+
+  // Continuous Frame-by-Frame QR Scanner Loop using jsQR
+  const runQrScanLoop = () => {
+    if (!isScanningRef.current) return;
+    const video = modalVideoRef.current;
+    const canvas = modalCanvasRef.current;
+    if (video && video.readyState >= 2 && canvas) {
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (code && code.data && code.data.trim().length > 0) {
+          isScanningRef.current = false;
+          handleProcessQrScan(code.data.trim());
+          return;
+        }
+      }
+    }
+    qrAnimFrameRef.current = requestAnimationFrame(runQrScanLoop);
+  };
+
+  // Process Student Scanned QR Code Token with Server
+  const handleProcessQrScan = async (qrToken) => {
+    setIsSubmittingQr(true);
+    setQrError('');
+    try {
+      const payload = {
+        sessionId: markingLectureSession?.sessionId || currentSessionId || 1,
+        qrToken: qrToken,
+        studentEmail: currentUser?.email || 'priyansh.jain@example.edu',
+        latitude: gpsResult?.studentLat,
+        longitude: gpsResult?.studentLon,
+        gpsAccuracy: gpsResult?.gpsAccuracy
+      };
+
+      const record = await StudentAttendanceApi.scanQrAttendance(payload);
+      stopModalCamera();
+      setMarkSuccessMsg(record.message || 'Attendance successfully saved to database via Dynamic QR Verification!');
+      setMarkingStep(3);
+
+      fetchStudentSubjectsFromBackend();
+      window.dispatchEvent(new CustomEvent('student-attendance-marked', { detail: record }));
+    } catch (err) {
+      setQrError(err.message || 'QR code verification failed. Code may have rotated. Please scan the current code.');
+      // Auto-resume camera scanning after 1.8 seconds so student can scan rotated QR code seamlessly
+      setTimeout(() => {
+        if (isScanningQr || !isScanningRef.current) {
+          isScanningRef.current = true;
+          runQrScanLoop();
+        }
+      }, 1800);
+    } finally {
+      setIsSubmittingQr(false);
+    }
+  };
+
+  // --- Faculty Dynamic QR Session Controls ---
+  const handleStartFacultyQr = async () => {
+    if (!currentSessionId) {
+      setToastMsg('Please wait for the class session to load.');
+      return;
+    }
+    setIsStartingQr(true);
+    try {
+      const res = await StudentAttendanceApi.startQrAttendance({
+        sessionId: currentSessionId,
+        durationMinutes: facultyQrDuration,
+        geofenceRequired: facultyQrGeofenceRequired,
+        facultyEmail: currentUser?.email || 'teacher@placeprep.com'
+      });
+
+      setFacultyQrActive(true);
+      setFacultyQrToken(res.qrToken);
+      setFacultyQrRemainingSeconds(res.remainingSeconds || (facultyQrDuration * 60));
+      setFacultyQrTotalScans(res.totalScans || 0);
+
+      if (res.qrToken) {
+        const url = await QRCode.toDataURL(res.qrToken, {
+          width: 320,
+          margin: 2,
+          color: { dark: '#0f172a', light: '#ffffff' }
+        });
+        setFacultyQrDataUrl(url);
+      }
+      setToastMsg('⚡ Attendance turned ON! Dynamic QR code is active on screen.');
+    } catch (err) {
+      setToastMsg('Failed to turn on QR attendance: ' + (err.message || 'Error'));
+    } finally {
+      setIsStartingQr(false);
+    }
+  };
+
+  const handleStopFacultyQr = async () => {
+    if (!currentSessionId) return;
+    setIsStoppingQr(true);
+    try {
+      const res = await StudentAttendanceApi.stopQrAttendance({
+        sessionId: currentSessionId,
+        facultyEmail: currentUser?.email || 'teacher@placeprep.com'
+      });
+      setFacultyQrActive(false);
+      setFacultyQrToken(null);
+      setFacultyQrDataUrl(null);
+      setFacultyQrRemainingSeconds(0);
+      setToastMsg(res.message || 'Attendance turned OFF.');
+      // Refresh class roster to show updated records
+      if (currentSessionId) {
+        const savedRecs = await fetchSessionRecords(currentSessionId);
+        const updatedMap = { ...attendanceRecords };
+        savedRecs.forEach(r => {
+          if (r.studentId) {
+            updatedMap[r.studentId] = { status: r.status || 'UNMARKED', remarks: r.remarks || '' };
+          }
+        });
+        setAttendanceRecords(updatedMap);
+      }
+    } catch (err) {
+      setToastMsg('Failed to stop attendance: ' + (err.message || 'Error'));
+    } finally {
+      setIsStoppingQr(false);
+    }
+  };
+
+  // Real-Time Polling for Faculty QR Session (Syncs Rotated QR Codes & Scans)
+  useEffect(() => {
+    let interval = null;
+    if (facultyQrActive && currentSessionId) {
+      interval = setInterval(async () => {
+        try {
+          const status = await StudentAttendanceApi.getQrStatus(currentSessionId);
+          if (status) {
+            if (status.isQrActive) {
+              setFacultyQrRemainingSeconds(status.remainingSeconds || 0);
+              setFacultyQrTotalScans(status.totalScans || 0);
+              setFacultyQrRecentScans(status.recentScans || []);
+
+              // Check if token rotated!
+              if (status.qrToken && status.qrToken !== facultyQrToken) {
+                setFacultyQrToken(status.qrToken);
+                const url = await QRCode.toDataURL(status.qrToken, {
+                  width: 320,
+                  margin: 2,
+                  color: { dark: '#0f172a', light: '#ffffff' }
+                });
+                setFacultyQrDataUrl(url);
+              }
+            } else {
+              // Session expired or completed
+              setFacultyQrActive(false);
+              setFacultyQrDataUrl(null);
+              setFacultyQrToken(null);
+            }
+          }
+        } catch (err) {
+          console.warn('QR polling sync error:', err);
+        }
+      }, 2000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [facultyQrActive, currentSessionId, facultyQrToken]);
+
+  // Sync initial QR status when faculty changes class session
+  useEffect(() => {
+    if (currentSessionId && isAuthorized) {
+      StudentAttendanceApi.getQrStatus(currentSessionId).then(async (status) => {
+        if (status && status.isQrActive) {
+          setFacultyQrActive(true);
+          setFacultyQrToken(status.qrToken);
+          setFacultyQrRemainingSeconds(status.remainingSeconds || 0);
+          setFacultyQrTotalScans(status.totalScans || 0);
+          setFacultyQrRecentScans(status.recentScans || []);
+          if (status.qrToken) {
+            const url = await QRCode.toDataURL(status.qrToken, { width: 320, margin: 2 });
+            setFacultyQrDataUrl(url);
+          }
+        } else {
+          setFacultyQrActive(false);
+          setFacultyQrDataUrl(null);
+          setFacultyQrToken(null);
+        }
+      }).catch(() => {});
+    }
+  }, [currentSessionId, isAuthorized]);
+
+
 
   const handleOpenMarkingModal = async (subject) => {
     setActiveMarkingModal(subject);
@@ -245,7 +481,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
 
           if (res.withinGeofence) {
             setMarkingStep(2);
-            startModalCamera();
+            startModalQrScanner();
           } else {
             setGpsError(`Geofence Verification Failed: You are ${res.distanceMeters}m away from campus. Maximum permitted distance is 100 meters.`);
           }
@@ -263,51 +499,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     );
   };
 
-  const handleModalCaptureAndSubmit = async () => {
-    if (!modalVideoRef.current || !modalCanvasRef.current) return;
-    const video = modalVideoRef.current;
-    const canvas = modalCanvasRef.current;
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const photoData = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedPhoto(photoData);
-    stopModalCamera();
-
-    setIsVerifyingFace(true);
-    setFaceError('');
-
-    try {
-      const verifyRes = await StudentAttendanceApi.verifyFace(photoData);
-      if (!verifyRes.verified) {
-        setFaceError('Facial mismatch: Captured selfie does not match registered profile photo.');
-        setIsVerifyingFace(false);
-        return;
-      }
-
-      const payload = {
-        sessionId: markingLectureSession?.sessionId || 1,
-        latitude: gpsResult.studentLat,
-        longitude: gpsResult.studentLon,
-        gpsAccuracy: gpsResult.gpsAccuracy,
-        photo: photoData,
-        faceVerified: true,
-        studentEmail: currentUser.email
-      };
-
-      const record = await StudentAttendanceApi.markLectureAttendance(payload);
-      setMarkSuccessMsg(record.message || 'Attendance successfully saved to database!');
-      setMarkingStep(3);
-
-      fetchStudentSubjectsFromBackend();
-      window.dispatchEvent(new CustomEvent('student-attendance-marked', { detail: record }));
-    } catch (err) {
-      setFaceError(err.message || 'Failed to submit attendance to database.');
-    } finally {
-      setIsVerifyingFace(false);
-    }
-  };
+  
 
   const handleOpenLecturesDrawer = async (sub) => {
     setViewingSubjectLectures(sub);
@@ -1023,8 +1215,8 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold ${
                     markingStep === 2 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : markingStep === 3 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'
                   }`}>
-                    {markingStep === 3 ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Camera className="w-3.5 h-3.5" />}
-                    <span>2. Photo Match</span>
+                    {markingStep === 3 ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <QrCode className="w-3.5 h-3.5" />}
+                    <span>2. Dynamic QR Scan</span>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold ${
@@ -1081,74 +1273,120 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                   </div>
                 )}
 
-                {/* Step 2: Camera & Face Photo */}
+                {/* Step 2: Dynamic QR Code Scanner (Anti-Screenshot) */}
                 {markingStep === 2 && (
                   <div className="space-y-4">
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Geofence verified: You are {gpsResult?.distanceMeters}m from campus center (&le; 100m).</span>
+                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span><strong>Geofence Verified:</strong> {gpsResult?.distanceMeters}m from campus center (&le; 100m).</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-black uppercase">
+                        Within 100m
+                      </span>
                     </div>
 
-                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-300 flex items-center justify-center">
-                      {capturedPhoto ? (
-                        <img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
-                      ) : (
-                        <>
-                          <video ref={modalVideoRef} playsInline muted className="w-full h-full object-cover" />
-                          {!cameraActive && (
-                            <div className="text-center p-4 text-slate-400">
-                              <Camera className="w-8 h-8 mx-auto mb-1 text-slate-600" />
-                              <button
-                                type="button"
-                                onClick={startModalCamera}
-                                className="mt-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-                              >
-                                Enable Camera
-                              </button>
-                            </div>
-                          )}
-                        </>
+                    {/* Camera Video Scanner View */}
+                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400 shadow-lg flex items-center justify-center">
+                      <video
+                        ref={modalVideoRef}
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                      />
+
+                      {/* Animated QR Reticle Overlay */}
+                      {isScanningQr && (
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                          <div className="relative w-52 h-52 border-2 border-indigo-400/90 rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(99,102,241,0.35)]">
+                            {/* Scanning laser line */}
+                            <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-bounce" />
+                            {/* Corner brackets */}
+                            <div className="absolute -top-1 -left-1 w-5 h-5 border-t-3 border-l-3 border-teal-400 rounded-tl-lg" />
+                            <div className="absolute -top-1 -right-1 w-5 h-5 border-t-3 border-r-3 border-teal-400 rounded-tr-lg" />
+                            <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-3 border-l-3 border-teal-400 rounded-bl-lg" />
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-3 border-r-3 border-teal-400 rounded-br-lg" />
+                            <span className="text-[10px] font-black text-white bg-slate-900/80 px-2.5 py-1 rounded-full uppercase tracking-wider backdrop-blur-xs">
+                              Scan Live QR
+                            </span>
+                          </div>
+                        </div>
                       )}
+
+                      {!cameraActive && (
+                        <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-4 text-center">
+                          <QrCode className="w-10 h-10 text-indigo-400 mb-2" />
+                          <p className="text-xs text-white font-bold">Camera is paused</p>
+                          <button
+                            type="button"
+                            onClick={startModalQrScanner}
+                            className="mt-3 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition"
+                          >
+                            Enable Scanner Camera
+                          </button>
+                        </div>
+                      )}
+
                       <canvas ref={modalCanvasRef} className="hidden" />
                     </div>
 
-                    {isVerifyingFace && (
-                      <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center gap-2 animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
-                        <span>Verifying facial biometric and saving record to database...</span>
+                    {isSubmittingQr && (
+                      <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center gap-2 animate-pulse">
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-600 shrink-0" />
+                        <span>Verifying dynamic QR token with database and saving attendance...</span>
                       </div>
                     )}
 
-                    {faceError && (
-                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
-                        <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                        <span>{faceError}</span>
+                    {qrError && (
+                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <span>{qrError}</span>
+                          <span className="block text-[11px] text-rose-600 font-normal">
+                            Keep your camera pointed at the faculty screen. The scanner will automatically retry!
+                          </span>
+                        </div>
                       </div>
                     )}
 
-                    <div className="pt-2 flex items-center gap-3">
-                      {!capturedPhoto ? (
+                    {/* Manual Code Input Fallback */}
+                    <div className="pt-2 border-t border-slate-100">
+                      {!showManualInput ? (
                         <button
                           type="button"
-                          onClick={handleModalCaptureAndSubmit}
-                          disabled={!cameraActive || isVerifyingFace}
-                          className="flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                          onClick={() => setShowManualInput(true)}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center gap-1.5"
                         >
-                          <Camera className="w-4 h-4" />
-                          <span>Capture Photo & Confirm Attendance</span>
+                          <Scan className="w-3.5 h-3.5" />
+                          <span>Having camera trouble? Enter code manually</span>
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCapturedPhoto(null);
-                            setFaceError('');
-                            startModalCamera();
-                          }}
-                          className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
-                        >
-                          Retake Photo
-                        </button>
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                          <label className="block text-xs font-bold text-slate-700">
+                            Enter QR Token displayed on Faculty Screen:
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={manualQrInput}
+                              onChange={(e) => setManualQrInput(e.target.value)}
+                              placeholder="e.g. PP-ATT-1-..."
+                              className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (manualQrInput.trim()) {
+                                  handleProcessQrScan(manualQrInput.trim());
+                                }
+                              }}
+                              disabled={isSubmittingQr || !manualQrInput.trim()}
+                              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs disabled:opacity-50 cursor-pointer"
+                            >
+                              Submit
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1504,6 +1742,260 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
             <div className="bg-indigo-50/70 rounded-2xl p-4 border border-indigo-200 shadow-sm text-center">
               <span className="text-xs text-indigo-700 block font-bold mb-1">Session Rate</span>
               <span className="text-2xl font-black text-indigo-700">{stats.rate}%</span>
+            </div>
+          </div>
+
+          {/* ─── LIVE DYNAMIC QR ATTENDANCE STATION (FACULTY REAL-TIME CONTROL) ─── */}
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-800/50 shadow-2xl relative overflow-hidden">
+            {/* Background Decorative Rings */}
+            <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-900/60 pb-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider">
+                      Faculty Control Panel
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-teal-300" />
+                      Dynamic Anti-Cheat QR
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-black text-white flex items-center gap-2">
+                    <QrCode className="w-6 h-6 text-teal-400" />
+                    <span>Real-Time Geofenced QR Attendance</span>
+                  </h3>
+                  <p className="text-xs text-indigo-200/80 mt-1">
+                    Class: <strong className="text-white">{selectedDept} Sem {selectedSemester} Sec {selectedSection} • {currentSubject.code} ({currentSubject.name})</strong>
+                  </p>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="flex items-center gap-3">
+                  <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-black ${
+                    facultyQrActive
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 animate-pulse'
+                      : 'bg-slate-800 border-slate-700 text-slate-400'
+                  }`}>
+                    <span className={`w-2.5 h-2.5 rounded-full ${facultyQrActive ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                    <span>{facultyQrActive ? 'ATTENDANCE IS ON' : 'ATTENDANCE IS OFF'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Console Content: Ready vs Live ON */}
+              {!facultyQrActive ? (
+                /* Ready State: Pre-Attendance Settings */
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <div className="md:col-span-8 space-y-4">
+                    <p className="text-xs text-indigo-100 leading-relaxed">
+                      Turn attendance ON when you are ready for students in your lecture to mark their presence.
+                      Students must be physically located within <strong>100 meters of the campus</strong> and scan the unique QR code.
+                      Each scan <strong>automatically changes the QR code</strong> to prevent screenshot sharing.
+                    </p>
+
+                    {/* Pre-flight Options */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      {/* Duration Selector */}
+                      <div className="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/80 space-y-2">
+                        <label className="block text-xs font-bold text-indigo-200 flex items-center gap-1.5">
+                          <Timer className="w-4 h-4 text-teal-400" />
+                          <span>QR Attendance Window Duration:</span>
+                        </label>
+                        <select
+                          value={facultyQrDuration}
+                          onChange={(e) => setFacultyQrDuration(parseInt(e.target.value, 10))}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-teal-400 cursor-pointer"
+                        >
+                          <option value={5}>5 Minutes (Quick marking)</option>
+                          <option value={10}>10 Minutes (Standard lecture)</option>
+                          <option value={15}>15 Minutes (Extended window)</option>
+                          <option value={30}>30 Minutes (Full period)</option>
+                        </select>
+                      </div>
+
+                      {/* Geofence Enforcement Toggle */}
+                      <div className="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/80 space-y-2">
+                        <label className="block text-xs font-bold text-indigo-200 flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-teal-400" />
+                          <span>Campus 100m Geofencing:</span>
+                        </label>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-xs text-slate-300">
+                            {facultyQrGeofenceRequired ? 'Strict 100m Radius Enforced' : 'Geofence Disabled'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFacultyQrGeofenceRequired(!facultyQrGeofenceRequired)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              facultyQrGeofenceRequired ? 'bg-teal-500' : 'bg-slate-700'
+                            }`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              facultyQrGeofenceRequired ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Start Attendance Button */}
+                  <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-slate-800/40 rounded-2xl border border-indigo-900/40 text-center space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleStartFacultyQr}
+                      disabled={isStartingQr}
+                      className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-black text-sm shadow-xl hover:shadow-teal-500/25 transition-all transform active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isStartingQr ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Generating Dynamic QR...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-5 h-5 fill-current" />
+                          <span>TURN ATTENDANCE ON</span>
+                        </>
+                      )}
+                    </button>
+                    <span className="text-[11px] text-indigo-300/70">
+                      Activates live QR and begins accepting student scans
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* LIVE ACTIVE STATE: Interactive QR Display + Live Stats */
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  {/* Left: Large Live QR Code Display */}
+                  <div className="lg:col-span-5 flex flex-col items-center justify-center space-y-3 bg-white p-6 rounded-3xl shadow-2xl border-4 border-teal-400">
+                    <div className="text-center">
+                      <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-900 text-[11px] font-black uppercase tracking-wider">
+                        Scan with PlacePrep App
+                      </span>
+                    </div>
+
+                    {facultyQrDataUrl ? (
+                      <div className="relative group">
+                        <img
+                          src={facultyQrDataUrl}
+                          alt="Live Attendance QR Code"
+                          className="w-64 h-64 sm:w-72 sm:h-72 object-contain rounded-xl"
+                        />
+                        <div className="absolute inset-0 rounded-xl border-2 border-dashed border-teal-500/50 pointer-events-none animate-pulse" />
+                      </div>
+                    ) : (
+                      <div className="w-64 h-64 flex items-center justify-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
+                      </div>
+                    )}
+
+                    <div className="text-center space-y-1">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-mono font-bold">
+                        <RotateCcw className="w-3 h-3 text-teal-600 animate-spin" />
+                        <span>Dynamic: Rotates after every scan</span>
+                      </span>
+                      <p className="text-[10px] text-slate-400 font-mono">
+                        Session Token: {facultyQrToken ? facultyQrToken.slice(0, 24) + '...' : 'Generating...'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Live Session Dashboard, Countdown Timer & Scanned List */}
+                  <div className="lg:col-span-7 space-y-5">
+                    {/* Live Stats Row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {/* Timer */}
+                      <div className="bg-slate-800/80 rounded-2xl p-4 border border-indigo-800/60 text-center">
+                        <span className="text-[11px] text-indigo-300 uppercase font-black block mb-1">Time Remaining</span>
+                        <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono flex items-center justify-center gap-1">
+                          <Timer className="w-5 h-5 text-amber-400" />
+                          <span>
+                            {Math.floor(facultyQrRemainingSeconds / 60)}:
+                            {(facultyQrRemainingSeconds % 60).toString().padStart(2, '0')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Scanned Counter */}
+                      <div className="bg-slate-800/80 rounded-2xl p-4 border border-indigo-800/60 text-center">
+                        <span className="text-[11px] text-indigo-300 uppercase font-black block mb-1">Students Verified</span>
+                        <div className="text-2xl sm:text-3xl font-black text-teal-400 font-mono">
+                          {facultyQrTotalScans}
+                        </div>
+                      </div>
+
+                      {/* Geofence Status */}
+                      <div className="col-span-2 sm:col-span-1 bg-slate-800/80 rounded-2xl p-4 border border-indigo-800/60 text-center">
+                        <span className="text-[11px] text-indigo-300 uppercase font-black block mb-1">Geofence Check</span>
+                        <div className="text-sm font-black text-emerald-400 mt-1.5 flex items-center justify-center gap-1">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          <span>100m Active</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Activity Feed */}
+                    <div className="bg-slate-800/60 rounded-2xl p-4 border border-indigo-900/60 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-indigo-200 font-bold border-b border-slate-700/60 pb-2">
+                        <span>Recent Real-Time Scans</span>
+                        <span className="text-[11px] text-teal-300 flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
+                          Live Database Stream
+                        </span>
+                      </div>
+
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                        {facultyQrRecentScans.length === 0 ? (
+                          <div className="py-4 text-center text-xs text-slate-400">
+                            Waiting for students to scan the live QR code...
+                          </div>
+                        ) : (
+                          facultyQrRecentScans.map((scan, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-700/40 text-xs">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <div>
+                                  <strong className="text-white block">{scan.studentName || scan.studentId}</strong>
+                                  <span className="text-[10px] text-slate-400 font-mono">Roll: {scan.studentRollNumber || 'N/A'}</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                                  PRESENT
+                                </span>
+                                <span className="text-[10px] text-slate-400 block font-mono mt-0.5">
+                                  {scan.recordedAt ? scan.recordedAt.split(' ')[1] : ''}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Turn Attendance OFF Button */}
+                    <div className="pt-2 flex items-center justify-between gap-4">
+                      <span className="text-xs text-indigo-200/80">
+                        Closing the session stops new scans and saves final attendance.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleStopFacultyQr}
+                        disabled={isStoppingQr}
+                        className="py-3 px-6 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg hover:shadow-rose-500/25 transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Square className="w-4 h-4 fill-current" />
+                        <span>TURN ATTENDANCE OFF</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

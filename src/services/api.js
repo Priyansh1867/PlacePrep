@@ -154,6 +154,21 @@ export const UserApi = {
 
   async getDashboard() {
     return await request('/users/me/dashboard');
+  },
+
+  async getStudentFullProfile(email) {
+    try {
+      return await request(`/users/profile?email=${encodeURIComponent(email || '')}`);
+    } catch {
+      return null;
+    }
+  },
+
+  async saveStudentFullProfile(profile, email) {
+    return await request('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ email, profile })
+    });
   }
 };
 
@@ -840,6 +855,35 @@ export const StudentAttendanceApi = {
         message: 'Attendance confirmed! Geofence verified and profile photo matched. You are marked PRESENT.'
       };
     }
+  },
+
+  // Dynamic QR Attendance APIs
+  async startQrAttendance({ sessionId, durationMinutes = 10, geofenceRequired = true, facultyEmail }) {
+    return await request('/student/attendance/qr/start', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, durationMinutes, geofenceRequired, facultyEmail })
+    });
+  },
+
+  async getQrStatus(sessionId) {
+    return await request(`/student/attendance/qr/status?sessionId=${sessionId}`);
+  },
+
+  async stopQrAttendance({ sessionId, facultyEmail }) {
+    return await request('/student/attendance/qr/stop', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, facultyEmail })
+    });
+  },
+
+  async scanQrAttendance({ sessionId, qrToken, studentEmail, latitude, longitude, gpsAccuracy }) {
+    return await request('/student/attendance/qr/scan', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, qrToken, studentEmail, latitude, longitude, gpsAccuracy })
+    });
+  },
+
+  async getActiveQrSessions() {
+    return await request('/student/attendance/qr/active-sessions');
   }
 };
-

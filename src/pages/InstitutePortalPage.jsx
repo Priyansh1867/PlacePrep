@@ -67,6 +67,7 @@ import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
 import UserProfileModal from '../components/profile/UserProfileModal';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
+import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
@@ -347,7 +348,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 2. TOP BANNER & RIGHT-SIDE PROFILE DROPDOWN */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
+        <div className="dashboard-hero dashboard-hero--institute bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
+          <img
+            src={instituteLearningHero}
+            alt=""
+            className="dashboard-hero__art"
+          />
+          <span className="dashboard-hero__wash" />
           <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
             <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
           </div>
@@ -497,7 +504,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs">
+          <div className="pp-hero-stats relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs">
             <div>
               <span className="text-indigo-300 block">CRT Attendance:</span>
               <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>

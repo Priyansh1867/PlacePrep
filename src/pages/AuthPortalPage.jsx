@@ -32,6 +32,17 @@ const rolesByPortal = {
 
 const defaultRoleFor = (portal) => (portal === 'placement' ? 'tpo' : 'student');
 
+export const isCollegeEmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const lower = email.trim().toLowerCase();
+  return (
+    lower.endsWith('.edu') ||
+    lower.endsWith('.ac.in') ||
+    lower.endsWith('.edu.in') ||
+    /^[^\s@]+@[^\s@]+\.(edu|ac\.in|edu\.in|[a-z0-9-]+\.edu|[a-z0-9-]+\.ac\.in)$/i.test(lower)
+  );
+};
+
 const demoDetails = {
   student: { fullName: 'Priyansh Jain', email: 'priyansh.jain@example.edu', password: 'password123', rollNumber: '2024/CSE/084', branch: 'Computer Science and Engineering', batch: '2028', college: 'Delhi Technological University (DTU)' },
   teacher: { fullName: 'Dr. Neha Sharma', email: 'neha.sharma@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Associate Professor & Class Incharge', college: 'Delhi Technological University (DTU)' },
@@ -103,6 +114,10 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       if (!formData.fullName || !formData.email || !formData.password) {
         setErrorMsg('Please complete all required fields.');
         setIsSubmitting(false);
+        return;
+      }
+      if (selectedRole === 'student' && !isCollegeEmail(formData.email)) {
+        setErrorMsg('Student registration requires an official college email (.edu, .ac.in, or .edu.in).');
         return;
       }
       if (formData.password !== formData.confirmPassword) {
@@ -395,6 +410,22 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                     required
                   />
                 </InputField>
+                {formData.email && (
+                  <div className="mt-1 flex items-center gap-1.5 text-[11px] px-1">
+                    {isCollegeEmail(formData.email) ? (
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Verified College Domain (.edu / .ac.in / .edu.in)
+                      </span>
+                    ) : selectedRole === 'student' ? (
+                      <span className="text-amber-300 font-medium flex items-center gap-1">
+                        <CircleHelp className="w-3.5 h-3.5 text-amber-300" />
+                        Please use official college email (.edu, .ac.in, .edu.in)
+                      </span>
+                    ) : null}
+                  </div>
+                )}
+                
 
                 {authMode === 'register' && selectedRole === 'student' && (
                   <div className="grid grid-cols-2 gap-2.5">

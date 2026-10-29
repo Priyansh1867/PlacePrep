@@ -10,7 +10,7 @@ export default function EmptyState({
   className = ''
 }) {
   return (
-    <div className={`p-8 sm:p-12 text-center rounded-2xl bg-white border border-dashed border-slate-300 space-y-3 flex flex-col items-center justify-center ${className}`}>
+    <div className={`pp-empty p-8 sm:p-12 text-center rounded-2xl bg-white border border-dashed border-slate-300 space-y-3 flex flex-col items-center justify-center ${className}`}>
       {Icon && (
         <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-1">
           <Icon className="w-6 h-6" />

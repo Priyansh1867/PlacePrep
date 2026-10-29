@@ -4,8 +4,11 @@ export function Card({ children, className = '', hover = false, onClick, ...prop
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-slate-200/90 shadow-xs transition-all duration-200 ${
-        hover ? 'hover:shadow-md hover:border-indigo-300 cursor-pointer' : ''
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onClick(event); } } : undefined}
+      className={`pp-card bg-white rounded-2xl border border-slate-200/90 shadow-xs transition-all duration-200 ${
+        hover ? 'pp-card--interactive hover:shadow-md hover:border-indigo-300 cursor-pointer' : ''
       } ${className}`}
       {...props}
     >

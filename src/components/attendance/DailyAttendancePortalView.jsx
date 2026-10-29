@@ -25,7 +25,6 @@ import {
   Eye,
   Camera,
   MapPin,
-  ScanFace,
   ArrowRight,
   ArrowLeft,
   QrCode,
@@ -104,9 +103,6 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   const [gpsResult, setGpsResult] = useState(null);
   const [gpsError, setGpsError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const [isVerifyingFace, setIsVerifyingFace] = useState(false);
-  const [faceError, setFaceError] = useState('');
   const [markSuccessMsg, setMarkSuccessMsg] = useState(null);
   const [viewingSubjectLectures, setViewingSubjectLectures] = useState(null);
   const [subjectLecturesList, setSubjectLecturesList] = useState([]);
@@ -449,8 +445,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     setMarkingStep(1);
     setGpsResult(null);
     setGpsError('');
-    setCapturedPhoto(null);
-    setFaceError('');
+    setQrError('');
     setMarkSuccessMsg(null);
 
     try {
@@ -987,7 +982,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                 Academic Class Attendance & Shortage Radar
               </h3>
               <p className="text-xs text-indigo-800 mt-1 leading-relaxed">
-                Manual roster marking is <strong>exclusively restricted to designated Faculty and HODs</strong>. Students can mark daily classroom attendance only through the <strong>Campus GPS Geofencing (100m) & Facial Verification</strong> tool above. Below is your official semester attendance record.
+                Manual roster marking is <strong>exclusively restricted to designated Faculty and HODs</strong>. Students can mark daily classroom attendance only through the <strong>Campus GPS Geofencing (100m) & Real-Time Dynamic QR Scanner</strong> tool above. Below is your official semester attendance record.
               </p>
             </div>
           </div>
@@ -1141,7 +1136,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                               type="button"
                               onClick={() => handleOpenMarkingModal(sub)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-xs transition cursor-pointer"
-                              title="Mark attendance using 100m Geofencing & Face Match"
+                              title="Mark attendance using 100m Geofencing & Dynamic QR Scan"
                             >
                               <Navigation className="w-3.5 h-3.5" />
                               <span>Mark Attendance</span>
@@ -1169,12 +1164,12 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                 College Mandate: <strong className="text-slate-700">Strictly ≥ 75.0% cumulative attendance required for end-semester admit card generation.</strong>
               </div>
               <div className="text-[11px] text-slate-400">
-                Attendance marks synchronized daily with GPS Geofence & Facial Verification logs.
+                Attendance marks synchronized daily with GPS Geofence & Dynamic Rotating QR Verification logs.
               </div>
             </div>
           </div>
 
-          {/* ─── MODAL 1: GEOFENCE & FACE ATTENDANCE MARKING FOR SELECTED CLASS ─── */}
+          {/* ─── MODAL 1: GEOFENCE & DYNAMIC QR ATTENDANCE MARKING FOR SELECTED CLASS ─── */}
           {activeMarkingModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
               <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto">

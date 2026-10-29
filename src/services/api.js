@@ -852,7 +852,7 @@ export const StudentAttendanceApi = {
         faceVerified: true,
         sessionType: payload.sessionType || 'CLASS',
         markedAt: new Date().toLocaleTimeString(),
-        message: 'Attendance confirmed! Geofence verified and profile photo matched. You are marked PRESENT.'
+        message: 'Attendance confirmed! Geofence verified and Dynamic QR code matched. You are marked PRESENT.'
       };
     }
   },

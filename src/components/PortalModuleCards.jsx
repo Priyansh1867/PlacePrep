@@ -1,45 +1,45 @@
 import React from 'react';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import cardDrivesLight from '../assets/images/card_drives_light.jpg';
-import cardReportsLight from '../assets/images/card_reports_light.jpg';
-import cardEligibilityLight from '../assets/images/card_eligibility_light.jpg';
-import cardLiveLight from '../assets/images/card_live_light.jpg';
-import cardShortlistsLight from '../assets/images/card_shortlists_light.jpg';
-import cardInternshipsLight from '../assets/images/card_internships_light.jpg';
-import cardFeedbackLight from '../assets/images/card_feedback_light.jpg';
-import cardOffcampusLight from '../assets/images/card_offcampus_light.jpg';
-import cardNotificationsLight from '../assets/images/card_notifications_light.jpg';
-import cardDsaLight from '../assets/images/card_dsa_light.jpg';
-import cardQuestionBankLight from '../assets/images/card_questionbank_light.jpg';
-import cardCrtLight from '../assets/images/card_crt_light.jpg';
+import cardDrivesOrange from '../assets/images/card_drives_orange.jpg';
+import cardReportsOrange from '../assets/images/card_reports_orange.jpg';
+import cardEligibilityOrange from '../assets/images/card_eligibility_orange.jpg';
+import cardLiveOrange from '../assets/images/card_live_orange.jpg';
+import cardShortlistsOrange from '../assets/images/card_shortlists_orange.jpg';
+import cardInternshipsOrange from '../assets/images/card_internships_orange.jpg';
+import cardFeedbackOrange from '../assets/images/card_feedback_orange.jpg';
+import cardOffcampusOrange from '../assets/images/card_offcampus_orange.jpg';
+import cardNotificationsOrange from '../assets/images/card_notifications_orange.jpg';
+import cardDsaOrange from '../assets/images/card_dsa_orange.jpg';
+import cardQuestionBankOrange from '../assets/images/card_questionbank_orange.jpg';
+import cardCrtOrange from '../assets/images/card_crt_orange.jpg';
 
 const CARD_IMAGE_MAP = {
-  // Placement Portal mappings (Light Colours, Highly Professional 3D Dioramas)
-  'drives': cardDrivesLight,
-  'reports-exporter': cardReportsLight,
-  'eligibility-criteria': cardEligibilityLight,
-  'live-sessions': cardLiveLight,
-  'shortlisted': cardShortlistsLight,
-  'internships': cardInternshipsLight,
-  'feedback-loop': cardFeedbackLight,
-  'off-campus': cardOffcampusLight,
-  'push-notifications': cardNotificationsLight,
-  'faculty-monitoring': cardReportsLight,
+  // Placement Portal mappings (Light Orange Matched 3D Dioramas)
+  'drives': cardDrivesOrange,
+  'reports-exporter': cardReportsOrange,
+  'eligibility-criteria': cardEligibilityOrange,
+  'live-sessions': cardLiveOrange,
+  'shortlisted': cardShortlistsOrange,
+  'internships': cardInternshipsOrange,
+  'feedback-loop': cardFeedbackOrange,
+  'off-campus': cardOffcampusOrange,
+  'push-notifications': cardNotificationsOrange,
+  'faculty-monitoring': cardReportsOrange,
 
-  // Institute Portal mappings (Light Colours, Highly Professional 3D Dioramas)
-  'student-data': cardEligibilityLight,
-  'curriculum-governance': cardReportsLight,
-  'upcoming-drives': cardDrivesLight,
-  'question-bank': cardQuestionBankLight,
-  'dsa-studio': cardDsaLight,
-  'crt-attendance': cardCrtLight,
-  'class-attendance': cardLiveLight,
-  'resume-ats': cardReportsLight,
-  'round-details': cardShortlistsLight,
-  'hackathons': cardDsaLight
+  // Institute Portal mappings (Light Orange Matched 3D Dioramas)
+  'student-data': cardEligibilityOrange,
+  'curriculum-governance': cardReportsOrange,
+  'upcoming-drives': cardDrivesOrange,
+  'question-bank': cardQuestionBankOrange,
+  'dsa-studio': cardDsaOrange,
+  'crt-attendance': cardCrtOrange,
+  'class-attendance': cardLiveOrange,
+  'resume-ats': cardReportsOrange,
+  'round-details': cardShortlistsOrange,
+  'hackathons': cardDsaOrange
 };
 
-// Unified Light Orange Theme Palette across all cards
+// Unified Light Orange Theme Palette matching both cards and 3D illustrations
 const LIGHT_ORANGE_THEME = {
   accent: 'orange',
   cardHoverBg: 'hover:bg-orange-50/25',
@@ -68,7 +68,7 @@ export default function PortalModuleCards({ items, activeId, onSelect }) {
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = activeId === item.id;
-        const cardImg = item.image || CARD_IMAGE_MAP[item.id] || cardDrivesLight;
+        const cardImg = item.image || CARD_IMAGE_MAP[item.id] || cardDrivesOrange;
 
         return (
           <button
@@ -81,7 +81,7 @@ export default function PortalModuleCards({ items, activeId, onSelect }) {
                 : `border-slate-200/90 ${theme.borderHover} ${theme.cardHoverBg}`
             }`}
           >
-            {/* Background 3D Graphic (Light Colours, Crisp & Balanced) */}
+            {/* Background 3D Graphic (Light Orange Matched, Crisp & Balanced) */}
             <img
               src={cardImg}
               alt={item.label}
@@ -89,10 +89,10 @@ export default function PortalModuleCards({ items, activeId, onSelect }) {
             />
 
             {/* Subtle Gradient Floor for Peak Bottom Typography Legibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/45 to-transparent transition-opacity duration-300" />
             
             {/* Soft Ambient Light Orange Glow from Bottom Right */}
-            <div className={`absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-gradient-to-br ${theme.glowGradient} blur-2xl opacity-50 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none`} />
+            <div className={`absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-gradient-to-br ${theme.glowGradient} blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
 
             {/* Active Subtle Orange Accent Border */}
             {isActive && (

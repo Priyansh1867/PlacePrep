@@ -3,7 +3,7 @@
 // Supports Drive Eligibility List, Final Placed Students Report, and Monthly Attendance Summary Report
 // with Excel (.xlsx) and CSV exports, formula injection protection, and live previews.
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileSpreadsheet,
   Download,

@@ -154,6 +154,21 @@ export const UserApi = {
 
   async getDashboard() {
     return await request('/users/me/dashboard');
+  },
+
+  async getStudentFullProfile(email) {
+    try {
+      return await request(`/users/profile?email=${encodeURIComponent(email || '')}`);
+    } catch {
+      return null;
+    }
+  },
+
+  async saveStudentFullProfile(profile, email) {
+    return await request('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ email, profile })
+    });
   }
 };
 
@@ -837,9 +852,215 @@ export const StudentAttendanceApi = {
         faceVerified: true,
         sessionType: payload.sessionType || 'CLASS',
         markedAt: new Date().toLocaleTimeString(),
-        message: 'Attendance confirmed! Geofence verified and profile photo matched. You are marked PRESENT.'
+        message: 'Attendance confirmed! Geofence verified and Dynamic QR code matched. You are marked PRESENT.'
       };
+    }
+  },
+
+  // Dynamic QR Attendance APIs with resilient Local Fallback for preview/offline modes
+  async startQrAttendance({ sessionId, durationMinutes = 10, geofenceRequired = true, facultyEmail }) {
+    const sid = sessionId || 1;
+    try {
+      return await request('/student/attendance/qr/start', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: sid, durationMinutes, geofenceRequired, facultyEmail })
+      });
+    } catch {
+      // Local fallback for static deployments (e.g. Vercel) and offline mode
+      const now = Date.now();
+      const expiresAt = now + (durationMinutes * 60 * 1000);
+      const token = 'PP-ATT-' + sid + '-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + now.toString(36).toUpperCase();
+      const sessionData = {
+        sessionId: sid,
+        qrActive: true,
+        qrToken: token,
+        qrExpiresAt: expiresAt,
+        qrDurationMinutes: durationMinutes,
+        geofenceRequired,
+        facultyEmail: facultyEmail || 'teacher@placeprep.com',
+        totalScans: 0,
+        recentScans: [],
+        scannedEmails: []
+      };
+      try {
+        localStorage.setItem(`placeprep_qr_session_${sid}`, JSON.stringify(sessionData));
+        localStorage.setItem('placeprep_active_qr_session_id', String(sid));
+      } catch (e) {
+        console.warn('LocalStorage save warning:', e);
+      }
+      return {
+        success: true,
+        active: true,
+        sessionId: sid,
+        qrToken: token,
+        durationMinutes,
+        remainingSeconds: durationMinutes * 60,
+        totalScans: 0,
+        recentScans: [],
+        message: 'Attendance session activated with dynamic QR code!'
+      };
+    }
+  },
+
+  async getQrStatus(sessionId) {
+    const sid = sessionId || 1;
+    try {
+      return await request(`/student/attendance/qr/status?sessionId=${sid}`);
+    } catch {
+      try {
+        const raw = localStorage.getItem(`placeprep_qr_session_${sid}`) ||
+                    localStorage.getItem('placeprep_qr_session_' + (localStorage.getItem('placeprep_active_qr_session_id') || 1));
+        if (raw) {
+          const data = JSON.parse(raw);
+          const remaining = Math.max(0, Math.floor((data.qrExpiresAt - Date.now()) / 1000));
+          if (remaining <= 0) {
+            data.qrActive = false;
+            try { localStorage.setItem(`placeprep_qr_session_${data.sessionId}`, JSON.stringify(data)); } catch {}
+            return { active: false, remainingSeconds: 0, totalScans: data.totalScans || 0 };
+          }
+          return {
+            active: data.qrActive,
+            sessionId: data.sessionId,
+            qrToken: data.qrToken,
+            durationMinutes: data.qrDurationMinutes,
+            remainingSeconds: remaining,
+            totalScans: data.totalScans || 0,
+            recentScans: data.recentScans || [],
+            geofenceRequired: data.geofenceRequired
+          };
+        }
+      } catch (e) {
+        console.warn('LocalStorage status read warning:', e);
+      }
+      return { active: false, remainingSeconds: 0, totalScans: 0 };
+    }
+  },
+
+  async stopQrAttendance({ sessionId, facultyEmail }) {
+    const sid = sessionId || 1;
+    try {
+      return await request('/student/attendance/qr/stop', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: sid, facultyEmail })
+      });
+    } catch {
+      try {
+        const key = `placeprep_qr_session_${sid}`;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.qrActive = false;
+          data.qrToken = null;
+          data.remainingSeconds = 0;
+          localStorage.setItem(key, JSON.stringify(data));
+        }
+      } catch (e) {
+        console.warn('LocalStorage stop warning:', e);
+      }
+      return { success: true, active: false, message: 'Attendance turned OFF.' };
+    }
+  },
+
+  async scanQrAttendance({ sessionId, qrToken, studentEmail, latitude, longitude, gpsAccuracy }) {
+    const sid = sessionId || 1;
+    try {
+      return await request('/student/attendance/qr/scan', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: sid, qrToken, studentEmail, latitude, longitude, gpsAccuracy })
+      });
+    } catch (err) {
+      if (err.status === 400 && err.message) {
+        throw err;
+      }
+      const key = `placeprep_qr_session_${sid}`;
+      let session = null;
+      try {
+        const raw = localStorage.getItem(key) ||
+                    localStorage.getItem('placeprep_qr_session_' + (localStorage.getItem('placeprep_active_qr_session_id') || 1));
+        if (raw) session = JSON.parse(raw);
+      } catch {}
+
+      if (!session || !session.qrActive) {
+        throw new Error('Attendance session is closed or inactive. Please ask faculty to turn attendance ON.');
+      }
+
+      if (Date.now() > session.qrExpiresAt) {
+        session.qrActive = false;
+        try { localStorage.setItem(`placeprep_qr_session_${session.sessionId}`, JSON.stringify(session)); } catch {}
+        throw new Error('Attendance session has expired.');
+      }
+
+      if (!session.qrToken || session.qrToken.trim() !== (qrToken || '').trim()) {
+        throw new Error('QR Code Expired: This QR code has already been scanned or rotated. Please scan the newly displayed code.');
+      }
+
+      // Geofence check
+      const loc = getSavedInstituteLocation();
+      const distance = calculateLocalDistance(latitude, longitude, loc.latitude, loc.longitude);
+      if (session.geofenceRequired && distance > 100.0) {
+        throw new Error(`Geofence validation failed: You are ${Math.round(distance)}m away from campus center. Attendance can ONLY be marked within 100m.`);
+      }
+
+      // Check duplicate student scan
+      const email = studentEmail || 'student@example.edu';
+      session.scannedEmails = session.scannedEmails || [];
+      if (session.scannedEmails.includes(email)) {
+        throw new Error('Duplicate attendance: You have already marked attendance for this lecture session!');
+      }
+
+      // Record student scan
+      session.totalScans = (session.totalScans || 0) + 1;
+      session.scannedEmails.push(email);
+
+      const scanEntry = {
+        studentEmail: email,
+        studentName: email.split('@')[0],
+        scannedAt: new Date().toLocaleTimeString(),
+        distanceMeters: Math.round(distance * 10) / 10
+      };
+      session.recentScans = [scanEntry, ...(session.recentScans || [])].slice(0, 10);
+
+      // ROTATE QR TOKEN IMMEDIATELY! Anti-Screenshot security rule
+      const newToken = 'PP-ATT-' + sid + '-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
+      session.qrToken = newToken;
+
+      try {
+        localStorage.setItem(`placeprep_qr_session_${session.sessionId}`, JSON.stringify(session));
+      } catch {}
+
+      return {
+        success: true,
+        status: 'PRESENT',
+        message: 'Attendance verified and saved via Dynamic Rotating QR Code!',
+        markedAt: new Date().toLocaleTimeString(),
+        distanceMeters: Math.round(distance * 10) / 10,
+        verificationMethod: '100M_GEOFENCE_AND_DYNAMIC_QR',
+        studentEmail: email
+      };
+    }
+  },
+
+  async getActiveQrSessions() {
+    try {
+      return await request('/student/attendance/qr/active-sessions');
+    } catch {
+      try {
+        const sid = localStorage.getItem('placeprep_active_qr_session_id') || 1;
+        const raw = localStorage.getItem(`placeprep_qr_session_${sid}`);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data.qrActive && Date.now() < data.qrExpiresAt) {
+            return [{
+              sessionId: data.sessionId,
+              qrActive: true,
+              totalScans: data.totalScans || 0,
+              facultyEmail: data.facultyEmail,
+              remainingSeconds: Math.max(0, Math.floor((data.qrExpiresAt - Date.now()) / 1000))
+            }];
+          }
+        }
+      } catch {}
+      return [];
     }
   }
 };
-

@@ -25,7 +25,9 @@ import {
   Copy,
   AlertCircle
 } from 'lucide-react';
+import { UserApi } from '../../services/api';
 import {
+  getCurrentUser,
   getFullStudentProfile,
   saveFullStudentProfile,
   generateUniqueStudentId
@@ -49,19 +51,59 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   if (!isOpen) return null;
 
   const [activeTab, setActiveTab] = useState('basic');
-  const [profile, setProfile] = useState(() => getFullStudentProfile());
+  const [profile, setProfile] = useState(() => getFullStudentProfile(getCurrentUser()));
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
 
   // Temporary inputs for skills
   const [newTechSkill, setNewTechSkill] = useState('');
   const [newSubject, setNewSubject] = useState('');
 
-  // Re-sync with storage on mount
+  // Re-sync with backend database and storage on mount
   useEffect(() => {
-    const fresh = getFullStudentProfile();
-    setProfile(fresh);
-  }, []);
+    const user = getCurrentUser();
+    if (!user) return;
+    const local = getFullStudentProfile(user);
+    setProfile(local);
+
+    if (user.email) {
+      UserApi.getStudentFullProfile(user.email).then((remoteData) => {
+        if (!remoteData) return;
+        let parsed = null;
+        if (typeof remoteData === 'string') {
+          try { parsed = JSON.parse(remoteData); } catch {}
+        } else if (remoteData && typeof remoteData === 'object') {
+          if (remoteData.basicDetails) {
+            parsed = remoteData;
+          } else if (remoteData.user) {
+            parsed = {
+              ...local,
+              basicDetails: {
+                ...local.basicDetails,
+                fullName: remoteData.user.name || local.basicDetails.fullName,
+                email: remoteData.user.email || local.basicDetails.email,
+                phone: remoteData.user.phone || local.basicDetails.phone,
+              },
+              educationDetails: {
+                ...local.educationDetails,
+                rollNumber: remoteData.user.rollNumber || local.educationDetails.rollNumber,
+                college: remoteData.user.college || local.educationDetails.college,
+                branch: remoteData.user.branch || local.educationDetails.branch,
+                graduationBatch: remoteData.user.graduationBatch || local.educationDetails.graduationBatch,
+              }
+            };
+          }
+        }
+        if (parsed && parsed.basicDetails) {
+          setProfile(parsed);
+          saveFullStudentProfile(parsed, user);
+        }
+      }).catch((err) => {
+        console.warn('Failed to fetch remote profile from DB:', err);
+      });
+    }
+  }, [isOpen]);
 
   const handleCopyId = () => {
     if (profile?.uniqueStudentId) {
@@ -71,11 +113,24 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
     }
   };
 
-  const handleSave = () => {
-    saveFullStudentProfile(profile);
-    setSaveSuccessMsg('Profile details updated and saved successfully!');
-    if (onProfileUpdated) onProfileUpdated(profile);
-    setTimeout(() => setSaveSuccessMsg(''), 4000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    const user = getCurrentUser();
+    saveFullStudentProfile(profile, user);
+
+    try {
+      if (user?.email) {
+        await UserApi.saveStudentFullProfile(profile, user.email);
+      }
+      setSaveSuccessMsg('Profile details synchronized with database successfully!');
+    } catch (err) {
+      console.warn('Backend profile save warning:', err);
+      setSaveSuccessMsg('Profile details saved successfully!');
+    } finally {
+      setIsSaving(false);
+      if (onProfileUpdated) onProfileUpdated(profile);
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+    }
   };
 
   const handleProfilePhotoUpload = (e) => {
@@ -439,7 +494,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
               {/* User Name with Green Verified Badge */}
               <div className="mt-3 flex items-center justify-center gap-1.5">
                 <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
-                  {profile.basicDetails?.fullName || 'Priyansh Jain'}
+                  {profile.basicDetails?.fullName || getCurrentUser()?.name || 'Student'}
                 </h3>
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
               </div>

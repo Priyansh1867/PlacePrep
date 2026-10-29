@@ -65,4 +65,25 @@ public class ClassAttendanceSession {
     private String instituteName;
 
     private String createdAt;
+
+    // Dynamic QR & Live Faculty Session Control fields
+    @Builder.Default
+    private Boolean isQrActive = false;
+
+    private String qrToken; // Rotates dynamically on every single student scan
+
+    private String qrExpiresAt; // ISO-8601 or formatted expiry timestamp
+
+    private Integer qrDurationMinutes; // Duration window in minutes (e.g. 5, 10, 15)
+
+    @Builder.Default
+    private Boolean geofenceRequired = true; // Live geofence validation required
+
+    private String sessionOpenedAt;
+
+    private String sessionOpenedBy; // Email or name of faculty who opened attendance
+
+    @Builder.Default
+    private Integer totalQrScans = 0; // Live count of students marked via QR
 }
+

@@ -278,4 +278,71 @@ public class UserService {
         }
         throw new IllegalArgumentException("Invalid or expired password reset token");
     }
+
+    public User getUserByEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        return userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("User not found for email: " + email));
+    }
+
+    public String getUserFullProfile(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseGet(() -> {
+                    User u = new User();
+                    u.setEmail(cleanEmail);
+                    String nameFromEmail = cleanEmail.split("@")[0].replace(".", " ");
+                    u.setName(Character.toUpperCase(nameFromEmail.charAt(0)) + nameFromEmail.substring(1));
+                    u.setPassword("password123");
+                    u.setRole("student");
+                    u.setStatus("ACTIVE");
+                    return userRepository.save(u);
+                });
+        return user.getFullProfileJson();
+    }
+
+    public User saveUserFullProfile(String email, String profileJson, Map<String, Object> basicFields) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseGet(() -> {
+                    User u = new User();
+                    u.setEmail(cleanEmail);
+                    u.setName(basicFields != null && basicFields.get("name") != null ? String.valueOf(basicFields.get("name")) : "Student");
+                    u.setPassword("password123");
+                    u.setRole("student");
+                    u.setStatus("ACTIVE");
+                    return userRepository.save(u);
+                });
+        user.setFullProfileJson(profileJson);
+        if (basicFields != null) {
+            if (basicFields.get("name") != null && !String.valueOf(basicFields.get("name")).trim().isEmpty()) {
+                user.setName(String.valueOf(basicFields.get("name")).trim());
+            }
+            if (basicFields.get("phone") != null) {
+                user.setPhone(String.valueOf(basicFields.get("phone")).trim());
+            }
+            if (basicFields.get("college") != null) {
+                user.setCollege(String.valueOf(basicFields.get("college")).trim());
+            }
+            if (basicFields.get("branch") != null) {
+                user.setBranch(String.valueOf(basicFields.get("branch")).trim());
+            }
+            if (basicFields.get("rollNumber") != null) {
+                user.setRollNumber(String.valueOf(basicFields.get("rollNumber")).trim());
+            }
+            if (basicFields.get("graduationBatch") != null) {
+                user.setGraduationBatch(String.valueOf(basicFields.get("graduationBatch")).trim());
+            }
+        }
+        return userRepository.save(user);
+    }
+
 }

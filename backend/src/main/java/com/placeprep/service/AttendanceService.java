@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
+import java.util.UUID;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1228,5 +1230,312 @@ public class AttendanceService {
         summary.put("averageAssessmentScore", Math.round(avgScore * 10.0) / 10.0);
         summary.put("records", sessionDetails);
         return summary;
+    }
+
+    // ==========================================
+    // DYNAMIC QR & LIVE REAL-TIME ATTENDANCE
+    // ==========================================
+
+    @Transactional
+    public Map<String, Object> startQrAttendanceSession(Long sessionId, String facultyEmail, Integer durationMinutes, Boolean geofenceRequired) {
+        ClassAttendanceSession session = classSessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Lecture session not found with ID: " + sessionId));
+
+        int duration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : 10;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusMinutes(duration);
+
+        String initialQrToken = "PP-ATT-" + sessionId + "-" + UUID.randomUUID().toString();
+
+        session.setIsQrActive(true);
+        session.setQrToken(initialQrToken);
+        session.setQrDurationMinutes(duration);
+        session.setQrExpiresAt(expiresAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        session.setSessionOpenedAt(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        session.setSessionOpenedBy(facultyEmail != null ? facultyEmail : "faculty");
+        session.setGeofenceRequired(geofenceRequired != null ? geofenceRequired : true);
+        session.setStatus("OPEN");
+        if (session.getTotalQrScans() == null) {
+            session.setTotalQrScans(0);
+        }
+
+        classSessionRepo.save(session);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("success", true);
+        res.put("sessionId", session.getId());
+        res.put("subjectCode", session.getSubjectCode());
+        res.put("subjectName", session.getSubjectName());
+        res.put("lectureNumber", session.getLectureNumber());
+        res.put("lectureTitle", session.getLectureTitle());
+        res.put("facultyName", session.getFacultyName());
+        res.put("isQrActive", true);
+        res.put("qrToken", initialQrToken);
+        res.put("qrExpiresAt", session.getQrExpiresAt());
+        res.put("remainingSeconds", duration * 60L);
+        res.put("durationMinutes", duration);
+        res.put("geofenceRequired", session.getGeofenceRequired());
+        res.put("totalScans", session.getTotalQrScans());
+        res.put("message", "Live QR Attendance started! Dynamic QR code is active and will rotate on every student scan.");
+        return res;
+    }
+
+    public Map<String, Object> getQrSessionStatus(Long sessionId) {
+        ClassAttendanceSession session = classSessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Lecture session not found with ID: " + sessionId));
+
+        boolean isActive = Boolean.TRUE.equals(session.getIsQrActive());
+        long remainingSeconds = 0;
+
+        if (isActive && session.getQrExpiresAt() != null) {
+            try {
+                LocalDateTime expiresAt = LocalDateTime.parse(session.getQrExpiresAt());
+                LocalDateTime now = LocalDateTime.now();
+                if (now.isAfter(expiresAt)) {
+                    isActive = false;
+                    session.setIsQrActive(false);
+                    session.setStatus("COMPLETED");
+                    classSessionRepo.save(session);
+                } else {
+                    remainingSeconds = Math.max(0, Duration.between(now, expiresAt).getSeconds());
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        List<ClassAttendanceRecord> records = classRecordRepo.findBySessionId(sessionId);
+        List<Map<String, Object>> recentScans = new ArrayList<>();
+        int count = 0;
+        for (int i = records.size() - 1; i >= 0 && count < 15; i--) {
+            ClassAttendanceRecord r = records.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("studentId", r.getStudentId());
+            m.put("studentName", r.getStudentName());
+            m.put("studentRollNumber", r.getStudentRollNumber());
+            m.put("status", r.getStatus());
+            m.put("recordedAt", r.getRecordedAt());
+            m.put("distanceMeters", r.getDistanceMeters());
+            recentScans.add(m);
+            count++;
+        }
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("sessionId", session.getId());
+        res.put("subjectCode", session.getSubjectCode());
+        res.put("subjectName", session.getSubjectName());
+        res.put("lectureNumber", session.getLectureNumber());
+        res.put("lectureTitle", session.getLectureTitle());
+        res.put("facultyName", session.getFacultyName());
+        res.put("isQrActive", isActive);
+        res.put("qrToken", isActive ? session.getQrToken() : null);
+        res.put("qrExpiresAt", session.getQrExpiresAt());
+        res.put("remainingSeconds", remainingSeconds);
+        res.put("durationMinutes", session.getQrDurationMinutes() != null ? session.getQrDurationMinutes() : 10);
+        res.put("geofenceRequired", session.getGeofenceRequired() != null ? session.getGeofenceRequired() : true);
+        res.put("totalScans", records.size());
+        res.put("status", session.getStatus());
+        res.put("recentScans", recentScans);
+        return res;
+    }
+
+    @Transactional
+    public Map<String, Object> stopQrAttendanceSession(Long sessionId, String facultyEmail) {
+        ClassAttendanceSession session = classSessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Lecture session not found with ID: " + sessionId));
+
+        session.setIsQrActive(false);
+        session.setQrToken(null);
+        session.setStatus("COMPLETED");
+        session.setClosingTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        classSessionRepo.save(session);
+
+        int totalMarked = classRecordRepo.findBySessionId(sessionId).size();
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("success", true);
+        res.put("sessionId", session.getId());
+        res.put("subjectCode", session.getSubjectCode());
+        res.put("isQrActive", false);
+        res.put("totalStudentsMarked", totalMarked);
+        res.put("status", "COMPLETED");
+        res.put("message", "QR Attendance session turned OFF. Total attendance recorded: " + totalMarked);
+        return res;
+    }
+
+    @Transactional
+    public Map<String, Object> markStudentLectureAttendanceViaQr(
+            Long sessionId,
+            String studentEmail,
+            String submittedQrToken,
+            Double studentLat,
+            Double studentLon,
+            Double gpsAccuracy
+    ) {
+        // 1. Session verification
+        ClassAttendanceSession session = classSessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Attendance session not found for ID: " + sessionId));
+
+        if (!Boolean.TRUE.equals(session.getIsQrActive())) {
+            throw new IllegalArgumentException("Attendance is currently turned OFF by the faculty for this class.");
+        }
+
+        // Check expiration
+        if (session.getQrExpiresAt() != null) {
+            try {
+                LocalDateTime expiresAt = LocalDateTime.parse(session.getQrExpiresAt());
+                if (LocalDateTime.now().isAfter(expiresAt)) {
+                    session.setIsQrActive(false);
+                    session.setStatus("COMPLETED");
+                    classSessionRepo.save(session);
+                    throw new IllegalArgumentException("The QR attendance window has expired. Faculty needs to open a new attendance window.");
+                }
+            } catch (Exception e) {
+                if (e instanceof IllegalArgumentException) throw (IllegalArgumentException) e;
+            }
+        }
+
+        // 2. Dynamic QR Token match check
+        if (submittedQrToken == null || submittedQrToken.isBlank()) {
+            throw new IllegalArgumentException("QR Code data is missing. Please point your camera to scan the live QR code.");
+        }
+
+        if (!submittedQrToken.trim().equals(session.getQrToken() != null ? session.getQrToken().trim() : "")) {
+            throw new IllegalArgumentException("QR Code Expired: This QR code has already been scanned or rotated. Please scan the current live QR code on the faculty screen!");
+        }
+
+        // 3. Duplicate attendance check at DB level
+        boolean alreadyMarked = classRecordRepo.existsBySessionIdAndStudentId(sessionId, studentEmail);
+        if (alreadyMarked) {
+            throw new IllegalArgumentException("Duplicate attendance: You have already marked attendance for this lecture session.");
+        }
+
+        // 4. Geofencing check (100m radius) if required
+        Double distance = null;
+        if (Boolean.TRUE.equals(session.getGeofenceRequired())) {
+            if (studentLat == null || studentLon == null) {
+                throw new IllegalArgumentException("GPS Location is required for Geofence validation (Step 1).");
+            }
+            if (locationService == null) {
+                throw new IllegalStateException("Location service is unavailable.");
+            }
+            Optional<InstituteLocation> locOpt = locationService.getCurrentLocation();
+            if (locOpt.isEmpty()) {
+                throw new IllegalStateException("College location has not been configured by Management.");
+            }
+            InstituteLocation college = locOpt.get();
+            distance = locationService.calculateDistance(studentLat, studentLon, college.getLatitude(), college.getLongitude());
+
+            if (distance > 100.0) {
+                throw new IllegalArgumentException(String.format(
+                        "Attendance REJECTED: You are %.1fm away from %s. Attendance is strictly restricted to within 100 meters of the campus.",
+                        distance, college.getInstituteName()
+                ));
+            }
+
+            if (gpsAccuracy != null && gpsAccuracy > 200.0) {
+                throw new IllegalArgumentException(String.format("GPS accuracy margin too high (%.0fm). Please enable High Accuracy GPS and retry.", gpsAccuracy));
+            }
+        }
+
+        // 5. Resolve Student Profile Information
+        String studentName = "Student";
+        String rollNumber = "22CS0101";
+        if (userRepo != null) {
+            Optional<User> uOpt = userRepo.findByEmail(studentEmail);
+            if (uOpt.isPresent()) {
+                studentName = uOpt.get().getName();
+                rollNumber = uOpt.get().getRollNumber() != null ? uOpt.get().getRollNumber() : rollNumber;
+            }
+        }
+
+        // 6. Record Student Attendance to MySQL Database
+        ClassAttendanceRecord record = new ClassAttendanceRecord();
+        record.setSessionId(session.getId());
+        record.setStudentId(studentEmail);
+        record.setStudentRollNumber(rollNumber);
+        record.setStudentName(studentName);
+        record.setSubjectCode(session.getSubjectCode());
+        record.setStatus("PRESENT");
+        record.setLatitude(studentLat);
+        record.setLongitude(studentLon);
+        record.setDistanceMeters(distance != null ? Math.round(distance * 10.0) / 10.0 : 0.0);
+        record.setGpsAccuracy(gpsAccuracy != null ? Math.round(gpsAccuracy * 10.0) / 10.0 : null);
+        record.setVerificationMethod("100M_GEOFENCE_AND_DYNAMIC_QR");
+        record.setMarkedBy("STUDENT_QR_SCAN");
+        record.setRemarks("Dynamic QR code verified & geofence validated (" + (distance != null ? Math.round(distance * 10.0) / 10.0 + "m" : "N/A") + ")");
+        record.setRecordedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
+        ClassAttendanceRecord savedRecord = classRecordRepo.save(record);
+
+        // 7. CRITICAL TWIST: AUTOMATIC ROTATION OF QR TOKEN
+        // Every time a student successfully scans the QR code, rotate the QR code immediately to a new unique token!
+        String nextQrToken = "PP-ATT-" + sessionId + "-" + UUID.randomUUID().toString();
+        session.setQrToken(nextQrToken);
+        session.setTotalQrScans((session.getTotalQrScans() != null ? session.getTotalQrScans() : 0) + 1);
+        classSessionRepo.save(session);
+
+        // 8. Prepare Confirmation
+        Map<String, Object> summary = getSubjectDetailsWithLectures(session.getSubjectCode(), studentEmail);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("success", true);
+        res.put("status", "PRESENT");
+        res.put("message", "Attendance confirmed! Dynamic QR code scanned and verified inside 100m geofence.");
+        res.put("recordId", savedRecord.getId());
+        res.put("sessionId", session.getId());
+        res.put("lectureNumber", session.getLectureNumber());
+        res.put("lectureTitle", session.getLectureTitle());
+        res.put("subjectCode", session.getSubjectCode());
+        res.put("subjectName", session.getSubjectName());
+        res.put("studentEmail", studentEmail);
+        res.put("studentName", studentName);
+        res.put("distanceMeters", savedRecord.getDistanceMeters());
+        res.put("markedAt", savedRecord.getRecordedAt());
+        res.put("verificationMethod", savedRecord.getVerificationMethod());
+        res.put("nextQrToken", nextQrToken); // new rotated token
+        res.put("subjectSummary", summary);
+
+        return res;
+    }
+
+    public List<Map<String, Object>> getActiveQrSessions() {
+        List<ClassAttendanceSession> openSessions = classSessionRepo.findAll();
+        List<Map<String, Object>> activeList = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (ClassAttendanceSession s : openSessions) {
+            if (Boolean.TRUE.equals(s.getIsQrActive())) {
+                boolean valid = true;
+                if (s.getQrExpiresAt() != null) {
+                    try {
+                        LocalDateTime exp = LocalDateTime.parse(s.getQrExpiresAt());
+                        if (now.isAfter(exp)) {
+                            s.setIsQrActive(false);
+                            s.setStatus("COMPLETED");
+                            classSessionRepo.save(s);
+                            valid = false;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (valid) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("sessionId", s.getId());
+                    m.put("subjectCode", s.getSubjectCode());
+                    m.put("subjectName", s.getSubjectName());
+                    m.put("lectureNumber", s.getLectureNumber());
+                    m.put("lectureTitle", s.getLectureTitle());
+                    m.put("facultyName", s.getFacultyName());
+                    m.put("department", s.getDepartment());
+                    m.put("semester", s.getSemester());
+                    m.put("startTime", s.getStartTime());
+                    m.put("endTime", s.getEndTime());
+                    m.put("qrExpiresAt", s.getQrExpiresAt());
+                    m.put("geofenceRequired", s.getGeofenceRequired());
+                    activeList.add(m);
+                }
+            }
+        }
+        return activeList;
     }
 }

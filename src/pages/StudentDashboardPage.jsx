@@ -276,7 +276,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         </div>
       </div>
 
-      {/* Mandatory Geofence & Facial Identity Attendance Section */}
+      {/* Mandatory Geofence & Real-Time Dynamic QR Attendance Section */}
       <StudentGpsAttendanceWidget sessionTitle="Today's Academic & Campus Recruitment Training Attendance" />
 
       {/* Quick Stats Grid */}

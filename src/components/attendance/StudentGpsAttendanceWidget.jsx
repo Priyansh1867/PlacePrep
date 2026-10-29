@@ -12,7 +12,6 @@ import {
   UserCheck,
   Check,
   Sparkles,
-  ScanFace,
   Lock,
   Unlock,
   Building2,
@@ -28,9 +27,13 @@ import {
   AlertCircle,
   Search,
   Filter,
-  CheckSquare
+  CheckSquare,
+  QrCode,
+  Scan,
+  Zap
 } from 'lucide-react';
 import { StudentAttendanceApi } from '../../services/api';
+import jsQR from 'jsqr';
 import { getCurrentUser, getFullStudentProfile } from '../../services/storage';
 
 export default function StudentGpsAttendanceWidget({
@@ -66,18 +69,14 @@ export default function StudentGpsAttendanceWidget({
   // Institute Geofence Status
   const [instituteStatus, setInstituteStatus] = useState(null);
 
-  // Active Marking Steps: 1 = Geofence Check, 2 = Photo Face Verification, 3 = Confirmed
+  // Active Marking Steps: 1 = Geofence Check, 2 = Dynamic QR Code Scan, 3 = Confirmed
   const [markingStep, setMarkingStep] = useState(1);
   const [isVerifyingGps, setIsVerifyingGps] = useState(false);
   const [gpsResult, setGpsResult] = useState(null);
   const [gpsError, setGpsError] = useState('');
 
-  // Camera & Face Verification
+  // Camera & Dynamic QR Scanner
   const [cameraActive, setCameraActive] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const [isVerifyingFace, setIsVerifyingFace] = useState(false);
-  const [faceResult, setFaceResult] = useState(null);
-  const [faceError, setFaceError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Final Attendance Record from Server
@@ -87,6 +86,12 @@ export default function StudentGpsAttendanceWidget({
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const isScanningRef = useRef(false);
+  const qrAnimFrameRef = useRef(null);
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [qrError, setQrError] = useState('');
+  const [manualQrInput, setManualQrInput] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   // Load Enrolled Subjects & Geofence Status on mount
   useEffect(() => {
@@ -148,30 +153,106 @@ export default function StudentGpsAttendanceWidget({
     };
   }, []);
 
+
+
   const stopCamera = () => {
+    isScanningRef.current = false;
+    if (qrAnimFrameRef.current) {
+      cancelAnimationFrame(qrAnimFrameRef.current);
+      qrAnimFrameRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     setCameraActive(false);
+    setIsScanningQr(false);
   };
 
   const startCamera = async () => {
-    setFaceError('');
+    setQrError('');
+    setIsSubmitting(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.setAttribute('playsinline', 'true');
+        await videoRef.current.play();
       }
       setCameraActive(true);
+      setIsScanningQr(true);
+      isScanningRef.current = true;
+      runQrScanLoop();
     } catch (err) {
-      console.warn('Camera stream error:', err);
-      setFaceError('Unable to access webcam. Please allow camera permissions in browser settings.');
+      console.warn('QR camera error:', err);
+      setQrError('Camera access unavailable. You can enter the unique session code manually below.');
+      setShowManualInput(true);
+    }
+  };
+
+  const runQrScanLoop = () => {
+    if (!isScanningRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (video && video.readyState >= 2 && canvas) {
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (code && code.data && code.data.trim().length > 0) {
+          isScanningRef.current = false;
+          processQrSubmission(code.data.trim());
+          return;
+        }
+      }
+    }
+    qrAnimFrameRef.current = requestAnimationFrame(runQrScanLoop);
+  };
+
+  const processQrSubmission = async (qrToken) => {
+    setIsSubmitting(true);
+    setQrError('');
+    try {
+      const payload = {
+        sessionId: activeLecture?.sessionId || 1,
+        qrToken: qrToken,
+        studentEmail: currentUser.email || 'priyansh.jain@example.edu',
+        latitude: gpsResult.studentLat,
+        longitude: gpsResult.studentLon,
+        gpsAccuracy: gpsResult.gpsAccuracy
+      };
+
+      const record = await StudentAttendanceApi.scanQrAttendance(payload);
+      stopCamera();
+      setAttendanceResult(record);
+      setMarkingStep(3);
+
+      loadSubjectsData();
+      if (selectedSubjectCode) {
+        loadSubjectDetails(selectedSubjectCode);
+      }
+
+      if (onAttendanceMarked) onAttendanceMarked(record);
+      window.dispatchEvent(new CustomEvent('student-attendance-marked', { detail: record }));
+    } catch (err) {
+      setQrError(err.message || 'QR code verification failed. Code may have rotated. Please scan the current code.');
+      setTimeout(() => {
+        if (isScanningQr || !isScanningRef.current) {
+          isScanningRef.current = true;
+          runQrScanLoop();
+        }
+      }, 1800);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -186,9 +267,7 @@ export default function StudentGpsAttendanceWidget({
     setMarkingStep(1);
     setGpsResult(null);
     setGpsError('');
-    setCapturedPhoto(null);
-    setFaceResult(null);
-    setFaceError('');
+    setQrError('');
     setAttendanceResult(null);
     setActiveView('mark-active');
   };
@@ -250,82 +329,6 @@ export default function StudentGpsAttendanceWidget({
     );
   };
 
-  // ─── STEP 2: PHOTO CAPTURE & SERVER PERSISTENCE ────────────────────────────
-  const handleCapturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const photoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedPhoto(photoDataUrl);
-    stopCamera();
-
-    processAttendanceSubmission(photoDataUrl);
-  };
-
-  const processAttendanceSubmission = async (photoData) => {
-    setIsVerifyingFace(true);
-    setIsSubmitting(true);
-    setFaceError('');
-
-    try {
-      // 1. Verify face identity against student profile
-      const verifyRes = await StudentAttendanceApi.verifyFace(photoData);
-      if (!verifyRes.verified) {
-        setFaceError(
-          'Facial verification mismatch: The captured photo does not match your registered profile photo. Please try again with clear lighting.'
-        );
-        setIsVerifyingFace(false);
-        setIsSubmitting(false);
-        return;
-      }
-      setFaceResult(verifyRes);
-
-      // 2. Submit lecture attendance to database backend
-      const payload = {
-        sessionId: activeLecture.sessionId,
-        latitude: gpsResult.studentLat,
-        longitude: gpsResult.studentLon,
-        gpsAccuracy: gpsResult.gpsAccuracy,
-        photo: photoData,
-        faceVerified: true,
-        studentEmail: currentUser.email
-      };
-
-      const record = await StudentAttendanceApi.markLectureAttendance(payload);
-
-      setAttendanceResult(record);
-      setMarkingStep(3);
-
-      // Refresh data
-      loadSubjectsData();
-      if (selectedSubjectCode) {
-        loadSubjectDetails(selectedSubjectCode);
-      }
-
-      if (onAttendanceMarked) onAttendanceMarked(record);
-      window.dispatchEvent(new CustomEvent('student-attendance-marked', { detail: record }));
-    } catch (err) {
-      setFaceError(err.message || 'Failed to submit attendance to database. Please retry.');
-    } finally {
-      setIsVerifyingFace(false);
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRetake = () => {
-    setCapturedPhoto(null);
-    setFaceResult(null);
-    setFaceError('');
-    startCamera();
-  };
-
   // Summary Metrics across all subjects
   const overallMetrics = useMemo(() => {
     if (!subjects.length) return { totalHeld: 0, totalAttended: 0, overallPct: 100, shortageSubjects: 0 };
@@ -348,7 +351,7 @@ export default function StudentGpsAttendanceWidget({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-600 flex items-center justify-center text-white shadow-md shrink-0">
-            <ScanFace className="w-6 h-6" />
+            <QrCode className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -802,8 +805,8 @@ export default function StudentGpsAttendanceWidget({
                   : 'bg-slate-100 text-slate-400'
               }`}
             >
-              {markingStep === 3 ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Camera className="w-3.5 h-3.5" />}
-              <span>2. Photo Face Match</span>
+              {markingStep === 3 ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <QrCode className="w-3.5 h-3.5" />}
+              <span>2. Dynamic QR Scan</span>
             </div>
 
             <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
@@ -869,7 +872,7 @@ export default function StudentGpsAttendanceWidget({
             </div>
           )}
 
-          {/* Step 2: Camera & Profile Photo Matching */}
+          {/* Step 2: Dynamic QR Code Scanner (Anti-Screenshot) */}
           {markingStep === 2 && (
             <div className="space-y-6">
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
@@ -880,7 +883,7 @@ export default function StudentGpsAttendanceWidget({
                       Geofence Verified: {gpsResult?.distanceMeters}m from Campus Center
                     </span>
                     <span className="text-[11px] text-emerald-700">
-                      Within allowed 100m boundary. Next: Capture photo to verify your face identity with your profile.
+                      Within allowed 100m boundary. Next: Scan the live dynamic QR code displayed on the faculty screen.
                     </span>
                   </div>
                 </div>
@@ -889,125 +892,139 @@ export default function StudentGpsAttendanceWidget({
                 </span>
               </div>
 
-              {/* Camera & Profile Photo Comparison Layout */}
+              {/* Dynamic QR Scanner Viewfinder Layout */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                {/* Left: Registered Profile Identity */}
-                <div className="md:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-center space-y-3">
+                {/* Left: Anti-Cheat & Lecture Details */}
+                <div className="md:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 text-center space-y-4">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    Registered Profile Identity
+                    Session Authentication
                   </span>
 
-                  <div className="relative mx-auto w-36 h-36 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-gradient-to-tr from-indigo-500 via-violet-500 to-teal-400 flex items-center justify-center">
-                    {studentProfile?.basicDetails?.profilePhoto ? (
-                      <img
-                        src={studentProfile.basicDetails.profilePhoto}
-                        alt={currentUser.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-white">
-                        <span className="text-3xl font-black">
-                          {currentUser.name
-                            ? currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('')
-                            : 'PJ'}
-                        </span>
-                        <span className="text-[10px] text-teal-300 font-bold uppercase mt-1">Reference</span>
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[9px] font-black shadow-xs">
-                      Original
-                    </div>
+                  <div className="relative mx-auto w-36 h-36 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-gradient-to-tr from-slate-900 via-indigo-900 to-teal-800 flex flex-col items-center justify-center text-white p-3">
+                    <QrCode className="w-12 h-12 text-teal-300 mb-1 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-200">
+                      Dynamic QR Active
+                    </span>
+                    <span className="text-[8px] text-indigo-200 text-center mt-0.5">
+                      Rotates on Every Scan
+                    </span>
                   </div>
 
                   <div>
                     <h4 className="font-extrabold text-slate-900 text-sm">
-                      {currentUser.name || 'Priyansh Jain'}
+                      {activeLecture?.lectureTitle || 'Lecture Session'}
                     </h4>
-                    <p className="text-[11px] font-mono text-slate-500">
-                      Roll: {currentUser.rollNumber || '22CS0101'}
+                    <p className="text-[11px] font-mono text-slate-500 mt-0.5">
+                      Subject: {selectedSubjectCode}
                     </p>
                     <p className="text-[11px] text-slate-600">
-                      {currentUser.branch || 'CSE'} • Sem 6
+                      Faculty: {activeLecture?.facultyName || 'Department Faculty'}
                     </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-100 text-[11px] text-indigo-900 font-medium text-left">
+                    ⚡ <strong>Anti-Cheat Active:</strong> The QR code rotates immediately upon each student's scan. Screenshots or photos cannot be shared.
                   </div>
                 </div>
 
-                {/* Right: Live Camera View */}
+                {/* Right: Camera Scanner */}
                 <div className="md:col-span-7 space-y-3">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    Live Camera Capture
+                    Live QR Camera Viewfinder
                   </span>
 
-                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border-2 border-slate-300 shadow-inner flex items-center justify-center">
-                    {capturedPhoto ? (
-                      <img src={capturedPhoto} alt="Captured selfie" className="w-full h-full object-cover" />
-                    ) : (
-                      <>
-                        <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-                        {cameraActive && (
-                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div className="w-48 h-60 rounded-[50%] border-2 border-dashed border-teal-400/80 shadow-[0_0_20px_rgba(20,184,166,0.3)] flex flex-col items-center justify-between p-3 animate-pulse">
-                              <span className="text-[10px] font-bold text-teal-300 bg-slate-950/70 px-2 py-0.5 rounded-full">
-                                Align Face Here
-                              </span>
-                              <span className="text-[9px] text-teal-200 bg-slate-950/70 px-2 py-0.5 rounded-full">
-                                Anti-Spoof Active
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        {!cameraActive && (
-                          <div className="text-center p-6 text-slate-400">
-                            <Camera className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-                            <p className="text-xs font-semibold">Webcam is off</p>
-                            <button
-                              type="button"
-                              onClick={startCamera}
-                              className="mt-3 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-                            >
-                              Enable Camera
-                            </button>
-                          </div>
-                        )}
-                      </>
+                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400 shadow-inner flex items-center justify-center">
+                    <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
+
+                    {cameraActive && isScanningQr && (
+                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div className="relative w-48 h-48 border-2 border-indigo-400 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+                          <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-bounce" />
+                          <div className="absolute -top-1 -left-1 w-4 h-4 border-t-3 border-l-3 border-teal-400 rounded-tl-lg" />
+                          <div className="absolute -top-1 -right-1 w-4 h-4 border-t-3 border-r-3 border-teal-400 rounded-tr-lg" />
+                          <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-3 border-l-3 border-teal-400 rounded-bl-lg" />
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-teal-400 rounded-br-lg" />
+                          <span className="text-[10px] font-bold text-white bg-slate-950/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Point at Faculty QR
+                          </span>
+                        </div>
+                      </div>
                     )}
+
+                    {!cameraActive && (
+                      <div className="text-center p-6 text-slate-400">
+                        <QrCode className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+                        <p className="text-xs font-semibold">Camera is paused</p>
+                        <button
+                          type="button"
+                          onClick={startCamera}
+                          className="mt-3 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer shadow-md transition"
+                        >
+                          Enable QR Camera
+                        </button>
+                      </div>
+                    )}
+
                     <canvas ref={canvasRef} className="hidden" />
                   </div>
 
                   {isSubmitting && (
                     <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center gap-2 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
-                      <span>Verifying face identity and saving attendance record in database...</span>
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-600 shrink-0" />
+                      <span>Verifying live dynamic QR code and recording attendance...</span>
                     </div>
                   )}
 
-                  {faceError && (
-                    <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2">
-                      <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <span>{faceError}</span>
+                  {qrError && (
+                    <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <span>{qrError}</span>
+                        <span className="block text-[11px] text-rose-600 font-normal">
+                          Point your camera at the newly updated QR code on the faculty screen. The scanner will retry automatically!
+                        </span>
+                      </div>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 pt-2">
-                    {!capturedPhoto ? (
+                  {/* Manual Code Input Fallback */}
+                  <div className="pt-2 border-t border-slate-100">
+                    {!showManualInput ? (
                       <button
                         type="button"
-                        onClick={handleCapturePhoto}
-                        disabled={!cameraActive || isSubmitting}
-                        className="flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        onClick={() => setShowManualInput(true)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center gap-1.5"
                       >
-                        <Camera className="w-4 h-4" />
-                        <span>Capture Photo & Confirm Attendance</span>
+                        <Scan className="w-3.5 h-3.5" />
+                        <span>Can't use camera? Enter session code manually</span>
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={handleRetake}
-                        disabled={isSubmitting}
-                        className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
-                      >
-                        Retake Photo
-                      </button>
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <label className="block text-xs font-bold text-slate-700">
+                          Enter QR Code Token displayed on faculty screen:
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={manualQrInput}
+                            onChange={(e) => setManualQrInput(e.target.value)}
+                            placeholder="e.g. PP-ATT-..."
+                            className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (manualQrInput.trim()) {
+                                processQrSubmission(manualQrInput.trim());
+                              }
+                            }}
+                            disabled={isSubmitting || !manualQrInput.trim()}
+                            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs disabled:opacity-50 cursor-pointer"
+                          >
+                            Submit
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1052,7 +1069,7 @@ export default function StudentGpsAttendanceWidget({
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Verification Method:</span>
-                  <span className="font-bold text-indigo-700">100M_GEOFENCE_AND_FACIAL_BIOMETRIC</span>
+                  <span className="font-bold text-indigo-700">{attendanceResult.verificationMethod || '100M_GEOFENCE_AND_DYNAMIC_QR'}</span>
                 </div>
               </div>
 

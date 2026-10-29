@@ -119,22 +119,24 @@ export function generateUniqueStudentId(seed = '') {
 }
 
 export function getInitialFullStudentProfile(currentUser = null) {
-  const user = currentUser || getCurrentUser();
-  const uniqueId = user?.uniqueStudentId || generateUniqueStudentId(user?.email || user?.id || 'priyansh.jain@example.edu');
+  const user = currentUser || getCurrentUser() || {};
+  const userEmail = user?.email || 'student@placeprep.com';
+  const userName = user?.name || (userEmail.split('@')[0].replace(/[._0-9]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+  const uniqueId = user?.uniqueStudentId || generateUniqueStudentId(userEmail);
 
   return {
     uniqueStudentId: uniqueId,
     verified: true,
     avatarTheme: 'emerald',
     basicDetails: {
-      fullName: user?.name || 'Priyansh Jain',
-      email: user?.email || 'priyansh.jain@example.edu',
+      fullName: user?.name || userName,
+      email: userEmail,
       phone: user?.phone || '+91 98765 43210',
       alternatePhone: '+91 91234 56789',
       dateOfBirth: '2004-06-15',
-      gender: 'Male',
+      gender: user?.gender || 'Female',
       bloodGroup: 'B+',
-      category: 'General',
+      category: 'General (UR)',
       differentlyAbled: 'No',
       currentAddress: 'Room 204, Aryabhatta Hostel, DTU Campus, Shahbad Daulatpur, Delhi',
       permanentAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085',
@@ -142,18 +144,18 @@ export function getInitialFullStudentProfile(currentUser = null) {
       hometown: 'New Delhi',
       state: 'Delhi',
       nationality: 'Indian',
-      linkedIn: 'https://linkedin.com/in/priyansh-jain',
-      github: 'https://github.com/priyanshjain',
-      portfolio: 'https://priyanshjain.dev',
-      leetCode: 'https://leetcode.com/priyanshjain'
+      linkedIn: user?.linkedIn || `https://linkedin.com/in/${userName.toLowerCase().replace(/\s+/g, '-')}`,
+      github: user?.github || `https://github.com/${userName.toLowerCase().replace(/\s+/g, '')}`,
+      portfolio: user?.portfolio || '',
+      leetCode: user?.leetCode || ''
     },
     educationDetails: {
       college: user?.college || 'Delhi Technological University (DTU)',
       degree: 'Bachelor of Technology (B.Tech)',
       branch: user?.branch || 'Computer Science and Engineering',
-      graduationBatch: user?.graduationBatch || '2028',
-      rollNumber: user?.rollNumber || '2024/CSE/084',
-      registrationNumber: 'DTU/2024/BTECH/0492',
+      graduationBatch: user?.graduationBatch || '2027',
+      rollNumber: user?.rollNumber || '23EJCAD122',
+      registrationNumber: user?.rollNumber ? `DTU/2023/BTECH/${user.rollNumber.slice(-4)}` : 'DTU/2023/BTECH/0122',
       cgpa: user?.cgpa || 8.5,
       activeBacklogs: user?.activeBacklogs || 0,
       totalCreditsEarned: 132,
@@ -161,11 +163,11 @@ export function getInitialFullStudentProfile(currentUser = null) {
       twelfthBoard: 'CBSE',
       twelfthStream: 'Science (PCM with Computer Science)',
       twelfthPercentage: user?.twelfthPercentage || 86.0,
-      twelfthYear: '2024',
+      twelfthYear: '2023',
       tenthSchool: 'Delhi Public School (DPS), R.K. Puram',
       tenthBoard: 'CBSE',
       tenthPercentage: user?.tenthPercentage || 88.0,
-      tenthYear: '2022'
+      tenthYear: '2021'
     },
     workExperiences: [
       {
@@ -299,27 +301,42 @@ export function getInitialFullStudentProfile(currentUser = null) {
   };
 }
 
-export function getFullStudentProfile() {
-  const current = getCurrentUser() || {};
-  const saved = getStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, null);
-  if (saved) {
-    if (!saved.uniqueStudentId) {
-      saved.uniqueStudentId = generateUniqueStudentId(current?.email || current?.id);
+export function getFullStudentProfile(currentUser = null) {
+  const current = currentUser || getCurrentUser() || {};
+  const userEmail = (current.email || '').toLowerCase().trim();
+  const storageKey = userEmail ? `placeprep_student_full_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}` : STORAGE_KEYS.FULL_STUDENT_PROFILE;
+
+  const saved = getStorageItem(storageKey, null);
+  if (saved && saved.basicDetails) {
+    if (!userEmail || !saved.basicDetails.email || saved.basicDetails.email.toLowerCase().trim() === userEmail) {
+      if (!saved.uniqueStudentId) {
+        saved.uniqueStudentId = generateUniqueStudentId(userEmail || current.id);
+      }
+      if (current.name && saved.basicDetails.fullName !== current.name && (!saved.basicDetails.fullName || saved.basicDetails.fullName === 'Priyansh Jain')) {
+        saved.basicDetails.fullName = current.name;
+      }
+      return saved;
     }
-    // sync current user name if modified in auth
-    if (current?.name && saved.basicDetails) {
-      saved.basicDetails.fullName = saved.basicDetails.fullName || current.name;
-    }
-    return saved;
   }
+
+  // Also check legacy storage key, but only if its email matches current user
+  const legacySaved = getStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, null);
+  if (legacySaved && legacySaved.basicDetails?.email && userEmail && legacySaved.basicDetails.email.toLowerCase().trim() === userEmail) {
+    setStorageItem(storageKey, legacySaved);
+    return legacySaved;
+  }
+
   const initial = getInitialFullStudentProfile(current);
-  setStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, initial);
+  setStorageItem(storageKey, initial);
   return initial;
 }
 
-export function saveFullStudentProfile(profile) {
-  setStorageItem(STORAGE_KEYS.FULL_STUDENT_PROFILE, profile);
-  const current = getCurrentUser() || {};
+export function saveFullStudentProfile(profile, currentUser = null) {
+  const current = currentUser || getCurrentUser() || {};
+  const userEmail = (profile?.basicDetails?.email || current.email || '').toLowerCase().trim();
+  const storageKey = userEmail ? `placeprep_student_full_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}` : STORAGE_KEYS.FULL_STUDENT_PROFILE;
+
+  setStorageItem(storageKey, profile);
   if (profile?.basicDetails) {
     current.name = profile.basicDetails.fullName || current.name;
     current.email = profile.basicDetails.email || current.email;

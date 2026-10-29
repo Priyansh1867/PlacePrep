@@ -13,6 +13,7 @@ import {
   Users,
   BookOpen,
   ShieldCheck,
+  Shield,
   Check,
   Sparkles,
   TrendingUp,
@@ -1037,7 +1038,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                 {markingStep === 1 && (
                   <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                     <div className="flex items-start gap-3">
-                      <Shield className="w-6 h-6 text-teal-600 shrink-0 mt-0.5" />
+                      <ShieldCheck className="w-6 h-6 text-teal-600 shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-extrabold text-slate-900 text-sm">
                           Mandatory Campus Geofencing Rule (Fixed 100m)

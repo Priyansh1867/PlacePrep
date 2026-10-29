@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
 import { setCurrentUser, setGraduationBatch, findRegisteredUser } from '../services/storage';
+import { isCollegeEmail } from '../pages/AuthPortalPage';
 import PlacePrepLogo from './PlacePrepLogo';
 import Button from './ui/Button';
 import Input from './ui/Input';

@@ -1,6 +1,10 @@
 package com.placeprep.config;
 
 import com.placeprep.model.ClassAttendanceRecord;
+import com.placeprep.model.Subject;
+import com.placeprep.model.StudentSubjectEnrollment;
+import com.placeprep.repository.SubjectRepository;
+import com.placeprep.repository.StudentSubjectEnrollmentRepository;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.Company;
 import com.placeprep.model.CrtAttendanceRecord;
@@ -35,7 +39,9 @@ public class DataInitializer {
             ClassAttendanceSessionRepository classSessionRepository,
             ClassAttendanceRecordRepository classRecordRepository,
             CrtTrainingSessionRepository crtSessionRepository,
-            CrtAttendanceRecordRepository crtRecordRepository
+            CrtAttendanceRecordRepository crtRecordRepository,
+            SubjectRepository subjectRepository,
+            StudentSubjectEnrollmentRepository enrollmentRepository
     ) {
         return args -> {
             if (userRepository.count() == 0) {
@@ -302,6 +308,182 @@ public class DataInitializer {
                 }
             }
 
+            
+            // ==========================================
+            // SEED SUBJECTS, ENROLLMENTS & LECTURE SESSIONS
+            // ==========================================
+            if (subjectRepository.count() == 0) {
+                Subject s1 = Subject.builder()
+                        .code("CS301")
+                        .name("Database Management Systems")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Prof. Tarun Gupta")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Relational data model, SQL queries, indexing, normalization, and transaction processing.")
+                        .build();
+                subjectRepository.save(s1);
+
+                Subject s2 = Subject.builder()
+                        .code("CS302")
+                        .name("Operating Systems & System Programming")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Dr. Radhika Sen")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Process scheduling, synchronization, deadlocks, memory management, and file systems.")
+                        .build();
+                subjectRepository.save(s2);
+
+                Subject s3 = Subject.builder()
+                        .code("CS303")
+                        .name("Computer Networks & Protocol Security")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Prof. Alok Verma")
+                        .facultyEmail("hod@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("OSI model, TCP/IP, routing algorithms, socket programming, and cryptographic protocols.")
+                        .build();
+                subjectRepository.save(s3);
+
+                Subject s4 = Subject.builder()
+                        .code("CS304")
+                        .name("Software Engineering & Agile Frameworks")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Ms. Sunita Kapoor")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(3)
+                        .minAttendancePercentage(75.0)
+                        .description("SDLC, Agile Scrum, requirement engineering, architectural design, and test-driven development.")
+                        .build();
+                subjectRepository.save(s4);
+
+                Subject s5 = Subject.builder()
+                        .code("CS306")
+                        .name("Cloud Computing & Distributed Systems")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Dr. Neha Sharma")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Virtualization, microservices, containerization, cloud storage, serverless, and fault tolerance.")
+                        .build();
+                subjectRepository.save(s5);
+
+                Subject s6 = Subject.builder()
+                        .code("CS308")
+                        .name("Compiler Design & Automata Processing")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Dr. Ramesh Gupta")
+                        .facultyEmail("management@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Lexical analysis, syntax trees, bottom-up parsing, intermediate code generation, and optimization.")
+                        .build();
+                subjectRepository.save(s6);
+
+                // Auto-enroll students into all 6 subjects
+                String[] enrolledStudentEmails = {
+                    "priyansh.jain@example.edu", "ananya.sharma@example.edu", "rohan.kulkarni@example.edu",
+                    "siddharth.nair@example.edu", "meera.venkat@example.edu", "kabir.mehta@example.edu",
+                    "divya.reddy@example.edu", "aarav.gupta@example.edu"
+                };
+
+                String[] allSubjectCodes = {"CS301", "CS302", "CS303", "CS304", "CS306", "CS308"};
+                for (String email : enrolledStudentEmails) {
+                    for (String code : allSubjectCodes) {
+                        StudentSubjectEnrollment en = StudentSubjectEnrollment.builder()
+                                .studentEmail(email)
+                                .subjectCode(code)
+                                .enrolledAt("2026-08-01 09:00")
+                                .build();
+                        enrollmentRepository.save(en);
+                    }
+                }
+
+                // Seed Realistic Lecture Sessions & Attendance Records
+                // 1. DBMS (CS301)
+                seedSubjectLectures(
+                        classSessionRepository, classRecordRepository,
+                        "CS301", "Database Management Systems", "Prof. Tarun Gupta", "FAC-CSE-012",
+                        new String[][]{
+                                {"1", "Relational Algebra & Relational Calculus", "2026-10-10", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                {"2", "Advanced SQL & Complex Nested Aggregations", "2026-10-13", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                {"3", "Normalization: 1NF, 2NF, 3NF & BCNF Proofs", "2026-10-17", "11:15 AM", "12:15 PM", "COMPLETED"},
+                                {"4", "B+ Tree Indexing & Query Execution Plans", "2026-10-22", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                {"5", "Transaction Concurrency & Two-Phase Locking", "2026-10-29", "10:00 AM", "11:00 AM", "OPEN"}
+                        },
+                        // Priyansh: 4 attended out of 4 completed = 100% (Eligible)
+                        new String[]{"PRESENT", "PRESENT", "PRESENT", "PRESENT", null}
+                );
+
+                // 2. OS (CS302)
+                seedSubjectLectures(
+                        classSessionRepository, classRecordRepository,
+                        "CS302", "Operating Systems & System Programming", "Dr. Radhika Sen", "FAC-CSE-028",
+                        new String[][]{
+                                {"1", "Process State Transitions & CPU Scheduling", "2026-10-09", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                {"2", "Deadlock Banker's Algorithm & Resource Allocation", "2026-10-14", "11:15 AM", "12:15 PM", "COMPLETED"},
+                                {"3", "Classic Synchronization: Dining Philosophers & Semaphores", "2026-10-18", "02:00 PM", "03:00 PM", "COMPLETED"},
+                                {"4", "Virtual Memory, Inverted Page Tables & Thrashing", "2026-10-23", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                {"5", "Demand Paging & Page Replacement Algorithms", "2026-10-29", "11:15 AM", "12:15 PM", "OPEN"}
+                        },
+                        // Priyansh: 2 attended, 2 absent = 50% (Shortage alert!)
+                        new String[]{"PRESENT", "ABSENT", "ABSENT", "PRESENT", null}
+                );
+
+                // 3. Computer Networks (CS303)
+                seedSubjectLectures(
+                        classSessionRepository, classRecordRepository,
+                        "CS303", "Computer Networks & Protocol Security", "Prof. Alok Verma", "HOD-CSE-001",
+                        new String[][]{
+                                {"1", "TCP 3-Way Handshake, Flow Control & Window Sizing", "2026-10-11", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                {"2", "BGP & OSPF Autonomous Routing Dynamics", "2026-10-15", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                {"3", "DNS Resolution, TLS 1.3 & PKI Certificates", "2026-10-20", "12:15 PM", "01:15 PM", "COMPLETED"},
+                                {"4", "Congestion Avoidance: Tahoe vs Reno Algorithms", "2026-10-29", "02:00 PM", "03:00 PM", "OPEN"}
+                        },
+                        // Priyansh: 3 attended out of 3 completed = 100% (Eligible)
+                        new String[]{"PRESENT", "PRESENT", "PRESENT", null}
+                );
+
+                // 4. Software Engineering (CS304)
+                seedSubjectLectures(
+                        classSessionRepository, classRecordRepository,
+                        "CS304", "Software Engineering & Agile Frameworks", "Ms. Sunita Kapoor", "FAC-CSE-033",
+                        new String[][]{
+                                {"1", "Agile Scrum Sprints, User Stories & Backlog Grooming", "2026-10-12", "11:15 AM", "12:15 PM", "COMPLETED"},
+                                {"2", "Clean Architecture, SOLID Principles & Refactoring", "2026-10-16", "02:00 PM", "03:00 PM", "COMPLETED"},
+                                {"3", "CI/CD Pipeline Automation & Automated Unit Testing", "2026-10-24", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                {"4", "Microservices Design Patterns: Saga & CQRS", "2026-10-29", "03:00 PM", "04:00 PM", "OPEN"}
+                        },
+                        // Priyansh: 3 attended out of 3 = 100%
+                        new String[]{"PRESENT", "PRESENT", "PRESENT", null}
+                );
+
+                // 5. Compiler Design (CS308)
+                seedSubjectLectures(
+                        classSessionRepository, classRecordRepository,
+                        "CS308", "Compiler Design & Automata Processing", "Dr. Ramesh Gupta", "MGMT-DTU-001",
+                        new String[][]{
+                                {"1", "Lexical Tokens, DFA Construction & Regular Expressions", "2026-10-08", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                {"2", "LL(1) First and Follow Set Calculations", "2026-10-14", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                {"3", "LR(0) and SLR(1) Parsing Table Canonical Collections", "2026-10-19", "11:15 AM", "12:15 PM", "COMPLETED"},
+                                {"4", "Syntax-Directed Translation & Three-Address Code", "2026-10-29", "04:00 PM", "05:00 PM", "OPEN"}
+                        },
+                        // Priyansh: 2 attended, 1 absent = 66.7% (Attendance Shortage alert!)
+                        new String[]{"PRESENT", "ABSENT", "PRESENT", null}
+                );
+            }
+
             if (crtSessionRepository.count() == 0) {
                 // 1. Session 1: Quantitative Aptitude
                 CrtTrainingSession s1 = new CrtTrainingSession();
@@ -471,4 +653,88 @@ public class DataInitializer {
             }
         };
     }
+
+    private void seedSubjectLectures(
+            ClassAttendanceSessionRepository sessionRepo,
+            ClassAttendanceRecordRepository recordRepo,
+            String subjectCode,
+            String subjectName,
+            String facultyName,
+            String facultyId,
+            String[][] lectures, // [lectureNumber, title, date, start, end, status]
+            String[] priyanshStatuses
+    ) {
+        String[] studentEmails = {
+                "priyansh.jain@example.edu", "ananya.sharma@example.edu", "rohan.kulkarni@example.edu",
+                "siddharth.nair@example.edu", "meera.venkat@example.edu", "kabir.mehta@example.edu",
+                "divya.reddy@example.edu", "aarav.gupta@example.edu"
+        };
+        String[] studentRolls = {
+                "22CS0101", "22CS0102", "22CS0103",
+                "22CS0104", "22CS0105", "22CS0106",
+                "22CS0107", "22CS0108"
+        };
+        String[] studentNames = {
+                "Priyansh Jain", "Ananya Sharma", "Rohan Kulkarni",
+                "Siddharth Nair", "Meera Venkat", "Kabir Mehta",
+                "Divya Reddy", "Aarav Gupta"
+        };
+
+        for (int i = 0; i < lectures.length; i++) {
+            String[] l = lectures[i];
+            int lectureNum = Integer.parseInt(l[0]);
+            String title = l[1];
+            String date = l[2];
+            String startTime = l[3];
+            String endTime = l[4];
+            String status = l[5];
+
+            ClassAttendanceSession session = ClassAttendanceSession.builder()
+                    .department("CSE")
+                    .semester("6")
+                    .section("A")
+                    .subjectCode(subjectCode)
+                    .subjectName(subjectName)
+                    .facultyName(facultyName)
+                    .facultyId(facultyId)
+                    .sessionDate(date)
+                    .periodNumber(lectureNum)
+                    .lectureNumber(lectureNum)
+                    .lectureTitle(title)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .status(status)
+                    .instituteName("Delhi Technological University (DTU)")
+                    .createdAt(date + " " + startTime)
+                    .build();
+            ClassAttendanceSession savedSession = sessionRepo.save(session);
+
+            // If session is COMPLETED, seed records for all students
+            if ("COMPLETED".equalsIgnoreCase(status)) {
+                for (int s = 0; s < studentEmails.length; s++) {
+                    String stuStatus = (s == 0) ? priyanshStatuses[i] : (s % 2 == 0 ? "PRESENT" : "ABSENT");
+                    if (stuStatus == null) continue;
+
+                    ClassAttendanceRecord rec = ClassAttendanceRecord.builder()
+                            .sessionId(savedSession.getId())
+                            .studentId(studentEmails[s])
+                            .studentRollNumber(studentRolls[s])
+                            .studentName(studentNames[s])
+                            .subjectCode(subjectCode)
+                            .status(stuStatus)
+                            .latitude(28.7495)
+                            .longitude(77.1180)
+                            .distanceMeters(14.5 + (s * 3.2))
+                            .gpsAccuracy(5.0)
+                            .verificationMethod("100M_GEOFENCE_AND_FACIAL_BIOMETRIC")
+                            .markedBy("STUDENT_GEOFENCE")
+                            .remarks("Verified inside campus geofence")
+                            .recordedAt(date + " " + startTime)
+                            .build();
+                    recordRepo.save(rec);
+                }
+            }
+        }
+    }
+
 }

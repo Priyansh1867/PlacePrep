@@ -773,6 +773,33 @@ export const StudentAttendanceApi = {
     }
   },
 
+  async getEnrolledSubjects(studentEmail) {
+    const qs = studentEmail ? `?studentEmail=${encodeURIComponent(studentEmail)}` : '';
+    return await request(`/student/attendance/subjects${qs}`);
+  },
+
+  async getSubjectDetails(subjectCode, studentEmail) {
+    const qs = studentEmail ? `?studentEmail=${encodeURIComponent(studentEmail)}` : '';
+    return await request(`/student/attendance/subjects/${encodeURIComponent(subjectCode)}${qs}`);
+  },
+
+  async getSubjectLectures(subjectCode, studentEmail) {
+    const qs = studentEmail ? `?studentEmail=${encodeURIComponent(studentEmail)}` : '';
+    return await request(`/student/attendance/subjects/${encodeURIComponent(subjectCode)}/lectures${qs}`);
+  },
+
+  async markLectureAttendance(payload) {
+    return await request('/student/attendance/mark-lecture', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getAttendanceHistory(studentEmail) {
+    const qs = studentEmail ? `?studentEmail=${encodeURIComponent(studentEmail)}` : '';
+    return await request(`/student/attendance/history${qs}`);
+  },
+
   async markAttendance(payload) {
     try {
       return await request('/student/attendance/mark', {

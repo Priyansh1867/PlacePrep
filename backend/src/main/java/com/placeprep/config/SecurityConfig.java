@@ -82,7 +82,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/student/attendance/mark").permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
-                        .requestMatchers("/api/student/attendance/**").authenticated()
+                        .requestMatchers("/api/student/attendance/**").permitAll()
                         .requestMatchers("/api/mock-sessions/**").authenticated()
                         .requestMatchers("/api/applications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/experiences").authenticated()

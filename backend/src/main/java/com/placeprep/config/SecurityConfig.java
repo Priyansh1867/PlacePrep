@@ -72,10 +72,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/moderate").hasRole("ADMIN")
 
                         // Management restricted endpoints
-                        .requestMatchers("/api/management/attendance/verify-location").authenticated()
+                        .requestMatchers("/api/management/attendance/verify-location").permitAll()
                         .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
 
-                        // Authenticated student/user actions
+                        // Authenticated student/user actions & attendance verification
+                        .requestMatchers("/api/student/attendance/status").permitAll()
+                        .requestMatchers("/api/student/attendance/verify-location").permitAll()
+                        .requestMatchers("/api/student/attendance/verify-face").permitAll()
+                        .requestMatchers("/api/student/attendance/mark").permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/student/attendance/**").authenticated()

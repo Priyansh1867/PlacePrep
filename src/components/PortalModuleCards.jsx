@@ -18,6 +18,9 @@ import cardOffcampusLight from '../assets/images/card_offcampus_light.jpg';
 import cardOffcampus from '../assets/images/card_offcampus.jpg';
 import cardNotificationsLight from '../assets/images/card_notifications_light.jpg';
 import cardNotifications from '../assets/images/card_notifications.jpg';
+import cardDsaLight from '../assets/images/card_dsa_light.jpg';
+import cardQuestionBankLight from '../assets/images/card_questionbank_light.jpg';
+import cardCrtLight from '../assets/images/card_crt_light.jpg';
 
 const CARD_IMAGE_MAP = {
   // Placement Portal mappings
@@ -33,15 +36,16 @@ const CARD_IMAGE_MAP = {
   'faculty-monitoring': cardReportsLight || cardReports,
 
   // Institute Portal mappings
-  'student-data': cardShortlistsLight || cardShortlists,
+  'student-data': cardEligibilityLight || cardEligibility,
   'curriculum-governance': cardReportsLight || cardReports,
   'upcoming-drives': cardDrivesLight || cardDrives,
-  'question-bank': cardEligibilityLight || cardEligibility,
-  'crt-attendance': cardFeedbackLight || cardFeedback,
+  'question-bank': cardQuestionBankLight,
+  'dsa-studio': cardDsaLight,
+  'crt-attendance': cardCrtLight,
   'class-attendance': cardLiveLight || cardLive,
-  'resume-ats': cardInternshipsLight || cardInternships,
-  'round-details': cardNotificationsLight || cardNotifications,
-  'hackathons': cardEligibilityLight || cardEligibility
+  'resume-ats': cardReportsLight || cardReports,
+  'round-details': cardShortlistsLight || cardShortlists,
+  'hackathons': cardDsaLight
 };
 
 // Clean Light Theme Triad System: Crisp White Base + Dark High-Contrast Text + Vibrant 3rd Accents
@@ -303,6 +307,19 @@ const MODULE_THEMES = {
     arrowActive: 'bg-sky-600 text-white shadow-md',
     badgeTone: 'border-slate-200 text-slate-700 bg-white/95 shadow-2xs',
     glowGradient: 'from-sky-400/20 via-cyan-300/10 to-transparent'
+  },
+  'dsa-studio': {
+    accent: 'indigo',
+    cardHoverBg: 'hover:bg-indigo-50/25',
+    activeRing: 'ring-2 ring-indigo-500 border-indigo-500 shadow-lg shadow-indigo-500/10',
+    borderHover: 'hover:border-indigo-300',
+    iconBox: 'bg-indigo-50 text-indigo-600 border border-indigo-200/80 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600',
+    iconActive: 'bg-indigo-600 text-white border-indigo-600 shadow-md',
+    titleHover: 'group-hover:text-indigo-700',
+    arrowBtn: 'bg-slate-100 text-slate-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600',
+    arrowActive: 'bg-indigo-600 text-white shadow-md',
+    badgeTone: 'border-slate-200 text-slate-700 bg-white/95 shadow-2xs',
+    glowGradient: 'from-indigo-400/20 via-cyan-300/10 to-transparent'
   }
 };
 
@@ -337,15 +354,15 @@ export default function PortalModuleCards({ items, activeId, onSelect, tone = 'e
                 : `border-slate-200/90 ${theme.borderHover} ${theme.cardHoverBg}`
             }`}
           >
-            {/* Background 3D Graphic (Light Harmonized Overlay) */}
+            {/* Background 3D Graphic (High-Fidelity Vibrant Light Presentation) */}
             <img
               src={cardImg}
               alt={item.label}
-              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110 opacity-75"
+              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105 opacity-90"
             />
 
-            {/* Radiant Light Theme Gradients for Peak Legibility & Bright Aesthetics */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/35 transition-opacity duration-300" />
+            {/* Subtle Gradient Floor for Razor-Sharp Bottom Typography Legibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/45 to-transparent transition-opacity duration-300" />
             
             {/* Soft Ambient Pastel Glow from Bottom Right */}
             <div className={`absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-gradient-to-br ${theme.glowGradient} blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />

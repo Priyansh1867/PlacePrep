@@ -1101,3 +1101,31 @@ export function addFeedbackLoopEntry(entry) {
   setStorageItem(STORAGE_KEYS.FEEDBACK_LOOP, updated);
   return updated;
 }
+
+
+// ----------------------------------------------------
+// Institute Location & Geofencing Persistence
+// ----------------------------------------------------
+export function getSavedInstituteLocation() {
+  return getStorageItem('placeprep_institute_location', {
+    instituteName: 'Delhi Technological University (DTU)',
+    instituteAddress: 'Shahbad Daulatpur, Main Bawana Road',
+    city: 'Delhi',
+    state: 'Delhi',
+    latitude: 28.7495,
+    longitude: 77.1180,
+    geofenceRadiusMeters: 100,
+    locationStatus: 'ACTIVE'
+  });
+}
+
+export function saveInstituteLocation(loc) {
+  const current = getSavedInstituteLocation();
+  const updated = {
+    ...current,
+    ...loc,
+    geofenceRadiusMeters: 100
+  };
+  setStorageItem('placeprep_institute_location', updated);
+  return updated;
+}

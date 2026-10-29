@@ -1,6 +1,10 @@
 package com.placeprep.config;
 
 import com.placeprep.model.ClassAttendanceRecord;
+import com.placeprep.model.Subject;
+import com.placeprep.model.StudentSubjectEnrollment;
+import com.placeprep.repository.SubjectRepository;
+import com.placeprep.repository.StudentSubjectEnrollmentRepository;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.Company;
 import com.placeprep.model.CrtAttendanceRecord;
@@ -35,7 +39,9 @@ public class DataInitializer {
             ClassAttendanceSessionRepository classSessionRepository,
             ClassAttendanceRecordRepository classRecordRepository,
             CrtTrainingSessionRepository crtSessionRepository,
-            CrtAttendanceRecordRepository crtRecordRepository
+            CrtAttendanceRecordRepository crtRecordRepository,
+            SubjectRepository subjectRepository,
+            StudentSubjectEnrollmentRepository enrollmentRepository
     ) {
         return args -> {
             if (userRepository.count() == 0) {
@@ -302,6 +308,157 @@ public class DataInitializer {
                 }
             }
 
+            
+            // ==========================================
+            // SEED SUBJECTS, ENROLLMENTS & LECTURE SESSIONS
+            // ==========================================
+            if (subjectRepository.count() == 0 || subjectRepository.findByCode("CS310").isEmpty()) {
+                // Ensure all 5 curriculum subjects from Semester 6 are present:
+                // 1. CS306 - Cloud Computing & Distributed Systems
+                // 2. CS302 - Operating Systems & System Programming
+                // 3. CS304 - Database Management Systems
+                // 4. CS308 - Compiler Design & Theory
+                // 5. CS310 - Artificial Intelligence & Machine Learning
+
+                Subject s1 = subjectRepository.findByCode("CS306").orElseGet(() -> subjectRepository.save(Subject.builder()
+                        .code("CS306")
+                        .name("Cloud Computing & Distributed Systems")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Dr. Neha Sharma")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Virtualization, containerization, microservices, and distributed cloud computing.")
+                        .build()));
+
+                Subject s2 = subjectRepository.findByCode("CS302").orElseGet(() -> subjectRepository.save(Subject.builder()
+                        .code("CS302")
+                        .name("Operating Systems & System Programming")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Prof. Alok Verma")
+                        .facultyEmail("hod@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Process scheduling, concurrency, deadlocks, memory virtualization, and file systems.")
+                        .build()));
+
+                Subject s3 = subjectRepository.findByCode("CS304").orElseGet(() -> subjectRepository.save(Subject.builder()
+                        .code("CS304")
+                        .name("Database Management Systems")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Dr. Vikram Malhotra")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Relational data model, SQL optimization, B+ Tree indexing, and ACID concurrency.")
+                        .build()));
+
+                Subject s4 = subjectRepository.findByCode("CS308").orElseGet(() -> subjectRepository.save(Subject.builder()
+                        .code("CS308")
+                        .name("Compiler Design & Theory")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Dr. Anjali Joshi")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Lexical analysis, syntax parsing, syntax-directed translation, and code generation.")
+                        .build()));
+
+                Subject s5 = subjectRepository.findByCode("CS310").orElseGet(() -> subjectRepository.save(Subject.builder()
+                        .code("CS310")
+                        .name("Artificial Intelligence & Machine Learning")
+                        .department("CSE")
+                        .semester("6")
+                        .facultyName("Prof. Sanjay Saxena")
+                        .facultyEmail("teacher@placeprep.com")
+                        .credits(4)
+                        .minAttendancePercentage(75.0)
+                        .description("Search algorithms, heuristics, neural networks, supervised & unsupervised machine learning.")
+                        .build()));
+
+                // Auto-enroll students into all 5 subjects
+                String[] enrolledStudentEmails = {
+                    "priyansh.jain@example.edu", "ananya.sharma@example.edu", "rohan.kulkarni@example.edu",
+                    "siddharth.nair@example.edu", "meera.venkat@example.edu", "kabir.mehta@example.edu",
+                    "divya.reddy@example.edu", "aarav.gupta@example.edu"
+                };
+
+                String[] curriculumCodes = {"CS306", "CS302", "CS304", "CS308", "CS310"};
+                for (String email : enrolledStudentEmails) {
+                    for (String code : curriculumCodes) {
+                        if (!enrollmentRepository.existsByStudentEmailAndSubjectCode(email, code)) {
+                            StudentSubjectEnrollment en = StudentSubjectEnrollment.builder()
+                                    .studentEmail(email)
+                                    .subjectCode(code)
+                                    .enrolledAt("2026-08-01 09:00")
+                                    .build();
+                            enrollmentRepository.save(en);
+                        }
+                    }
+                }
+
+                // Seed lectures and open sessions for CS304 (DBMS) if not present
+                if (classSessionRepository.findBySubjectCodeOrderBySessionDateDesc("CS304").isEmpty()) {
+                    seedSubjectLectures(
+                            classSessionRepository, classRecordRepository,
+                            "CS304", "Database Management Systems", "Dr. Vikram Malhotra", "FAC-CSE-018",
+                            new String[][]{
+                                    {"1", "Relational Algebra & Tuple Calculus", "2026-10-10", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                    {"2", "Advanced SQL Joins & Subqueries", "2026-10-12", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                    {"3", "Database Normalization (1NF to BCNF)", "2026-10-16", "11:15 AM", "12:15 PM", "COMPLETED"},
+                                    {"4", "B+ Tree Indexing & Hash Indices", "2026-10-20", "02:00 PM", "03:00 PM", "COMPLETED"},
+                                    {"5", "ACID Transactions & Two-Phase Locking", "2026-10-24", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                    {"6", "Query Optimization & Execution Tuning", "2026-10-29", "11:15 AM", "12:15 PM", "OPEN"}
+                            },
+                            new String[]{"PRESENT", "PRESENT", "PRESENT", "PRESENT", "PRESENT", null}
+                    );
+                }
+
+                // Seed lectures and open sessions for CS310 (AI & ML) if not present
+                if (classSessionRepository.findBySubjectCodeOrderBySessionDateDesc("CS310").isEmpty()) {
+                    seedSubjectLectures(
+                            classSessionRepository, classRecordRepository,
+                            "CS310", "Artificial Intelligence & Machine Learning", "Prof. Sanjay Saxena", "FAC-CSE-052",
+                            new String[][]{
+                                    {"1", "State Space Search & A* Heuristic Search", "2026-10-09", "10:00 AM", "11:00 AM", "COMPLETED"},
+                                    {"2", "Constraint Satisfaction & Adversarial Search", "2026-10-13", "11:15 AM", "12:15 PM", "COMPLETED"},
+                                    {"3", "Supervised Learning: Linear & Logistic Regression", "2026-10-17", "02:00 PM", "03:00 PM", "COMPLETED"},
+                                    {"4", "Decision Trees & Random Forests Ensemble", "2026-10-21", "09:00 AM", "10:00 AM", "COMPLETED"},
+                                    {"5", "Deep Neural Networks & Backpropagation", "2026-10-29", "03:00 PM", "04:00 PM", "OPEN"}
+                            },
+                            new String[]{"PRESENT", "PRESENT", "PRESENT", "PRESENT", null}
+                    );
+                }
+
+                // Ensure an OPEN lecture exists for CS306 as well so attendance can be marked right now
+                List<ClassAttendanceSession> cs306Sessions = classSessionRepository.findBySubjectCodeAndStatus("CS306", "OPEN");
+                if (cs306Sessions.isEmpty()) {
+                    ClassAttendanceSession openSess = ClassAttendanceSession.builder()
+                            .department("CSE")
+                            .semester("6")
+                            .section("A")
+                            .subjectCode("CS306")
+                            .subjectName("Cloud Computing & Distributed Systems")
+                            .facultyName("Dr. Neha Sharma")
+                            .facultyId("FAC-CSE-042")
+                            .sessionDate("2026-10-29")
+                            .periodNumber(6)
+                            .lectureNumber(6)
+                            .lectureTitle("Docker Containerization & Kubernetes Orchestration")
+                            .startTime("09:00 AM")
+                            .endTime("10:00 AM")
+                            .status("OPEN")
+                            .instituteName("Delhi Technological University (DTU)")
+                            .createdAt("2026-10-29 09:00")
+                            .build();
+                    classSessionRepository.save(openSess);
+                }
+            }
+            
             if (crtSessionRepository.count() == 0) {
                 // 1. Session 1: Quantitative Aptitude
                 CrtTrainingSession s1 = new CrtTrainingSession();
@@ -471,4 +628,88 @@ public class DataInitializer {
             }
         };
     }
+
+    private void seedSubjectLectures(
+            ClassAttendanceSessionRepository sessionRepo,
+            ClassAttendanceRecordRepository recordRepo,
+            String subjectCode,
+            String subjectName,
+            String facultyName,
+            String facultyId,
+            String[][] lectures, // [lectureNumber, title, date, start, end, status]
+            String[] priyanshStatuses
+    ) {
+        String[] studentEmails = {
+                "priyansh.jain@example.edu", "ananya.sharma@example.edu", "rohan.kulkarni@example.edu",
+                "siddharth.nair@example.edu", "meera.venkat@example.edu", "kabir.mehta@example.edu",
+                "divya.reddy@example.edu", "aarav.gupta@example.edu"
+        };
+        String[] studentRolls = {
+                "22CS0101", "22CS0102", "22CS0103",
+                "22CS0104", "22CS0105", "22CS0106",
+                "22CS0107", "22CS0108"
+        };
+        String[] studentNames = {
+                "Priyansh Jain", "Ananya Sharma", "Rohan Kulkarni",
+                "Siddharth Nair", "Meera Venkat", "Kabir Mehta",
+                "Divya Reddy", "Aarav Gupta"
+        };
+
+        for (int i = 0; i < lectures.length; i++) {
+            String[] l = lectures[i];
+            int lectureNum = Integer.parseInt(l[0]);
+            String title = l[1];
+            String date = l[2];
+            String startTime = l[3];
+            String endTime = l[4];
+            String status = l[5];
+
+            ClassAttendanceSession session = ClassAttendanceSession.builder()
+                    .department("CSE")
+                    .semester("6")
+                    .section("A")
+                    .subjectCode(subjectCode)
+                    .subjectName(subjectName)
+                    .facultyName(facultyName)
+                    .facultyId(facultyId)
+                    .sessionDate(date)
+                    .periodNumber(lectureNum)
+                    .lectureNumber(lectureNum)
+                    .lectureTitle(title)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .status(status)
+                    .instituteName("Delhi Technological University (DTU)")
+                    .createdAt(date + " " + startTime)
+                    .build();
+            ClassAttendanceSession savedSession = sessionRepo.save(session);
+
+            // If session is COMPLETED, seed records for all students
+            if ("COMPLETED".equalsIgnoreCase(status)) {
+                for (int s = 0; s < studentEmails.length; s++) {
+                    String stuStatus = (s == 0) ? priyanshStatuses[i] : (s % 2 == 0 ? "PRESENT" : "ABSENT");
+                    if (stuStatus == null) continue;
+
+                    ClassAttendanceRecord rec = ClassAttendanceRecord.builder()
+                            .sessionId(savedSession.getId())
+                            .studentId(studentEmails[s])
+                            .studentRollNumber(studentRolls[s])
+                            .studentName(studentNames[s])
+                            .subjectCode(subjectCode)
+                            .status(stuStatus)
+                            .latitude(28.7495)
+                            .longitude(77.1180)
+                            .distanceMeters(14.5 + (s * 3.2))
+                            .gpsAccuracy(5.0)
+                            .verificationMethod("100M_GEOFENCE_AND_FACIAL_BIOMETRIC")
+                            .markedBy("STUDENT_GEOFENCE")
+                            .remarks("Verified inside campus geofence")
+                            .recordedAt(date + " " + startTime)
+                            .build();
+                    recordRepo.save(rec);
+                }
+            }
+        }
+    }
+
 }

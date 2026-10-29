@@ -25,6 +25,8 @@ import {
   Copy,
   AlertCircle
 } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import { calculateProfileCompletion } from '../../utils/profileCompletion';
 import { UserApi } from '../../services/api';
 import {
   getCurrentUser,
@@ -55,6 +57,24 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+
+  // Dynamic Profile Completion calculation based strictly on genuine persisted data
+  const completionUser = {
+    fullName: profile.basicDetails?.fullName,
+    name: profile.basicDetails?.fullName,
+    email: profile.basicDetails?.email,
+    rollNumber: profile.educationDetails?.rollNumber,
+    graduationBatch: profile.educationDetails?.graduationBatch,
+    phone: profile.basicDetails?.phone,
+    dateOfBirth: profile.basicDetails?.dateOfBirth,
+    gender: profile.basicDetails?.gender,
+    college: profile.educationDetails?.college,
+    branch: profile.educationDetails?.branch,
+    currentAddress: profile.basicDetails?.currentAddress,
+    tenthPercentage: profile.educationDetails?.tenthPercentage,
+    twelfthPercentage: profile.educationDetails?.twelfthPercentage
+  };
+  const completionInfo = calculateProfileCompletion(completionUser);
 
   // Temporary inputs for skills
   const [newTechSkill, setNewTechSkill] = useState('');
@@ -496,7 +516,9 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
                   {profile.basicDetails?.fullName || getCurrentUser()?.name || 'Student'}
                 </h3>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
+                {completionInfo.isComplete && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
+                )}
               </div>
 
               {/* Unique ID Generator Display (Replacing Superset ID as instructed) */}
@@ -558,6 +580,58 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
           {/* RIGHT PANE: SELECTED SECTION CONTENT & INTERACTIVE FORM   */}
           {/* ========================================================= */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-slate-50/30">
+            
+            {/* Top Incomplete Profile Notification / Complete Status Banner */}
+            {!completionInfo.isComplete ? (
+              <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-300 shadow-xs">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-black text-amber-950 text-sm tracking-tight">Profile Incomplete ({completionInfo.percentage}% Completed)</h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/80 text-amber-900 uppercase">
+                        Action Required
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                      You have registered with basic details. Please complete all remaining mandatory fields to verify your candidate profile for campus drives.
+                    </p>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-amber-900 font-semibold">
+                      <span>Completed: <strong className="text-amber-950">{completionInfo.completedRequiredCount}</strong> / {completionInfo.totalRequiredCount} required fields</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 sm:self-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sec = completionInfo.firstMissingSection === 'education-details' ? 'education' : 'basic';
+                      setActiveTab(sec);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Complete My Profile</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between gap-3 shadow-xs animate-fade-in">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="block text-sm font-extrabold text-emerald-950">Profile Complete (100%)</span>
+                    <span className="font-normal text-emerald-800">All required placement verification fields have been saved and validated.</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-900 uppercase">
+                  Verified
+                </span>
+              </div>
+            )}
             
             {/* 1. BASIC DETAILS */}
             {activeTab === 'basic' && (
@@ -623,7 +697,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Gender</label>
                       <select
-                        value={profile.basicDetails?.gender || 'Male'}
+                        value={profile.basicDetails?.gender || ''}
                         onChange={(e) => updateBasic('gender', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
                       >
@@ -637,7 +711,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Blood Group</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.bloodGroup || 'B+'}
+                        value={profile.basicDetails?.bloodGroup || ''}
                         onChange={(e) => updateBasic('bloodGroup', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -646,7 +720,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Category / Quota</label>
                       <select
-                        value={profile.basicDetails?.category || 'General'}
+                        value={profile.basicDetails?.category || ''}
                         onChange={(e) => updateBasic('category', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
                       >
@@ -660,7 +734,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Differently Abled (PwD)</label>
                       <select
-                        value={profile.basicDetails?.differentlyAbled || 'No'}
+                        value={profile.basicDetails?.differentlyAbled || ''}
                         onChange={(e) => updateBasic('differentlyAbled', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
                       >
@@ -672,7 +746,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Nationality</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.nationality || 'Indian'}
+                        value={profile.basicDetails?.nationality || ''}
                         onChange={(e) => updateBasic('nationality', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -705,7 +779,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Hometown & State</label>
                       <input
                         type="text"
-                        value={`${profile.basicDetails?.hometown || 'New Delhi'}, ${profile.basicDetails?.state || 'Delhi'}`}
+                        value={profile.basicDetails?.hometown || profile.basicDetails?.state ? `${profile.basicDetails?.hometown || ''}${profile.basicDetails?.state ? ', ' + profile.basicDetails.state : ''}` : ''}
                         onChange={(e) => {
                           const parts = e.target.value.split(',');
                           updateBasic('hometown', parts[0]?.trim() || '');
@@ -718,7 +792,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Pincode</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.pincode || '110042'}
+                        value={profile.basicDetails?.pincode || ''}
                         onChange={(e) => updateBasic('pincode', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -817,7 +891,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Degree Program</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.degree || 'B.Tech'}
+                        value={profile.educationDetails?.degree || ''}
                         onChange={(e) => updateEducation('degree', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -836,7 +910,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Graduation Batch Year</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.graduationBatch || '2028'}
+                        value={profile.educationDetails?.graduationBatch || ''}
                         onChange={(e) => updateEducation('graduationBatch', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -902,7 +976,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Board (CBSE / ICSE / State)</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.twelfthBoard || 'CBSE'}
+                        value={profile.educationDetails?.twelfthBoard || ''}
                         onChange={(e) => updateEducation('twelfthBoard', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -911,7 +985,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Stream / Specialization</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.twelfthStream || 'Science (PCM)'}
+                        value={profile.educationDetails?.twelfthStream || ''}
                         onChange={(e) => updateEducation('twelfthStream', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -930,7 +1004,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Year of Passing</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.twelfthYear || '2024'}
+                        value={profile.educationDetails?.twelfthYear || ''}
                         onChange={(e) => updateEducation('twelfthYear', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -965,7 +1039,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Year of Passing</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.tenthYear || '2022'}
+                        value={profile.educationDetails?.tenthYear || ''}
                         onChange={(e) => updateEducation('tenthYear', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -1740,10 +1814,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       </div>
                       <div>
                         <span className="font-bold text-sm text-slate-900 block">
-                          {profile.documents?.resumeFileName || 'Priyansh_Jain_Resume.pdf'}
+                          {profile.documents?.resumeFileName || 'Not uploaded'}
                         </span>
                         <span className="text-[11px] text-slate-500">
-                          Last Updated: {profile.documents?.resumeLastUpdated || 'Oct 24, 2026'} • Verified by Placement Cell
+                          Last Updated: {profile.documents?.resumeLastUpdated || 'Never'} • Verified by Placement Cell
                         </span>
                       </div>
                     </div>
@@ -1915,7 +1989,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Relationship</label>
                       <input
                         type="text"
-                        value={profile.guardians?.emergencyRelation || 'Father'}
+                        value={profile.guardians?.emergencyRelation || ''}
                         onChange={(e) => updateGuardians('emergencyRelation', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                       />

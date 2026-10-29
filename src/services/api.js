@@ -1,4 +1,4 @@
-import { getSavedInstituteLocation, saveInstituteLocation } from './storage';
+import { getSavedInstituteLocation, saveInstituteLocation } from './storage.js';
 // PlacePrep REST API Client
 // API requests are routed through the Vite proxy to the Spring Boot backend.
 // Attaches auth tokens and provides clean, explicit error handling.

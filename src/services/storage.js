@@ -73,6 +73,13 @@ function setStorageItem(key, value) {
     console.error(`Error saving ${key} to localStorage:`, err);
   }
 }
+function removeStorageItem(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    console.error(`Error removing ${key} from localStorage:`, err);
+  }
+}
 
 function dispatchSafeCustomEvent(eventName, detail) {
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -84,6 +91,7 @@ function dispatchSafeCustomEvent(eventName, detail) {
   }
 }
 
+// User Profile
 // User Profile
 export function getCurrentUser() {
   return getStorageItem(STORAGE_KEYS.CURRENT_USER, {
@@ -102,6 +110,9 @@ export function getCurrentUser() {
 
 export function setCurrentUser(user) {
   setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
+  if (user && user.email) {
+    saveRegisteredUser(user);
+  }
   if (user && user.graduationBatch) {
     setGraduationBatch(user.graduationBatch);
   }
@@ -120,183 +131,86 @@ export function generateUniqueStudentId(seed = '') {
 
 export function getInitialFullStudentProfile(currentUser = null) {
   const user = currentUser || getCurrentUser() || {};
-  const userEmail = user?.email || 'student@placeprep.com';
-  const userName = user?.name || (userEmail.split('@')[0].replace(/[._0-9]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
-  const uniqueId = user?.uniqueStudentId || generateUniqueStudentId(userEmail);
+  const userEmail = user?.email || '';
+  const userName = user?.name || '';
+  const uniqueId = user?.uniqueStudentId || (userEmail ? generateUniqueStudentId(userEmail) : '');
 
   return {
     uniqueStudentId: uniqueId,
-    verified: true,
+    verified: false,
     avatarTheme: 'emerald',
     basicDetails: {
-      fullName: user?.name || userName,
+      fullName: userName,
       email: userEmail,
-      phone: user?.phone || '+91 98765 43210',
-      alternatePhone: '+91 91234 56789',
-      dateOfBirth: '2004-06-15',
-      gender: user?.gender || 'Female',
-      bloodGroup: 'B+',
-      category: 'General (UR)',
-      differentlyAbled: 'No',
-      currentAddress: 'Room 204, Aryabhatta Hostel, DTU Campus, Shahbad Daulatpur, Delhi',
-      permanentAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085',
-      pincode: '110042',
-      hometown: 'New Delhi',
-      state: 'Delhi',
-      nationality: 'Indian',
-      linkedIn: user?.linkedIn || `https://linkedin.com/in/${userName.toLowerCase().replace(/\s+/g, '-')}`,
-      github: user?.github || `https://github.com/${userName.toLowerCase().replace(/\s+/g, '')}`,
+      phone: user?.phone || '',
+      alternatePhone: '',
+      dateOfBirth: user?.dateOfBirth || '',
+      gender: user?.gender || '',
+      bloodGroup: '',
+      category: '',
+      differentlyAbled: '',
+      currentAddress: user?.currentAddress || '',
+      permanentAddress: '',
+      pincode: '',
+      hometown: '',
+      state: '',
+      nationality: '',
+      linkedIn: user?.linkedIn || '',
+      github: user?.github || '',
       portfolio: user?.portfolio || '',
       leetCode: user?.leetCode || ''
     },
     educationDetails: {
-      college: user?.college || 'Delhi Technological University (DTU)',
-      degree: 'Bachelor of Technology (B.Tech)',
-      branch: user?.branch || 'Computer Science and Engineering',
-      graduationBatch: user?.graduationBatch || '2027',
-      rollNumber: user?.rollNumber || '23EJCAD122',
-      registrationNumber: user?.rollNumber ? `DTU/2023/BTECH/${user.rollNumber.slice(-4)}` : 'DTU/2023/BTECH/0122',
-      cgpa: user?.cgpa || 8.5,
-      activeBacklogs: user?.activeBacklogs || 0,
-      totalCreditsEarned: 132,
-      twelfthSchool: 'Delhi Public School (DPS), R.K. Puram',
-      twelfthBoard: 'CBSE',
-      twelfthStream: 'Science (PCM with Computer Science)',
-      twelfthPercentage: user?.twelfthPercentage || 86.0,
-      twelfthYear: '2023',
-      tenthSchool: 'Delhi Public School (DPS), R.K. Puram',
-      tenthBoard: 'CBSE',
-      tenthPercentage: user?.tenthPercentage || 88.0,
-      tenthYear: '2021'
+      college: user?.college || '',
+      degree: '',
+      branch: user?.branch || '',
+      graduationBatch: user?.graduationBatch || '',
+      rollNumber: user?.rollNumber || '',
+      registrationNumber: user?.rollNumber || '',
+      cgpa: user?.cgpa || '',
+      activeBacklogs: 0,
+      totalCreditsEarned: '',
+      twelfthSchool: '',
+      twelfthBoard: '',
+      twelfthStream: '',
+      twelfthPercentage: user?.twelfthPercentage || '',
+      twelfthYear: '',
+      tenthSchool: '',
+      tenthBoard: '',
+      tenthPercentage: user?.tenthPercentage || '',
+      tenthYear: ''
     },
-    workExperiences: [
-      {
-        id: 'work-1',
-        company: 'CloudScale Technologies',
-        role: 'Full Stack Engineering Intern',
-        location: 'Bengaluru (Remote)',
-        startDate: 'May 2025',
-        endDate: 'July 2025',
-        currentlyWorking: false,
-        stipend: '₹35,000 / month',
-        description: 'Engineered high-performance REST APIs with Spring Boot and designed responsive client dashboards with React and Tailwind CSS. Reduced query latency by 28% using Redis cache.'
-      }
-    ],
+    workExperiences: [],
     skills: {
-      technical: ['Java', 'Spring Boot', 'React', 'JavaScript', 'TypeScript', 'MySQL', 'Python', 'Tailwind CSS', 'Docker', 'Git & GitHub'],
-      coreSubjects: ['Data Structures & Algorithms', 'Database Management Systems', 'Computer Networks', 'Operating Systems', 'Object Oriented Programming', 'System Design'],
-      languages: [
-        { language: 'English', proficiency: 'Professional Working / Fluent' },
-        { language: 'Hindi', proficiency: 'Native / Bilingual' }
-      ]
+      technical: [],
+      coreSubjects: [],
+      languages: []
     },
-    responsibilities: [
-      {
-        id: 'por-1',
-        title: 'Training & Placement Student Coordinator',
-        organization: 'Corporate Relations & Placement Cell, DTU',
-        duration: 'Aug 2024 - Present',
-        description: 'Orchestrated smooth conduction of campus recruitment drives for 45+ premier recruiters. Liaised between visiting HR executives and a cohort of 1,200+ eligible final year students.'
-      },
-      {
-        id: 'por-2',
-        title: 'Technical Lead',
-        organization: 'Google Developer Student Clubs (GDSC)',
-        duration: 'Oct 2024 - Present',
-        description: 'Conducted 5+ hands-on technical workshops on full-stack web architectures and cloud deployments for 300+ university undergraduates.'
-      }
-    ],
-    projects: [
-      {
-        id: 'proj-1',
-        title: 'PlacePrep AI - Comprehensive Campus Placement Suite',
-        techStack: 'React, Spring Boot, MySQL, Vite, TailwindCSS',
-        liveUrl: 'https://placeprep.edu',
-        githubUrl: 'https://github.com/priyanshjain/placeprep',
-        duration: 'Jan 2025 - Present',
-        description: 'Architected end-to-end recruitment platform with 9 specialized modules including intelligent eligibility checker, auto-report exporter, mock interviews, and live CRT session attendance.'
-      },
-      {
-        id: 'proj-2',
-        title: 'Distributed Real-Time Code Execution Engine',
-        techStack: 'Java, Docker, Redis, WebSocket, Node.js',
-        liveUrl: 'https://code-engine.dev',
-        githubUrl: 'https://github.com/priyanshjain/code-engine',
-        duration: 'Sep 2024 - Nov 2024',
-        description: 'Built sandboxed isolated code runner executing C++, Java, and Python scripts with sub-second turnaround and memory constraint governance.'
-      }
-    ],
-    accomplishments: [
-      {
-        id: 'acc-1',
-        title: 'Finalist - Smart India Hackathon (SIH)',
-        category: 'Hackathon & Competitions',
-        issuedBy: 'Ministry of Education & AICTE',
-        year: '2024',
-        description: 'Ranked top 10 nationwide out of 25,000+ participating teams for building AI-driven disaster response dispatching.'
-      },
-      {
-        id: 'acc-2',
-        title: 'Knight Badge (Rating 1940+)',
-        category: 'Competitive Programming',
-        issuedBy: 'LeetCode',
-        year: '2025',
-        description: 'Solved over 650+ algorithmic coding problems across Data Structures, Dynamic Programming, and Graph Theory.'
-      },
-      {
-        id: 'acc-3',
-        title: 'AWS Certified Cloud Practitioner',
-        category: 'Industry Certification',
-        issuedBy: 'Amazon Web Services',
-        year: '2025',
-        description: 'Demonstrated overall understanding of cloud concepts, security, technology, architecture, and billing.'
-      }
-    ],
-    volunteering: [
-      {
-        id: 'vol-1',
-        organization: 'National Service Scheme (NSS)',
-        role: 'Student Volunteer Lead',
-        duration: 'Jan 2024 - Present',
-        description: 'Organized campus-wide blood donation drives mobilizing 450+ donors, and mentored underprivileged local high school students in basic computer literacy.'
-      }
-    ],
-    extraCurricular: [
-      {
-        id: 'ec-1',
-        activity: 'University Inter-College Football Tournament',
-        role: 'Vice Captain',
-        year: '2024',
-        description: 'Represented DTU university team at zonal inter-varsity championships, securing runner-up trophy.'
-      },
-      {
-        id: 'ec-2',
-        activity: 'Annual Cultural Fest Debating Society',
-        role: 'Parliamentary Debate Finalist',
-        year: '2024',
-        description: 'Adjudged best speaker in parliamentary debate on modern tech monopolies and algorithmic ethics.'
-      }
-    ],
+    responsibilities: [],
+    projects: [],
+    accomplishments: [],
+    volunteering: [],
+    extraCurricular: [],
     documents: {
-      resumeFileName: 'Priyansh_Jain_Software_Engineer_Resume.pdf',
-      resumeLastUpdated: 'Oct 24, 2026',
-      resumeUrl: '#',
-      aboutMe: 'Driven Computer Science undergraduate with hands-on experience in full-stack architecture, microservices, and distributed systems. Passionate about solving complex algorithmic challenges and building impactful scalable digital products for modern enterprise needs.',
-      transcriptsUploaded: true,
-      idProofUploaded: true
+      resumeFileName: '',
+      resumeLastUpdated: '',
+      resumeUrl: '',
+      aboutMe: '',
+      transcriptsUploaded: false,
+      idProofUploaded: false
     },
     guardians: {
-      fatherName: 'Rajesh Jain',
-      fatherOccupation: 'Senior Business Consultant',
-      fatherPhone: '+91 98110 54321',
-      fatherEmail: 'rajesh.jain@example.com',
-      motherName: 'Sunita Jain',
-      motherOccupation: 'Educationist / Principal',
-      motherPhone: '+91 98110 54322',
-      emergencyContactName: 'Rajesh Jain',
-      emergencyRelation: 'Father',
-      emergencyPhone: '+91 98110 54321',
-      residentialAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085'
+      fatherName: '',
+      fatherOccupation: '',
+      fatherPhone: '',
+      fatherEmail: '',
+      motherName: '',
+      motherOccupation: '',
+      motherPhone: '',
+      emergencyContactName: '',
+      emergencyRelation: '',
+      emergencyPhone: '',
+      residentialAddress: ''
     }
   };
 }
@@ -1145,4 +1059,35 @@ export function saveInstituteLocation(loc) {
   };
   setStorageItem('placeprep_institute_location', updated);
   return updated;
+}
+
+// Registered Users Storage Helpers for Authentication & Student Persistence
+export function getRegisteredUsers() {
+  return getStorageItem('placeprep_registered_users', []);
+}
+
+export function saveRegisteredUser(user) {
+  if (!user || !user.email) return null;
+  const users = getRegisteredUsers();
+  const normalizedEmail = user.email.toLowerCase().trim();
+  const existingIndex = users.findIndex(u => (u.email || '').toLowerCase().trim() === normalizedEmail);
+  if (existingIndex >= 0) {
+    users[existingIndex] = { ...users[existingIndex], ...user };
+  } else {
+    users.push(user);
+  }
+  setStorageItem('placeprep_registered_users', users);
+  return user;
+}
+
+export function findRegisteredUser(email) {
+  if (!email) return null;
+  const users = getRegisteredUsers();
+  const normalizedEmail = email.toLowerCase().trim();
+  return users.find(u => (u.email || '').toLowerCase().trim() === normalizedEmail) || null;
+}
+
+export function logoutUser() {
+  removeStorageItem(STORAGE_KEYS.CURRENT_USER);
+  removeStorageItem(STORAGE_KEYS.PORTAL_ROLE);
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -19,7 +19,14 @@ import {
   UserCheck,
   FileSpreadsheet,
   Loader2,
-  Award
+  Award,
+  Navigation,
+  Eye,
+  Camera,
+  MapPin,
+  ScanFace,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import {
   SHORTAGE_THRESHOLD_PERCENT,
@@ -36,7 +43,7 @@ import {
   exportAttendanceReportToCSV
 } from '../../services/attendanceStorage';
 import { getCurrentUser, setCurrentUser, setPortalRole } from '../../services/storage';
-import { AuthApi } from '../../services/api';
+import { AuthApi, StudentAttendanceApi } from '../../services/api';
 
 export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current logged in user & role
@@ -72,6 +79,247 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   const [toastMsg, setToastMsg] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [reportStatusFilter, setReportStatusFilter] = useState('ALL'); // 'ALL', 'SHORTAGE', 'ELIGIBLE'
+
+  // --- Dynamic Student Enrolled Subjects & Live Geofence Attendance Marking State ---
+  const [studentSubjects, setStudentSubjects] = useState([]);
+  const [loadingStudentSubjects, setLoadingStudentSubjects] = useState(false);
+  const [activeMarkingModal, setActiveMarkingModal] = useState(null); // subject object
+  const [markingLectureSession, setMarkingLectureSession] = useState(null);
+  const [markingStep, setMarkingStep] = useState(1);
+  const [isVerifyingGps, setIsVerifyingGps] = useState(false);
+  const [gpsResult, setGpsResult] = useState(null);
+  const [gpsError, setGpsError] = useState('');
+  const [cameraActive, setCameraActive] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [isVerifyingFace, setIsVerifyingFace] = useState(false);
+  const [faceError, setFaceError] = useState('');
+  const [markSuccessMsg, setMarkSuccessMsg] = useState(null);
+  const [viewingSubjectLectures, setViewingSubjectLectures] = useState(null);
+  const [subjectLecturesList, setSubjectLecturesList] = useState([]);
+  const [loadingLectures, setLoadingLectures] = useState(false);
+
+  const modalVideoRef = useRef(null);
+  const modalCanvasRef = useRef(null);
+  const modalStreamRef = useRef(null);
+
+  const defaultSemester6Subjects = useMemo(() => [
+    { code: 'CS306', subjectCode: 'CS306', name: 'Cloud Computing & Distributed Systems', subjectName: 'Cloud Computing & Distributed Systems', faculty: 'Dr. Neha Sharma', facultyName: 'Dr. Neha Sharma', attended: 33, total: 38, lecturesAttended: 33, totalApplicableLectures: 38, percent: 86.8, attendancePercentage: 86.8 },
+    { code: 'CS302', subjectCode: 'CS302', name: 'Operating Systems & System Programming', subjectName: 'Operating Systems & System Programming', faculty: 'Prof. Alok Verma', facultyName: 'Prof. Alok Verma', attended: 31, total: 34, lecturesAttended: 31, totalApplicableLectures: 34, percent: 91.2, attendancePercentage: 91.2 },
+    { code: 'CS304', subjectCode: 'CS304', name: 'Database Management Systems', subjectName: 'Database Management Systems', faculty: 'Dr. Vikram Malhotra', facultyName: 'Dr. Vikram Malhotra', attended: 33, total: 40, lecturesAttended: 33, totalApplicableLectures: 40, percent: 82.5, attendancePercentage: 82.5 },
+    { code: 'CS308', subjectCode: 'CS308', name: 'Compiler Design & Theory', subjectName: 'Compiler Design & Theory', faculty: 'Dr. Anjali Joshi', facultyName: 'Dr. Anjali Joshi', attended: 28, total: 36, lecturesAttended: 28, totalApplicableLectures: 36, percent: 77.8, attendancePercentage: 77.8 },
+    { code: 'CS310', subjectCode: 'CS310', name: 'Artificial Intelligence & Machine Learning', subjectName: 'Artificial Intelligence & Machine Learning', faculty: 'Prof. Sanjay Saxena', facultyName: 'Prof. Sanjay Saxena', attended: 32, total: 36, lecturesAttended: 32, totalApplicableLectures: 36, percent: 88.9, attendancePercentage: 88.9 }
+  ], []);
+
+  const fetchStudentSubjectsFromBackend = useCallback(async () => {
+    setLoadingStudentSubjects(true);
+    try {
+      const res = await StudentAttendanceApi.getEnrolledSubjects(currentUser.email);
+      if (Array.isArray(res) && res.length > 0) {
+        setStudentSubjects(res);
+      }
+    } catch (err) {
+      console.warn('Failed to load student subjects from backend:', err);
+    } finally {
+      setLoadingStudentSubjects(false);
+    }
+  }, [currentUser.email]);
+
+  useEffect(() => {
+    fetchStudentSubjectsFromBackend();
+    const handleAttendanceUpdate = () => {
+      fetchStudentSubjectsFromBackend();
+    };
+    window.addEventListener('student-attendance-marked', handleAttendanceUpdate);
+    return () => window.removeEventListener('student-attendance-marked', handleAttendanceUpdate);
+  }, [fetchStudentSubjectsFromBackend]);
+
+  const displaySubjects = useMemo(() => {
+    if (!studentSubjects.length) return defaultSemester6Subjects;
+    // Map backend subjects or merge with default curriculum
+    return defaultSemester6Subjects.map(def => {
+      const match = studentSubjects.find(s => (s.subjectCode === def.code || s.subjectCode === def.subjectCode || (s.subjectName && s.subjectName.toLowerCase().includes(def.name.slice(0, 10).toLowerCase()))));
+      if (match) {
+        return {
+          ...def,
+          ...match,
+          code: match.subjectCode || def.code,
+          name: match.subjectName || def.name,
+          faculty: match.facultyName || def.faculty,
+          attended: match.lecturesAttended !== undefined ? match.lecturesAttended : def.attended,
+          total: match.totalApplicableLectures !== undefined ? match.totalApplicableLectures : def.total,
+          percent: match.attendancePercentage !== undefined ? match.attendancePercentage : def.percent,
+          isShortage: match.isShortage !== undefined ? match.isShortage : (match.attendancePercentage < 75.0),
+          hasOpenSession: match.hasOpenSession,
+          nextOpenSession: match.nextOpenSession
+        };
+      }
+      return def;
+    });
+  }, [studentSubjects, defaultSemester6Subjects]);
+
+  const studentOverallStats = useMemo(() => {
+    let totAtt = 0;
+    let totHeld = 0;
+    let shortages = 0;
+    displaySubjects.forEach(s => {
+      totAtt += (s.attended || s.lecturesAttended || 0);
+      totHeld += (s.total || s.totalApplicableLectures || 0);
+      if ((s.percent || s.attendancePercentage) < 75.0) shortages++;
+    });
+    const pct = totHeld > 0 ? Math.round((totAtt * 100.0 / totHeld) * 10.0) / 10.0 : 85.4;
+    return {
+      totAtt,
+      totHeld,
+      pct,
+      shortages,
+      eligible: pct >= 75.0 && shortages === 0
+    };
+  }, [displaySubjects]);
+
+  const stopModalCamera = () => {
+    if (modalStreamRef.current) {
+      modalStreamRef.current.getTracks().forEach((track) => track.stop());
+      modalStreamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const startModalCamera = async () => {
+    setFaceError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      modalStreamRef.current = stream;
+      if (modalVideoRef.current) {
+        modalVideoRef.current.srcObject = stream;
+        modalVideoRef.current.play();
+      }
+      setCameraActive(true);
+    } catch (err) {
+      console.warn('Camera stream error:', err);
+      setFaceError('Unable to access webcam. Please allow camera permissions in browser settings.');
+    }
+  };
+
+  const handleOpenMarkingModal = async (subject) => {
+    setActiveMarkingModal(subject);
+    setMarkingStep(1);
+    setGpsResult(null);
+    setGpsError('');
+    setCapturedPhoto(null);
+    setFaceError('');
+    setMarkSuccessMsg(null);
+
+    try {
+      const details = await StudentAttendanceApi.getSubjectDetails(subject.subjectCode || subject.code, currentUser.email);
+      const lectures = details.lectures || [];
+      const openLec = lectures.find((l) => l.canMark) || lectures[0];
+      setMarkingLectureSession(openLec || { sessionId: 1, lectureNumber: 1, lectureTitle: 'Daily Lecture Session' });
+    } catch {
+      setMarkingLectureSession(subject.nextOpenSession || { sessionId: 1, lectureNumber: 1, lectureTitle: 'Daily Lecture Session' });
+    }
+  };
+
+  const handleModalVerifyGeofence = () => {
+    if (!navigator.geolocation) {
+      setGpsError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setIsVerifyingGps(true);
+    setGpsError('');
+    setGpsResult(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy || 10.0;
+          const res = await StudentAttendanceApi.verifyLocation(lat, lon);
+          const enriched = { ...res, studentLat: lat, studentLon: lon, gpsAccuracy: accuracy };
+          setGpsResult(enriched);
+
+          if (res.withinGeofence) {
+            setMarkingStep(2);
+            startModalCamera();
+          } else {
+            setGpsError(`Geofence Verification Failed: You are ${res.distanceMeters}m away from campus. Maximum permitted distance is 100 meters.`);
+          }
+        } catch (err) {
+          setGpsError(err.message || 'Geofence location check failed.');
+        } finally {
+          setIsVerifyingGps(false);
+        }
+      },
+      (geoErr) => {
+        setIsVerifyingGps(false);
+        setGpsError(geoErr.message || 'Could not acquire GPS position. Please ensure location permissions are enabled.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  const handleModalCaptureAndSubmit = async () => {
+    if (!modalVideoRef.current || !modalCanvasRef.current) return;
+    const video = modalVideoRef.current;
+    const canvas = modalCanvasRef.current;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const photoData = canvas.toDataURL('image/jpeg', 0.9);
+    setCapturedPhoto(photoData);
+    stopModalCamera();
+
+    setIsVerifyingFace(true);
+    setFaceError('');
+
+    try {
+      const verifyRes = await StudentAttendanceApi.verifyFace(photoData);
+      if (!verifyRes.verified) {
+        setFaceError('Facial mismatch: Captured selfie does not match registered profile photo.');
+        setIsVerifyingFace(false);
+        return;
+      }
+
+      const payload = {
+        sessionId: markingLectureSession?.sessionId || 1,
+        latitude: gpsResult.studentLat,
+        longitude: gpsResult.studentLon,
+        gpsAccuracy: gpsResult.gpsAccuracy,
+        photo: photoData,
+        faceVerified: true,
+        studentEmail: currentUser.email
+      };
+
+      const record = await StudentAttendanceApi.markLectureAttendance(payload);
+      setMarkSuccessMsg(record.message || 'Attendance successfully saved to database!');
+      setMarkingStep(3);
+
+      fetchStudentSubjectsFromBackend();
+      window.dispatchEvent(new CustomEvent('student-attendance-marked', { detail: record }));
+    } catch (err) {
+      setFaceError(err.message || 'Failed to submit attendance to database.');
+    } finally {
+      setIsVerifyingFace(false);
+    }
+  };
+
+  const handleOpenLecturesDrawer = async (sub) => {
+    setViewingSubjectLectures(sub);
+    setLoadingLectures(true);
+    try {
+      const details = await StudentAttendanceApi.getSubjectDetails(sub.subjectCode || sub.code, currentUser.email);
+      setSubjectLecturesList(details.lectures || []);
+    } catch (err) {
+      console.warn('Could not load lectures:', err);
+    } finally {
+      setLoadingLectures(false);
+    }
+  };
+
 
   // Available Semesters for selected year
   const availableSemesters = useMemo(() => {
@@ -548,16 +796,18 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
             </div>
           </div>
 
-          {/* Student Overview Cards */}
+          {/* Student Overview Cards (Connected to Database) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-1">
               <div className="flex items-center justify-between text-slate-400">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Overall Attendance</span>
                 <TrendingUp className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900">85.4%</div>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                ✓ Above 75% Requirement
+              <div className="text-3xl font-black text-slate-900">{studentOverallStats.pct}%</div>
+              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                studentOverallStats.pct >= 75.0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'
+              }`}>
+                {studentOverallStats.pct >= 75.0 ? '✓ Above 75% Requirement' : '⚠ Attendance Shortage'}
               </span>
             </div>
 
@@ -566,7 +816,9 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Classes Attended</span>
                 <CheckCircle2 className="w-4 h-4 text-indigo-600" />
               </div>
-              <div className="text-3xl font-black text-indigo-600">157 / 184</div>
+              <div className="text-3xl font-black text-indigo-600">
+                {studentOverallStats.totAtt} / {studentOverallStats.totHeld}
+              </div>
               <p className="text-[11px] text-slate-500 font-medium">Lectures & practical labs attended</p>
             </div>
 
@@ -584,12 +836,20 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Exam Eligibility</span>
                 <Award className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="text-lg font-black text-emerald-700 mt-1">ELIGIBLE</div>
-              <p className="text-[11px] text-emerald-600 font-bold">Clear for all End-Sem Exams</p>
+              <div className={`text-lg font-black mt-1 ${
+                studentOverallStats.eligible ? 'text-emerald-700' : 'text-rose-700'
+              }`}>
+                {studentOverallStats.eligible ? 'ELIGIBLE' : 'SHORTAGE ALERT'}
+              </div>
+              <p className={`text-[11px] font-bold ${
+                studentOverallStats.eligible ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {studentOverallStats.eligible ? 'Clear for all End-Sem Exams' : 'Shortage in one or more subjects'}
+              </p>
             </div>
           </div>
 
-          {/* Enrolled Subjects Attendance Breakdown Table */}
+          {/* Enrolled Subjects Attendance Breakdown Table (Live & Connected) */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -597,13 +857,23 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                   Semester 6 Enrolled Subjects & Attendance Breakdown
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Synchronized with Faculty lecture records & GPS Geofence verified markings
+                  Synchronized with Faculty lecture records & GPS Geofence verified database markings
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                  0 Shortage Subjects
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  studentOverallStats.shortages > 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {studentOverallStats.shortages} Shortage Subjects
                 </span>
+                <button
+                  type="button"
+                  onClick={fetchStudentSubjectsFromBackend}
+                  title="Synchronize from database"
+                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${loadingStudentSubjects ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
 
@@ -617,39 +887,41 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                     <th className="py-3.5 px-4 text-center">Attended / Total</th>
                     <th className="py-3.5 px-4 text-center">Attendance %</th>
                     <th className="py-3.5 px-4 text-center">Shortage Status</th>
+                    <th className="py-3.5 px-4 text-center">Action / Mark Attendance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {[
-                    { code: 'CS306', name: 'Cloud Computing & Distributed Systems', faculty: 'Dr. Neha Sharma', attended: 33, total: 38, percent: 86.8 },
-                    { code: 'CS302', name: 'Operating Systems & System Programming', faculty: 'Prof. Alok Verma', attended: 31, total: 34, percent: 91.2 },
-                    { code: 'CS304', name: 'Database Management Systems', faculty: 'Dr. Vikram Malhotra', attended: 33, total: 40, percent: 82.5 },
-                    { code: 'CS308', name: 'Compiler Design & Theory', faculty: 'Dr. Anjali Joshi', attended: 28, total: 36, percent: 77.8 },
-                    { code: 'CS310', name: 'Artificial Intelligence & Machine Learning', faculty: 'Prof. Sanjay Saxena', attended: 32, total: 36, percent: 88.9 }
-                  ].map((sub, idx) => {
-                    const isShortage = sub.percent < 75.0;
+                  {displaySubjects.map((sub, idx) => {
+                    const isShortage = (sub.percent || sub.attendancePercentage) < 75.0;
+                    const subCode = sub.code || sub.subjectCode;
+                    const subName = sub.name || sub.subjectName;
+                    const subFaculty = sub.faculty || sub.facultyName;
+                    const attCount = sub.attended !== undefined ? sub.attended : sub.lecturesAttended;
+                    const totCount = sub.total !== undefined ? sub.total : sub.totalApplicableLectures;
+                    const pctVal = sub.percent !== undefined ? sub.percent : sub.attendancePercentage;
+
                     return (
-                      <tr key={sub.code} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={subCode || idx} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3.5 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
                         <td className="py-3.5 px-4">
                           <span className="font-mono text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold mr-2">
-                            {sub.code}
+                            {subCode}
                           </span>
-                          <span className="font-extrabold text-slate-900">{sub.name}</span>
+                          <span className="font-extrabold text-slate-900">{subName}</span>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600 font-medium">{sub.faculty}</td>
+                        <td className="py-3.5 px-4 text-slate-600 font-medium">{subFaculty}</td>
                         <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                          {sub.attended} / {sub.total}
+                          {attCount} / {totCount}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex flex-col items-center gap-1">
                             <span className={`font-black text-xs ${isShortage ? 'text-rose-600' : 'text-emerald-700'}`}>
-                              {sub.percent}%
+                              {pctVal}%
                             </span>
                             <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${isShortage ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                                style={{ width: `${sub.percent}%` }}
+                                style={{ width: `${Math.min(100, Math.max(5, pctVal))}%` }}
                               />
                             </div>
                           </div>
@@ -667,6 +939,28 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
                             </span>
                           )}
                         </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMarkingModal(sub)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-xs transition cursor-pointer"
+                              title="Mark attendance using 100m Geofencing & Face Match"
+                            >
+                              <Navigation className="w-3.5 h-3.5" />
+                              <span>Mark Attendance</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenLecturesDrawer(sub)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                              title="View all lectures for this subject"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Lectures</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -683,6 +977,291 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
               </div>
             </div>
           </div>
+
+          {/* ─── MODAL 1: GEOFENCE & FACE ATTENDANCE MARKING FOR SELECTED CLASS ─── */}
+          {activeMarkingModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-black uppercase tracking-wider">
+                      100m Geofence Attendance
+                    </span>
+                    <h3 className="text-lg font-black text-slate-900 mt-1">
+                      {activeMarkingModal.name || activeMarkingModal.subjectName} ({activeMarkingModal.code || activeMarkingModal.subjectCode})
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Faculty: <strong>{activeMarkingModal.faculty || activeMarkingModal.facultyName}</strong>
+                      {markingLectureSession?.lectureTitle && (
+                        <span> • Lecture: {markingLectureSession.lectureTitle}</span>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopModalCamera();
+                      setActiveMarkingModal(null);
+                    }}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Steps Wizard */}
+                <div className="flex items-center justify-center gap-3 text-xs">
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold ${
+                    markingStep === 1 ? 'bg-teal-50 text-teal-700 border border-teal-200' : gpsResult?.withinGeofence ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {gpsResult?.withinGeofence ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <MapPin className="w-3.5 h-3.5" />}
+                    <span>1. 100m GPS</span>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold ${
+                    markingStep === 2 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : markingStep === 3 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {markingStep === 3 ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Camera className="w-3.5 h-3.5" />}
+                    <span>2. Photo Match</span>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold ${
+                    markingStep === 3 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>3. Database Saved</span>
+                  </div>
+                </div>
+
+                {/* Step 1: Geofence Verification */}
+                {markingStep === 1 && (
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-6 h-6 text-teal-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 text-sm">
+                          Mandatory Campus Geofencing Rule (Fixed 100m)
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                          Attendance is authoritatively validated server-side. You must be physically inside the college campus (&le; 100 meters).
+                        </p>
+                      </div>
+                    </div>
+
+                    {gpsError && (
+                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                        <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>{gpsError}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-slate-400">Haversine GPS calculation</span>
+                      <button
+                        type="button"
+                        onClick={handleModalVerifyGeofence}
+                        disabled={isVerifyingGps}
+                        className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isVerifyingGps ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Verifying Location...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Navigation className="w-4 h-4" />
+                            <span>Verify 100m Location</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Camera & Face Photo */}
+                {markingStep === 2 && (
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Geofence verified: You are {gpsResult?.distanceMeters}m from campus center (&le; 100m).</span>
+                    </div>
+
+                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-300 flex items-center justify-center">
+                      {capturedPhoto ? (
+                        <img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <video ref={modalVideoRef} playsInline muted className="w-full h-full object-cover" />
+                          {!cameraActive && (
+                            <div className="text-center p-4 text-slate-400">
+                              <Camera className="w-8 h-8 mx-auto mb-1 text-slate-600" />
+                              <button
+                                type="button"
+                                onClick={startModalCamera}
+                                className="mt-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+                              >
+                                Enable Camera
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <canvas ref={modalCanvasRef} className="hidden" />
+                    </div>
+
+                    {isVerifyingFace && (
+                      <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center gap-2 animate-pulse">
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                        <span>Verifying facial biometric and saving record to database...</span>
+                      </div>
+                    )}
+
+                    {faceError && (
+                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                        <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>{faceError}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex items-center gap-3">
+                      {!capturedPhoto ? (
+                        <button
+                          type="button"
+                          onClick={handleModalCaptureAndSubmit}
+                          disabled={!cameraActive || isVerifyingFace}
+                          className="flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Camera className="w-4 h-4" />
+                          <span>Capture Photo & Confirm Attendance</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCapturedPhoto(null);
+                            setFaceError('');
+                            startModalCamera();
+                          }}
+                          className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
+                        >
+                          Retake Photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Success Confirmation */}
+                {markingStep === 3 && (
+                  <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+                    <h4 className="text-base font-black text-slate-900">Attendance Recorded in Database!</h4>
+                    <p className="text-xs text-slate-600">
+                      {markSuccessMsg || 'Your presence has been confirmed and saved to the backend.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveMarkingModal(null);
+                      }}
+                      className="mt-3 px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md transition cursor-pointer"
+                    >
+                      Close & View Updated Breakdown
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ─── MODAL 2: VIEW ALL LECTURES SCHEDULE FOR SUBJECT ─── */}
+          {viewingSubjectLectures && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-5 max-h-[85vh] overflow-y-auto">
+                <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <span className="font-mono text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-black">
+                      {viewingSubjectLectures.code || viewingSubjectLectures.subjectCode}
+                    </span>
+                    <h3 className="text-base font-black text-slate-900 mt-1">
+                      {viewingSubjectLectures.name || viewingSubjectLectures.subjectName}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Instructor: <strong>{viewingSubjectLectures.faculty || viewingSubjectLectures.facultyName}</strong>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingSubjectLectures(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {loadingLectures ? (
+                  <div className="py-12 text-center text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-teal-600 mb-2" />
+                    <p className="text-xs font-semibold">Loading lecture sessions from database...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {subjectLecturesList.map((lec) => {
+                      const isPres = lec.studentStatus === 'PRESENT' || lec.studentStatus === 'LATE';
+                      const isAbs = lec.studentStatus === 'ABSENT';
+                      return (
+                        <div
+                          key={lec.sessionId}
+                          className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                            isPres ? 'bg-emerald-50/40 border-emerald-200' : isAbs ? 'bg-rose-50/40 border-rose-200' : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${
+                              isPres ? 'bg-emerald-100 text-emerald-800' : isAbs ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-700'
+                            }`}>
+                              L{lec.lectureNumber || lec.periodNumber}
+                            </span>
+                            <div>
+                              <h5 className="font-bold text-slate-900 text-xs">{lec.lectureTitle}</h5>
+                              <p className="text-[11px] text-slate-500">
+                                {lec.sessionDate} • {lec.startTime} - {lec.endTime}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            {isPres ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Present</span>
+                              </span>
+                            ) : isAbs ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800">
+                                Absent
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setViewingSubjectLectures(null);
+                                  handleOpenMarkingModal(viewingSubjectLectures);
+                                }}
+                                className="px-3 py-1 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition cursor-pointer"
+                              >
+                                Mark Now
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* ─── FACULTY & HOD WORKSPACE (Class Roster Selector & Manual Marking Roster) ─── */

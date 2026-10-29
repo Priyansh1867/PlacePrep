@@ -88,107 +88,113 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setErrorMsg('');
     setIsSubmitting(true);
 
-    if (authMode === 'login') {
-      if (!formData.email || !formData.password) {
-        setErrorMsg('Please enter both email and password.');
-        setIsSubmitting(false);
-        return;
-      }
-    } else {
-      if (selectedRole === 'management') {
-        setErrorMsg('Management accounts cannot self-register. Please contact the administrator or use Sign in.');
-        setIsSubmitting(false);
-        return;
-      }
-      if (!formData.fullName || !formData.email || !formData.password) {
-        setErrorMsg('Please complete all required fields.');
-        setIsSubmitting(false);
-        return;
-      }
-      if (formData.password !== formData.confirmPassword) {
-        setErrorMsg('Passwords do not match.');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    const roleMeta = roleOptions.find((item) => item.id === selectedRole);
-    let userObj = {
-      id: `user-${Date.now()}`,
-      name: formData.fullName || (formData.email.split('@')[0]),
-      email: formData.email.trim().toLowerCase(),
-      role: selectedRole,
-      roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
-      portal: portalBranch,
-      college: formData.college || 'Delhi Technological University (DTU)',
-      branch: formData.branch || 'Computer Science and Engineering',
-      graduationBatch: formData.batch || '2028',
-      department: formData.department || 'Computer Science and Engineering',
-      designation: formData.designation,
-      company: formData.companyName || 'HCLTech',
-      rollNumber: formData.rollNumber || '2024/CSE/084',
-      authenticatedAt: new Date().toISOString(),
-    };
-
-    // Synchronize directly with Spring Boot MySQL Database with instant non-blocking fallback
     try {
-      if (authMode === 'register') {
-        const payload = {
-          name: userObj.name,
-          email: userObj.email,
-          password: formData.password,
-          college: userObj.college,
-          branch: userObj.branch,
-          graduationBatch: userObj.graduationBatch,
-          role: selectedRole,
-          rollNumber: userObj.rollNumber
-        };
-        try {
-          const backendRes = await AuthApi.register(payload);
-          if (backendRes && backendRes.user) {
-            userObj = { ...userObj, ...backendRes.user, id: backendRes.user.id || userObj.id };
-          }
-        } catch (regErr) {
-          if (regErr && regErr.message && regErr.message.toLowerCase().includes('already exists')) {
-            setErrorMsg(regErr.message + '. Please switch to Sign in.');
-            setIsSubmitting(false);
-            return;
-          }
-          console.warn('Backend database offline or unavailable, continuing with verified local session.');
+      if (authMode === 'login') {
+        if (!formData.email || !formData.password) {
+          setErrorMsg('Please enter both email and password.');
+          setIsSubmitting(false);
+          return;
         }
       } else {
-        // Mode is login: attempt live database login
-        try {
-          const loginRes = await AuthApi.login({
-            email: formData.email.trim().toLowerCase(),
-            password: formData.password
-          });
-          if (loginRes && loginRes.user) {
-            userObj = { ...userObj, ...loginRes.user, id: loginRes.user.id || userObj.id };
-          }
-        } catch {
-          // If login fails or backend is unreachable, continue smoothly with local session
-          console.warn('Backend login unavailable, continuing with verified session.');
+        if (selectedRole === 'management') {
+          setErrorMsg('Management accounts cannot self-register. Please contact the administrator or use Sign in.');
+          setIsSubmitting(false);
+          return;
+        }
+        if (!formData.fullName || !formData.email || !formData.password) {
+          setErrorMsg('Please complete all required fields.');
+          setIsSubmitting(false);
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          setErrorMsg('Passwords do not match.');
+          setIsSubmitting(false);
+          return;
         }
       }
-    } catch (err) {
-      console.warn('Backend note:', err);
+
+      const roleMeta = roleOptions.find((item) => item.id === selectedRole);
+      let userObj = {
+        id: 'user-' + Date.now(),
+        name: formData.fullName || (formData.email.split('@')[0]),
+        email: formData.email.trim().toLowerCase(),
+        role: selectedRole,
+        roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
+        portal: portalBranch,
+        college: formData.college || 'Delhi Technological University (DTU)',
+        branch: formData.branch || 'Computer Science and Engineering',
+        graduationBatch: formData.batch || '2028',
+        department: formData.department || 'Computer Science and Engineering',
+        designation: formData.designation,
+        company: formData.companyName || 'HCLTech',
+        rollNumber: formData.rollNumber || '2024/CSE/084',
+        authenticatedAt: new Date().toISOString(),
+      };
+
+      // Synchronize directly with Spring Boot MySQL Database with instant non-blocking fallback
+      try {
+        if (authMode === 'register') {
+          const payload = {
+            name: userObj.name,
+            email: userObj.email,
+            password: formData.password,
+            college: userObj.college,
+            branch: userObj.branch,
+            graduationBatch: userObj.graduationBatch,
+            role: selectedRole,
+            rollNumber: userObj.rollNumber
+          };
+          try {
+            const backendRes = await AuthApi.register(payload);
+            if (backendRes && backendRes.user) {
+              userObj = { ...userObj, ...backendRes.user, id: backendRes.user.id || userObj.id };
+            }
+          } catch (regErr) {
+            if (regErr && regErr.message && regErr.message.toLowerCase().includes('already exists')) {
+              setErrorMsg(regErr.message + '. Please switch to Sign in.');
+              setIsSubmitting(false);
+              return;
+            }
+            console.warn('Backend database offline or unavailable, continuing with verified local session.');
+          }
+        } else {
+          // Mode is login: attempt live database login
+          try {
+            const loginRes = await AuthApi.login({
+              email: formData.email.trim().toLowerCase(),
+              password: formData.password
+            });
+            if (loginRes && loginRes.user) {
+              userObj = { ...userObj, ...loginRes.user, id: loginRes.user.id || userObj.id };
+            }
+          } catch {
+            // If login fails or backend is unreachable, continue smoothly with local session
+            console.warn('Backend login unavailable, continuing with verified session.');
+          }
+        }
+      } catch (err) {
+        console.warn('Backend note:', err);
+      }
+
+      const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
+
+      // Persist session to local storage
+      setCurrentUser(userObj);
+      setPortalMode(destinationPortal);
+      setPortalRole(selectedRole);
+      if (selectedRole === 'student' && userObj.graduationBatch) {
+        setGraduationBatch(userObj.graduationBatch);
+      }
+
+      setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${destinationPortal.toUpperCase()} workspace...`);
+      setTimeout(() => {
+        onAuthSuccess(userObj, destinationPortal);
+      }, 550);
+    } catch (generalErr) {
+      console.error('Unhandled error during authentication submission:', generalErr);
+      setErrorMsg('An unexpected error occurred. Please try again.');
+      setIsSubmitting(false);
     }
-
-    const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
-
-    // Persist session to local storage
-    setCurrentUser(userObj);
-    setPortalMode(destinationPortal);
-    setPortalRole(selectedRole);
-    if (selectedRole === 'student' && userObj.graduationBatch) {
-      setGraduationBatch(userObj.graduationBatch);
-    }
-
-    setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${destinationPortal.toUpperCase()} workspace...`);
-    setTimeout(() => {
-      onAuthSuccess(userObj, destinationPortal);
-    }, 550);
   };
 
   return (

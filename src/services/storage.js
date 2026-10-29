@@ -109,12 +109,16 @@ export function getCurrentUser() {
 }
 
 export function setCurrentUser(user) {
-  setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
-  if (user && user.email) {
-    saveRegisteredUser(user);
-  }
-  if (user && user.graduationBatch) {
-    setGraduationBatch(user.graduationBatch);
+  try {
+    setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
+    if (user && user.email) {
+      saveRegisteredUser(user);
+    }
+    if (user && user.graduationBatch) {
+      setGraduationBatch(user.graduationBatch);
+    }
+  } catch (e) {
+    console.error('Error setting current user:', e);
   }
 }
 
@@ -1063,28 +1067,46 @@ export function saveInstituteLocation(loc) {
 
 // Registered Users Storage Helpers for Authentication & Student Persistence
 export function getRegisteredUsers() {
-  return getStorageItem('placeprep_registered_users', []);
+  try {
+    const data = getStorageItem('placeprep_registered_users', []);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('Error reading registered users:', e);
+    return [];
+  }
 }
 
 export function saveRegisteredUser(user) {
   if (!user || !user.email) return null;
-  const users = getRegisteredUsers();
-  const normalizedEmail = user.email.toLowerCase().trim();
-  const existingIndex = users.findIndex(u => (u.email || '').toLowerCase().trim() === normalizedEmail);
-  if (existingIndex >= 0) {
-    users[existingIndex] = { ...users[existingIndex], ...user };
-  } else {
-    users.push(user);
+  try {
+    let users = getRegisteredUsers();
+    if (!Array.isArray(users)) users = [];
+    const normalizedEmail = user.email.toLowerCase().trim();
+    const existingIndex = users.findIndex(u => (u?.email || '').toLowerCase().trim() === normalizedEmail);
+    if (existingIndex >= 0) {
+      users[existingIndex] = { ...users[existingIndex], ...user };
+    } else {
+      users.push(user);
+    }
+    setStorageItem('placeprep_registered_users', users);
+    return user;
+  } catch (err) {
+    console.error('Error saving registered user:', err);
+    return user;
   }
-  setStorageItem('placeprep_registered_users', users);
-  return user;
 }
 
 export function findRegisteredUser(email) {
   if (!email) return null;
-  const users = getRegisteredUsers();
-  const normalizedEmail = email.toLowerCase().trim();
-  return users.find(u => (u.email || '').toLowerCase().trim() === normalizedEmail) || null;
+  try {
+    const users = getRegisteredUsers();
+    if (!Array.isArray(users)) return null;
+    const normalizedEmail = email.toLowerCase().trim();
+    return users.find(u => (u?.email || '').toLowerCase().trim() === normalizedEmail) || null;
+  } catch (err) {
+    console.error('Error finding registered user:', err);
+    return null;
+  }
 }
 
 export function logoutUser() {

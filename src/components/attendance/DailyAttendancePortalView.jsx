@@ -61,6 +61,9 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || { role: 'teacher', name: 'Dr. Neha Sharma', email: 'teacher@placeprep.com' });
   const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || 'teacher'));
 
+  // Check if current user is authorized to manage/mark attendance (declared early to avoid TDZ)
+  const isAuthorized = activeRole === 'teacher' || activeRole === 'hod' || activeRole === 'admin' || activeRole === 'faculty';
+
   // View Mode: 'marking' (speed marking) vs 'report' (cumulative shortage report)
   const [viewMode, setViewMode] = useState('marking');
 
@@ -534,8 +537,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     };
   }, [availableSubjects, selectedSubjectCode]);
 
-  // Check if current user is authorized to manage/mark attendance
-  const isAuthorized = activeRole === 'teacher' || activeRole === 'hod' || activeRole === 'admin' || activeRole === 'faculty';
+
 
   // Quick Demo Role Switcher
   const handleSwitchDemoRole = async (newRole) => {

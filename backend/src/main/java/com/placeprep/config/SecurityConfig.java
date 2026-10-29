@@ -40,8 +40,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // Public authentication & info
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/resume-ats/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         
                         // Public reads & public interactions
@@ -68,14 +71,35 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/moderate").hasRole("ADMIN")
 
-                        // Authenticated student/user actions
+                        // Management restricted endpoints
+                        .requestMatchers("/api/management/attendance/verify-location").permitAll()
+                        .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
+
+                        // Authenticated student/user actions & attendance verification
+                        .requestMatchers("/api/student/attendance/status").permitAll()
+                        .requestMatchers("/api/student/attendance/verify-location").permitAll()
+                        .requestMatchers("/api/student/attendance/verify-face").permitAll()
+                        .requestMatchers("/api/student/attendance/mark").permitAll()
+                        .requestMatchers("/api/users/profile/**", "/api/users/profile").permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers("/api/student/attendance/**").permitAll()
                         .requestMatchers("/api/mock-sessions/**").authenticated()
                         .requestMatchers("/api/applications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/experiences").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/report").authenticated()
                         .requestMatchers("/api/workflow/**").authenticated()
+
+                        // HOD Faculty Operations Monitoring - restricted strictly to HOD & ADMIN
+                        .requestMatchers("/api/hod/**").hasAnyRole("HOD", "ADMIN")
+
+                        // Attendance Portal Role Authorization:
+                        // Marking class attendance requires TEACHER, HOD, or ADMIN role
+                        .requestMatchers(HttpMethod.POST, "/api/attendance/class/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY")
+                        .requestMatchers(HttpMethod.POST, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.PUT, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.GET, "/api/attendance/**").permitAll()
 
                         // Any other request must be authenticated
                         .anyRequest().authenticated()

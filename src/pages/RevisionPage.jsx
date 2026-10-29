@@ -26,6 +26,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
+import SearchBar from '../components/ui/SearchBar';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
 import PageHeader from '../components/ui/PageHeader';
@@ -97,10 +98,13 @@ export default function RevisionPage({ onSelectQuestion, onNavigate }) {
     const titleStr = (q.title || q.question || '').toLowerCase();
     const topicStr = (q.topic || '').toLowerCase();
     const compStr = (q.companyName || '').toLowerCase();
-    const searchLower = (searchQuery || '').toLowerCase();
-    const matchesSearch = titleStr.includes(searchLower) ||
+    const answerStr = (q.answer || '').toLowerCase();
+    const searchLower = (searchQuery || '').trim().toLowerCase();
+    const matchesSearch = !searchLower ||
+                          titleStr.includes(searchLower) ||
                           topicStr.includes(searchLower) ||
-                          compStr.includes(searchLower);
+                          compStr.includes(searchLower) ||
+                          answerStr.includes(searchLower);
     const matchesCategory = activeCategory === 'ALL' || q.category === activeCategory || q.round === activeCategory;
     return matchesSearch && matchesCategory;
   });
@@ -155,12 +159,14 @@ export default function RevisionPage({ onSelectQuestion, onNavigate }) {
       <Card className="p-4 sm:p-5 border-slate-200">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="w-full md:w-96">
-            <Input
-              type="text"
-              placeholder="Search in revision queue..."
+            <SearchBar
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={Search}
+              onClear={() => setSearchQuery('')}
+              placeholder="Search in revision queue..."
+              resultCount={filteredQuestions.length}
+              totalCount={revisionQuestions.length}
+              ariaLabel="Search revision queue"
             />
           </div>
 
@@ -214,15 +220,27 @@ export default function RevisionPage({ onSelectQuestion, onNavigate }) {
           description={
             revisionQuestions.length === 0
               ? "Flag questions from the Question Bank or Company Hubs by clicking 'Flag for Revision' to practice active recall before your interviews."
-              : "No questions matched your search query. Try clearing filters."
+              : `No questions matched "${searchQuery.trim()}". Try clearing filters or search.`
           }
           action={
-            <Button
-              variant="primary"
-              onClick={() => onNavigate && onNavigate('prep')}
-            >
-              Explore Question Bank
-            </Button>
+            searchQuery ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveCategory('ALL');
+                }}
+              >
+                Clear Search & Filters
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={() => onNavigate && onNavigate('prep')}
+              >
+                Explore Question Bank
+              </Button>
+            )
           }
         />
       ) : (

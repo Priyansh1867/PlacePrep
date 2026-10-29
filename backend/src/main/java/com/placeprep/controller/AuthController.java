@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,6 +25,9 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired(required = false)
+    private com.placeprep.config.TokenService tokenService;
+
     public AuthController() {
     }
 
@@ -31,11 +35,26 @@ public class AuthController {
         this.userService = userService;
     }
 
+    private Map<String, Object> buildAuthResponse(User user, String token) {
+        Map<String, Object> resp = new java.util.LinkedHashMap<>();
+        resp.put("token", token);
+        resp.put("user", user);
+        resp.put("id", user.getId());
+        resp.put("name", user.getName());
+        resp.put("email", user.getEmail());
+        resp.put("role", user.getRole());
+        resp.put("branch", user.getBranch());
+        resp.put("college", user.getCollege());
+        resp.put("rollNumber", user.getRollNumber());
+        return resp;
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
             User created = userService.register(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            String token = tokenService != null ? tokenService.generateToken(created.getId(), created.getEmail(), created.getRole()) : "pp_demo_token";
+            return ResponseEntity.status(HttpStatus.CREATED).body(buildAuthResponse(created, token));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -50,7 +69,8 @@ public class AuthController {
         String password = credentials != null ? credentials.get("password") : null;
         try {
             User user = userService.login(email, password);
-            return ResponseEntity.ok(user);
+            String token = tokenService != null ? tokenService.generateToken(user.getId(), user.getEmail(), user.getRole()) : "pp_demo_token";
+            return ResponseEntity.ok(buildAuthResponse(user, token));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -60,14 +80,21 @@ public class AuthController {
     }
 
     @PostMapping("/demo-login")
-    public ResponseEntity<?> demoLogin() {
+    public ResponseEntity<?> demoLogin(@RequestBody(required = false) Map<String, String> body) {
         try {
-            User demoUser = userService.demoLogin();
-            return ResponseEntity.ok(demoUser);
+            String role = (body != null && body.containsKey("role")) ? body.get("role") : "student";
+            User demoUser = userService.demoLogin(role);
+            String token = tokenService != null ? tokenService.generateToken(demoUser.getId(), demoUser.getEmail(), demoUser.getRole()) : "pp_demo_token";
+            return ResponseEntity.ok(buildAuthResponse(demoUser, token));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Demo login error: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers(null, null));
     }
 
     @GetMapping("/user/{id}")

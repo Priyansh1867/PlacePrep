@@ -5,12 +5,14 @@ import BatchSelectionModal from './components/BatchSelectionModal';
 import AuthModal from './components/AuthModal';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import PushNotificationDrawer from './components/PushNotificationDrawer';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Unified Portal Pages
 import PortalGatewayPage from './pages/PortalGatewayPage';
 import AuthPortalPage from './pages/AuthPortalPage';
 import InstitutePortalPage from './pages/InstitutePortalPage';
 import PlacementPortalPage from './pages/PlacementPortalPage';
+import ManagementPortalPage from './pages/ManagementPortalPage';
 import RemiiLandingPage from './pages/RemiiLandingPage';
 
 // Specialized Placement Prep Pages
@@ -28,6 +30,12 @@ import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
 import AcademicRecordsPage from './pages/AcademicRecordsPage';
 import AcademicProfilePage from './pages/AcademicProfilePage';
 import MyApplicationsPage from './pages/MyApplicationsPage';
+import DailyAttendancePage from './pages/DailyAttendancePage';
+import CrtAttendancePage from './pages/CrtAttendancePage';
+import ReportsExporterPage from './pages/ReportsExporterPage';
+import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
+import DsaPracticePage from './pages/DsaPracticePage';
+import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
 
 import { getCompanies } from './services/storage';
 
@@ -59,6 +67,29 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKey);
   }, []);
 
+  // Viewport scroll reset helper for instant top alignment
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  };
+
+  const handleNavigate = (route) => {
+    scrollToTop();
+    setCurrentRoute(route);
+  };
+
+  // Automatically snap viewport to top on route change to keep search bars in direct view
+  useEffect(() => {
+    scrollToTop();
+  }, [currentRoute]);
+
   // Navigation handlers
   const handleSelectPortal = (portal) => {
     if (authorizedPortal !== portal) {
@@ -69,14 +100,16 @@ export default function App() {
       setCurrentRoute('institute-portal');
     } else if (portal === 'placement') {
       setCurrentRoute('placement-portal');
+    } else if (portal === 'management') {
+      setCurrentRoute('management-portal');
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleNavigateAuth = (portalBranch = 'institute') => {
     setSelectedAuthPortal(portalBranch);
     setCurrentRoute('auth-portal');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleAuthSuccess = (user, portalBranch) => {
@@ -85,16 +118,18 @@ export default function App() {
       setCurrentRoute('institute-portal');
     } else if (portalBranch === 'placement') {
       setCurrentRoute('placement-portal');
+    } else if (portalBranch === 'management') {
+      setCurrentRoute('management-portal');
     } else {
       setCurrentRoute('dashboard');
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleSelectCompany = (company) => {
     setSelectedCompany(company);
     setCurrentRoute('company-hub');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleSelectRound = (roundId, company) => {
@@ -102,7 +137,7 @@ export default function App() {
     setSelectedCompany(company);
     setSelectedQuestion(null);
     setCurrentRoute('prep');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleSelectQuestion = (question) => {
@@ -112,19 +147,19 @@ export default function App() {
     const foundCompany = companies.find(c => c.id === question.companyId);
     if (foundCompany) setSelectedCompany(foundCompany);
     setCurrentRoute('prep');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleStartMockInterview = (company, round = 'technical') => {
     setMockSessionParams({ company, round });
     setCurrentRoute('mock-interview');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleViewAiInsights = (company) => {
     setSelectedCompany(company);
     setCurrentRoute('ai-insights');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleSearchSelect = (resultItem) => {
@@ -133,22 +168,22 @@ export default function App() {
     } else if (resultItem.type === 'question') {
       handleSelectQuestion(resultItem.data);
     } else if (resultItem.type === 'drive') {
-      setCurrentRoute('drives');
+      handleNavigate('drives');
     } else if (resultItem.type === 'experience') {
-      setCurrentRoute('experiences');
+      handleNavigate('experiences');
     } else if (resultItem.type === 'academic-record') {
-      setCurrentRoute('academic-records');
+      handleNavigate('academic-records');
     }
   };
 
   // If route is 'landing', render standalone Remii-style Landing Page
   if (currentRoute === 'landing') {
     return (
-      <RemiiLandingPage onBackToApp={() => setCurrentRoute('gateway')} />
+      <RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} />
     );
   }
 
-  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal'].includes(currentRoute);
+  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
@@ -156,7 +191,7 @@ export default function App() {
       {!isGuidedFlowRoute && (
         <Navbar
           currentRoute={currentRoute}
-          setCurrentRoute={setCurrentRoute}
+          setCurrentRoute={handleNavigate}
           onOpenSearch={() => setIsSearchModalOpen(true)}
           onOpenBatchModal={() => setIsBatchModalOpen(true)}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
@@ -167,7 +202,8 @@ export default function App() {
 
       {/* Main Content Router */}
       <main className="flex-1">
-        
+        <ErrorBoundary resetKey={currentRoute}>
+                
         {/* 1. MASTER HOME PAGE: Portal Gateway (Institute & Placement Options) */}
         {(currentRoute === 'gateway' || currentRoute === 'home') && (
           <PortalGatewayPage
@@ -176,50 +212,56 @@ export default function App() {
           />
         )}
 
+        
         {/* 2. DEDICATED LOGIN / REGISTER PAGE for selected portal */}
         {currentRoute === 'auth-portal' && (
           <AuthPortalPage
             initialPortal={selectedAuthPortal}
             onAuthSuccess={handleAuthSuccess}
-            onBackToGateway={() => setCurrentRoute('gateway')}
+            onBackToGateway={() => handleNavigate('gateway')}
           />
         )}
 
+        
         {/* 3. INSTITUTE PORTAL (Teacher, HOD, Students) */}
         {currentRoute === 'institute-portal' && (
           <InstitutePortalPage
-            onNavigate={setCurrentRoute}
+            onNavigate={handleNavigate}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
 
+        
         {/* 4. PLACEMENT PORTAL (HR, Director, TPO, Coordinator) */}
         {currentRoute === 'placement-portal' && (
           <PlacementPortalPage
-            onNavigate={setCurrentRoute}
+            onNavigate={handleNavigate}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
 
+        
         {/* 5. CLASSIC PLACEMENT HOMEPAGE */}
         {currentRoute === 'classic-home' && (
           <HomePage
-            onNavigate={setCurrentRoute}
+            onNavigate={handleNavigate}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
 
+        
         {/* 6. SELECTION WORKFLOW ENGINE */}
         {currentRoute === 'workflow' && (
           <SelectionWorkflowPage
-            onNavigate={setCurrentRoute}
+            onNavigate={handleNavigate}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
 
+        
         {/* 7. DRIVES & PLACEMENT CALENDAR */}
         {currentRoute === 'drives' && (
           <PlacementDrivesPage
@@ -227,6 +269,7 @@ export default function App() {
           />
         )}
 
+        
         {/* 8. COMPANIES LISTING */}
         {currentRoute === 'companies' && (
           <CompaniesPage
@@ -235,19 +278,21 @@ export default function App() {
           />
         )}
 
+        
         {/* 9. COMPANY PREPARATION HUB */}
         {currentRoute === 'company-hub' && selectedCompany && (
           <CompanyHubPage
             company={selectedCompany}
-            onBack={() => setCurrentRoute('companies')}
+            onBack={() => handleNavigate('companies')}
             onSelectRound={handleSelectRound}
             onSelectQuestion={handleSelectQuestion}
             onStartMockInterview={handleStartMockInterview}
             onViewInsights={handleViewAiInsights}
-            onNavigateToDrives={() => setCurrentRoute('drives')}
+            onNavigateToDrives={() => handleNavigate('drives')}
           />
         )}
 
+        
         {/* 10. QUESTION PREPARATION & PRACTICE */}
         {currentRoute === 'prep' && (
           <QuestionPrepPage
@@ -262,11 +307,13 @@ export default function App() {
           />
         )}
 
+        
         {/* 11. INTERVIEW EXPERIENCES */}
         {currentRoute === 'experiences' && (
           <ExperiencesPage />
         )}
 
+        
         {/* 12. AI INSIGHTS */}
         {currentRoute === 'ai-insights' && (
           <AiInsightsPage
@@ -276,24 +323,27 @@ export default function App() {
           />
         )}
 
+        
         {/* 13. MOCK INTERVIEW */}
         {currentRoute === 'mock-interview' && (
           <MockInterviewPage
             initialCompany={mockSessionParams.company || selectedCompany}
             initialRound={mockSessionParams.round || 'technical'}
-            onFinish={() => setCurrentRoute('dashboard')}
+            onFinish={() => handleNavigate('dashboard')}
           />
         )}
 
+        
         {/* 14. STUDENT DASHBOARD */}
         {currentRoute === 'dashboard' && (
           <StudentDashboardPage
-            onNavigate={setCurrentRoute}
+            onNavigate={handleNavigate}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
 
+        
         {/* 15. ACADEMIC RECORDS */}
         {currentRoute === 'academic-records' && (
           <AcademicRecordsPage />
@@ -315,14 +365,67 @@ export default function App() {
           />
         )}
 
+        
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
           <AdminPage />
         )}
 
+        
+        {/* 17. TEACHER & HOD DAILY CLASS ATTENDANCE PORTAL */}
+        {(currentRoute === 'attendance' || currentRoute === 'daily-attendance' || currentRoute === 'class-attendance') && (
+          <DailyAttendancePage onNavigate={handleNavigate} />
+        )}
+
+        
+        {/* 18. CRT TRAINING ATTENDANCE & ELIGIBILITY PORTAL */}
+        {(currentRoute === 'crt-attendance' || currentRoute === 'crt-training-attendance') && (
+          <CrtAttendancePage onNavigate={handleNavigate} />
+        )}
+
+        
+        {/* 19. REPORTS EXPORTER (DRIVE ELIGIBILITY, PLACEMENTS & ATTENDANCE) */}
+        {(currentRoute === 'reports' || currentRoute === 'reports-exporter') && (
+          <ReportsExporterPage onNavigate={handleNavigate} />
+        )}
+
+        
+        {/* 20. HOD CURRICULUM & SYLLABUS GOVERNANCE */}
+        {(currentRoute === 'curriculum-governance' || currentRoute === 'syllabus-governance') && (
+          <CurriculumGovernancePage onNavigate={handleNavigate} />
+        )}
+
+        
+        {/* 21. STUDENT-ONLY DSA & CODING PRACTICE STUDIO */}
+        {(currentRoute === 'dsa-studio' || currentRoute === 'dsa-practice') && (
+          <DsaPracticePage
+            onNavigate={handleNavigate}
+            onSelectGlobalQuestion={handleSelectQuestion}
+          />
+        )}
+
+        
+        {/* 23. MANAGEMENT PORTAL (COLLEGE LOCATION & GEOFENCING) */}
+        {currentRoute === 'management-portal' && (
+          <ManagementPortalPage
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        
+        {/* 22. RESUME STATUS & ATS COMPATIBILITY CHECKER */}
+        {(currentRoute === 'resume-ats' || currentRoute === 'resume-checker' || currentRoute === 'ats-checker') && (
+          <ResumeAtsCheckerPage
+            onNavigate={handleNavigate}
+            onSelectCompany={handleSelectCompany}
+          />
+        )}
+
+        
+              </ErrorBoundary>
       </main>
 
-      {!isGuidedFlowRoute && <Footer onNavigate={setCurrentRoute} />}
+      {!isGuidedFlowRoute && <Footer onNavigate={handleNavigate} />}
 
       {!isGuidedFlowRoute && (
         <>
@@ -334,7 +437,7 @@ export default function App() {
           <AuthModal
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
-            onAuthSuccess={() => setCurrentRoute('dashboard')}
+            onAuthSuccess={() => handleNavigate('dashboard')}
             triggerBatchModal={() => setIsBatchModalOpen(true)}
           />
           <GlobalSearchModal
@@ -345,7 +448,7 @@ export default function App() {
           <PushNotificationDrawer
             isOpen={isNotificationDrawerOpen}
             onClose={() => setIsNotificationDrawerOpen(false)}
-            onNavigate={setCurrentRoute}
+            onNavigate={handleNavigate}
           />
         </>
       )}

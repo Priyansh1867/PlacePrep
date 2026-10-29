@@ -7,6 +7,7 @@ import {
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
 import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
+import { AuthApi } from '../services/api';
 
 const portalOptions = [
   { id: 'institute', label: 'Institute', icon: School },
@@ -18,12 +19,14 @@ const rolesByPortal = {
     { id: 'student', label: 'Student', icon: GraduationCap, description: 'Prepare and apply' },
     { id: 'teacher', label: 'Faculty', icon: BookOpen, description: 'Guide your cohort' },
     { id: 'hod', label: 'HOD', icon: Award, description: 'See department insights' },
+    { id: 'management', label: 'Management', icon: Building2, description: 'Location & geofence' },
   ],
   placement: [
     { id: 'tpo', label: 'TPO Officer', icon: Building2, description: 'Manage campus drives' },
     { id: 'coordinator', label: 'Coordinator', icon: Users, description: 'Run placement ops' },
     { id: 'hr', label: 'Recruiter', icon: Briefcase, description: 'Discover candidates' },
     { id: 'director', label: 'Director', icon: ShieldCheck, description: 'Monitor outcomes' },
+    { id: 'student', label: 'Student', icon: GraduationCap, description: 'View drives, eligibility & jobs' },
   ],
 };
 
@@ -44,6 +47,7 @@ const demoDetails = {
   student: { fullName: 'Priyansh Jain', email: 'priyansh.jain@example.edu', password: 'password123', rollNumber: '2024/CSE/084', branch: 'Computer Science and Engineering', batch: '2028', college: 'Delhi Technological University (DTU)' },
   teacher: { fullName: 'Dr. Neha Sharma', email: 'neha.sharma@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Associate Professor & Class Incharge', college: 'Delhi Technological University (DTU)' },
   hod: { fullName: 'Prof. Alok Verma', email: 'hod.cse@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Head of Department (HOD)', college: 'Delhi Technological University (DTU)' },
+  management: { fullName: 'Dr. Ramesh Gupta', email: 'management@placeprep.com', password: 'demo123', designation: 'Director & Location Authority', college: 'Delhi Technological University (DTU)' },
   tpo: { fullName: 'Prof. Rajesh Raman', email: 'tpo@placeprep.edu', password: 'password123', designation: 'Head - Training & Placement Cell', college: 'Delhi Technological University (DTU)' },
   coordinator: { fullName: 'Sneha Kapur', email: 'coordinator.tpo@dtu.ac.in', password: 'password123', designation: 'Lead Student Placement Coordinator', college: 'Delhi Technological University (DTU)' },
   hr: { fullName: 'Vikram Mehta', email: 'vikram.mehta@hcltech.com', password: 'password123', companyName: 'HCLTech', designation: 'University Talent Acquisition Partner' },
@@ -88,18 +92,28 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setErrorMsg('');
   };
 
-  const handleSubmit = (event) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMsg('');
+    setIsSubmitting(true);
 
     if (authMode === 'login') {
       if (!formData.email || !formData.password) {
         setErrorMsg('Please enter both email and password.');
+        setIsSubmitting(false);
         return;
       }
     } else {
+      if (selectedRole === 'management') {
+        setErrorMsg('Management accounts cannot self-register. Please contact the administrator or use Sign in.');
+        setIsSubmitting(false);
+        return;
+      }
       if (!formData.fullName || !formData.email || !formData.password) {
         setErrorMsg('Please complete all required fields.');
+        setIsSubmitting(false);
         return;
       }
       if (selectedRole === 'student' && !isCollegeEmail(formData.email)) {
@@ -108,83 +122,149 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       }
       if (formData.password !== formData.confirmPassword) {
         setErrorMsg('Passwords do not match.');
+        setIsSubmitting(false);
         return;
       }
     }
 
     const roleMeta = roleOptions.find((item) => item.id === selectedRole);
-    const userObj = {
+    let userObj = {
       id: `user-${Date.now()}`,
       name: formData.fullName || (formData.email.split('@')[0]),
-      email: formData.email,
+      email: formData.email.trim().toLowerCase(),
       role: selectedRole,
       roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
       portal: portalBranch,
-      college: formData.college,
-      branch: formData.branch,
-      graduationBatch: formData.batch,
-      department: formData.department,
+      college: formData.college || 'Delhi Technological University (DTU)',
+      branch: formData.branch || 'Computer Science and Engineering',
+      graduationBatch: formData.batch || '2028',
+      department: formData.department || 'Computer Science and Engineering',
       designation: formData.designation,
-      company: formData.companyName,
-      rollNumber: formData.rollNumber,
+      company: formData.companyName || 'HCLTech',
+      rollNumber: formData.rollNumber || '2024/CSE/084',
       authenticatedAt: new Date().toISOString(),
     };
 
-    setCurrentUser(userObj);
-    setPortalMode(portalBranch);
-    setPortalRole(selectedRole);
-    if (selectedRole === 'student' && formData.batch) {
-      setGraduationBatch(formData.batch);
+    // Synchronize directly with Spring Boot MySQL Database
+    try {
+      if (authMode === 'register') {
+        const payload = {
+          name: userObj.name,
+          email: userObj.email,
+          password: formData.password,
+          college: userObj.college,
+          branch: userObj.branch,
+          graduationBatch: userObj.graduationBatch,
+          role: selectedRole,
+          rollNumber: userObj.rollNumber
+        };
+        const backendRes = await AuthApi.register(payload);
+        if (backendRes && backendRes.user) {
+          userObj = { ...userObj, ...backendRes.user, id: backendRes.user.id || userObj.id };
+        }
+      } else {
+        // Mode is login: attempt live database login
+        try {
+          const loginRes = await AuthApi.login({
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password
+          });
+          if (loginRes && loginRes.user) {
+            userObj = { ...userObj, ...loginRes.user, id: loginRes.user.id || userObj.id };
+          }
+        } catch (loginErr) {
+          // If user does not exist in backend database yet, auto-register them seamlessly into DB!
+          try {
+            const autoRegPayload = {
+              name: userObj.name,
+              email: userObj.email,
+              password: formData.password,
+              college: userObj.college,
+              branch: userObj.branch,
+              graduationBatch: userObj.graduationBatch,
+              role: selectedRole,
+              rollNumber: userObj.rollNumber
+            };
+            const autoRegRes = await AuthApi.register(autoRegPayload);
+            if (autoRegRes && autoRegRes.user) {
+              userObj = { ...userObj, ...autoRegRes.user, id: autoRegRes.user.id || userObj.id };
+            }
+          } catch {
+            // Local fallback
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Backend database registration note:', err.message);
+      if (authMode === 'register' && err.message && err.message.toLowerCase().includes('already exists')) {
+        setErrorMsg(err.message + '. Please switch to Sign in.');
+        setIsSubmitting(false);
+        return;
+      }
     }
 
-    setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${portalBranch.toUpperCase()} workspace...`);
+    const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
+
+    // Persist session to local storage
+    setCurrentUser(userObj);
+    setPortalMode(destinationPortal);
+    setPortalRole(selectedRole);
+    if (selectedRole === 'student' && userObj.graduationBatch) {
+      setGraduationBatch(userObj.graduationBatch);
+    }
+
+    setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${destinationPortal.toUpperCase()} workspace...`);
     setTimeout(() => {
-      onAuthSuccess(userObj, portalBranch);
+      onAuthSuccess(userObj, destinationPortal);
     }, 550);
   };
 
   return (
-    <div className="auth-page min-h-screen xl:h-screen xl:max-h-screen xl:overflow-hidden px-4 py-3 sm:px-6 lg:px-8 flex flex-col justify-between">
-      <div className="mx-auto w-full max-w-[1450px] h-full flex flex-col justify-between">
+    <div className="auth-page min-h-screen w-full flex flex-col justify-between py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8 antialiased">
+      <div className="mx-auto w-full max-w-6xl my-auto flex flex-col justify-between gap-4">
         
         {/* Header Bar */}
-        <header className="mb-2 flex items-center justify-between px-1 shrink-0 py-1">
-          <button onClick={onBackToGateway} className="auth-back-button">
+        <header className="flex items-center justify-between px-1 shrink-0 py-1">
+          <button 
+            type="button"
+            onClick={onBackToGateway} 
+            className="auth-back-button inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 hover:bg-white text-slate-700 hover:text-indigo-900 text-xs font-bold border border-slate-200/80 shadow-xs transition cursor-pointer"
+          >
             <ArrowLeft className="h-4 w-4" />
             <span>All portals</span>
           </button>
           <PlacePrepLogo className="h-7 sm:h-8 w-auto" theme="light" />
-          <div className="hidden items-center gap-2 text-xs font-medium text-slate-500 sm:flex">
-            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            Secure campus access
+          <div className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white/80 border border-slate-200/70 px-3 py-1.5 rounded-xl shadow-xs">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            <span>Secure campus access</span>
           </div>
         </header>
 
-        {/* Auth Shell Modal Container */}
-        <div className="auth-shell overflow-hidden rounded-[2rem] border border-white/75 bg-white shadow-[0_28px_80px_-30px_rgba(30,41,59,0.34)] xl:grid xl:flex-1 xl:min-h-0 xl:grid-cols-[0.9fr_1.1fr] my-auto">
+        {/* Auth Shell Container - Fully Responsive & Centered */}
+        <div className="auth-shell overflow-hidden rounded-3xl lg:rounded-[2.25rem] border border-slate-200/80 bg-white shadow-2xl shadow-indigo-950/10 grid grid-cols-1 lg:grid-cols-12 w-full">
           
-          {/* Left Visual Aside (Ivy League Campus Dusk) */}
-          <aside className="auth-visual relative hidden overflow-hidden p-8 sm:p-10 text-white xl:flex xl:flex-col justify-between">
+          {/* Left Visual Aside (Ivy League Campus Dusk) - Visible on Laptops & Desktops (lg+) */}
+          <aside className="auth-visual relative hidden lg:flex lg:col-span-5 flex-col justify-between p-8 xl:p-10 text-white min-h-[580px] overflow-hidden">
             <img src={campusLoginHero} alt="University campus at dusk" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(15,23,65,0.92)_0%,rgba(30,27,75,0.68)_44%,rgba(17,24,39,0.76)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(15,23,65,0.92)_0%,rgba(30,27,75,0.72)_44%,rgba(17,24,39,0.82)_100%)]" />
             <div className="auth-orb auth-orb-one" /><div className="auth-orb auth-orb-two" />
             
             <div className="relative z-10 flex items-center gap-3 text-sm font-semibold text-indigo-100">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-md">
                 <Layers3 className="h-4 w-4" />
               </span>
-              One connected campus ecosystem
+              <span>One connected campus ecosystem</span>
             </div>
 
             <div className="relative z-10 mt-auto max-w-md">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-indigo-50 backdrop-blur-md">
                 <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                BUILT FOR AMBITIOUS CAMPUSES
+                <span>BUILT FOR AMBITIOUS CAMPUSES</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black leading-[1.08] tracking-[-0.04em] text-white">
+              <h1 className="text-3xl sm:text-4xl font-black leading-[1.1] tracking-[-0.04em] text-white">
                 The next great opportunity begins here.
               </h1>
-              <p className="mt-3 max-w-sm text-xs sm:text-sm leading-relaxed text-indigo-100/90">
+              <p className="mt-3 text-xs sm:text-sm leading-relaxed text-indigo-100/90">
                 A considered workspace for students, faculties, and placement teams to turn preparation into outcomes.
               </p>
               
@@ -194,9 +274,9 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   ['300+', 'partner companies'],
                   ['24/7', 'career intelligence'],
                 ].map(([value, label]) => (
-                  <div key={label} className="rounded-2xl border border-white/15 bg-slate-950/20 p-2.5 backdrop-blur-md">
-                    <div className="text-base sm:text-lg font-extrabold tracking-tight text-white">{value}</div>
-                    <div className="mt-0.5 text-[10px] font-medium leading-3 text-indigo-100/80">{label}</div>
+                  <div key={label} className="rounded-2xl border border-white/15 bg-slate-950/25 p-2.5 backdrop-blur-md text-center">
+                    <div className="text-base sm:text-lg font-black tracking-tight text-white">{value}</div>
+                    <div className="mt-0.5 text-[10px] font-semibold text-indigo-200/80 uppercase tracking-wide leading-tight">{label}</div>
                   </div>
                 ))}
               </div>
@@ -204,23 +284,21 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           </aside>
 
           {/* Right Form Section */}
-          <section className="relative flex items-center bg-white px-5 py-5 sm:px-8 sm:py-6 lg:px-10 xl:px-12 overflow-y-auto max-h-[85vh] xl:max-h-none">
+          <section className="relative lg:col-span-7 bg-white px-5 py-6 sm:px-8 sm:py-8 xl:px-10 flex flex-col justify-center">
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400" />
-            <div className="mx-auto w-full max-w-xl">
+            <div className="mx-auto w-full max-w-lg">
               
               {/* Heading */}
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
-                  <div className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-indigo-600">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-50">
-                      <ActivePortalIcon className="h-3 w-3" />
-                    </span>
-                    {activePortal.label} portal
+                  <div className="mb-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-[0.12em]">
+                    <ActivePortalIcon className="h-3.5 w-3.5" />
+                    <span>{activePortal.label} portal</span>
                   </div>
-                  <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-[1.85rem]">
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                     {authMode === 'login' ? 'Welcome back.' : 'Start your journey.'}
                   </h2>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     {authMode === 'login' ? 'Sign in to continue where your ambitions left off.' : 'Create a profile built for your campus role.'}
                   </p>
                 </div>
@@ -267,7 +345,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   <label className="text-xs font-bold text-slate-700">I’m signing in as</label>
                   <span className="text-[11px] text-slate-400">Choose your workspace</span>
                 </div>
-                <div className={`grid gap-1.5 ${roleOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div className={`grid gap-1.5 ${roleOptions.length === 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
                   {roleOptions.map(({ id, label, icon: Icon, description }) => (
                     <button
                       key={id}
@@ -441,11 +519,13 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   )}
                 </div>
 
-                <button type="submit" className="auth-submit-button py-2.5">
+                <button type="submit" disabled={isSubmitting} className="auth-submit-button py-2.5 disabled:opacity-75 disabled:cursor-wait">
                   <span>
-                    {authMode === 'login'
-                      ? `Continue as ${roleOptions.find((role) => role.id === selectedRole)?.label}`
-                      : 'Create account & continue'}
+                    {isSubmitting
+                      ? 'Saving to database...'
+                      : authMode === 'login'
+                        ? `Continue as ${roleOptions.find((role) => role.id === selectedRole)?.label}`
+                        : 'Create account & continue'}
                   </span>
                   <ArrowRight className="h-4 w-4" />
                 </button>

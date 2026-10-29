@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,7 +14,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "class_attendance_records")
+@Table(
+    name = "class_attendance_records",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_session_student", columnNames = {"sessionId", "studentId"})
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,9 +41,23 @@ public class ClassAttendanceRecord {
 
     private String studentName;
 
+    private String subjectCode;
+
     // PRESENT, ABSENT, LATE, EXCUSED
     @Column(nullable = false)
     private String status;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    private Double distanceMeters;
+
+    private Double gpsAccuracy;
+
+    private String verificationMethod; // "100M_GEOFENCE_AND_FACIAL_BIOMETRIC"
+
+    private String markedBy; // "STUDENT_GEOFENCE" or "FACULTY"
 
     private String remarks;
 

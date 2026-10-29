@@ -9,7 +9,7 @@ import {
   BRANCH_SEMESTER_SUBJECTS,
   calculateGradeAndPoints,
   calculateAgeFromDOB
-} from '../data/initialAcademicRecords';
+} from '../data/initialAcademicRecords.js';
 
 const STORAGE_KEYS = {
   STUDENTS: 'placeprep_student_academic_records',

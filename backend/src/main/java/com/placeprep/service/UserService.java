@@ -65,24 +65,49 @@ public class UserService {
     }
 
     public User demoLogin() {
-        String demoEmail = "demo@placeprep.com";
+        return demoLogin("student");
+    }
+
+    public User demoLogin(String role) {
+        String cleanRole = (role != null && !role.trim().isEmpty()) ? role.trim().toLowerCase() : "student";
+        String demoEmail = cleanRole + "@placeprep.com";
+        if ("student".equalsIgnoreCase(cleanRole)) {
+            demoEmail = "demo@placeprep.com";
+        }
+
         Optional<User> existing = userRepository.findByEmail(demoEmail);
         if (existing.isPresent()) {
             return existing.get();
         }
+
         User demoUser = new User();
         demoUser.setEmail(demoEmail);
         demoUser.setPassword("demo123");
-        demoUser.setName("Demo Student");
-        demoUser.setCollege("Demo University");
-        demoUser.setBranch("CSE");
-        demoUser.setGraduationBatch("2028");
-        demoUser.setRole("student");
+        demoUser.setCollege("Delhi Technological University (DTU)");
+        demoUser.setBranch("Computer Science and Engineering");
+        demoUser.setGraduationBatch("2026");
+        demoUser.setRole(cleanRole);
+        demoUser.setStatus("ACTIVE");
         demoUser.setOnboardingCompleted(true);
         demoUser.setSavedCompanyIds(new ArrayList<>());
         demoUser.setSavedQuestionIds(new ArrayList<>());
         demoUser.setPracticedQuestionIds(new ArrayList<>());
         demoUser.setRevisionQuestionIds(new ArrayList<>());
+
+        if ("teacher".equalsIgnoreCase(cleanRole)) {
+            demoUser.setName("Dr. Neha Sharma");
+            demoUser.setRollNumber("FAC-CSE-042");
+        } else if ("hod".equalsIgnoreCase(cleanRole)) {
+            demoUser.setName("Prof. Alok Verma");
+            demoUser.setRollNumber("HOD-CSE-001");
+        } else if ("admin".equalsIgnoreCase(cleanRole)) {
+            demoUser.setName("System Administrator");
+            demoUser.setRollNumber("ADM-ROOT-001");
+        } else {
+            demoUser.setName("Demo Student");
+            demoUser.setRollNumber("22CS0101");
+        }
+
         return userRepository.save(demoUser);
     }
 
@@ -253,4 +278,71 @@ public class UserService {
         }
         throw new IllegalArgumentException("Invalid or expired password reset token");
     }
+
+    public User getUserByEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        return userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("User not found for email: " + email));
+    }
+
+    public String getUserFullProfile(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseGet(() -> {
+                    User u = new User();
+                    u.setEmail(cleanEmail);
+                    String nameFromEmail = cleanEmail.split("@")[0].replace(".", " ");
+                    u.setName(Character.toUpperCase(nameFromEmail.charAt(0)) + nameFromEmail.substring(1));
+                    u.setPassword("password123");
+                    u.setRole("student");
+                    u.setStatus("ACTIVE");
+                    return userRepository.save(u);
+                });
+        return user.getFullProfileJson();
+    }
+
+    public User saveUserFullProfile(String email, String profileJson, Map<String, Object> basicFields) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseGet(() -> {
+                    User u = new User();
+                    u.setEmail(cleanEmail);
+                    u.setName(basicFields != null && basicFields.get("name") != null ? String.valueOf(basicFields.get("name")) : "Student");
+                    u.setPassword("password123");
+                    u.setRole("student");
+                    u.setStatus("ACTIVE");
+                    return userRepository.save(u);
+                });
+        user.setFullProfileJson(profileJson);
+        if (basicFields != null) {
+            if (basicFields.get("name") != null && !String.valueOf(basicFields.get("name")).trim().isEmpty()) {
+                user.setName(String.valueOf(basicFields.get("name")).trim());
+            }
+            if (basicFields.get("phone") != null) {
+                user.setPhone(String.valueOf(basicFields.get("phone")).trim());
+            }
+            if (basicFields.get("college") != null) {
+                user.setCollege(String.valueOf(basicFields.get("college")).trim());
+            }
+            if (basicFields.get("branch") != null) {
+                user.setBranch(String.valueOf(basicFields.get("branch")).trim());
+            }
+            if (basicFields.get("rollNumber") != null) {
+                user.setRollNumber(String.valueOf(basicFields.get("rollNumber")).trim());
+            }
+            if (basicFields.get("graduationBatch") != null) {
+                user.setGraduationBatch(String.valueOf(basicFields.get("graduationBatch")).trim());
+            }
+        }
+        return userRepository.save(user);
+    }
+
 }

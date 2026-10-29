@@ -24,6 +24,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
+import SearchBar from '../components/ui/SearchBar';
 import Dialog from '../components/ui/Dialog';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
@@ -150,8 +151,12 @@ export default function MyApplicationsPage({ onNavigate, onSelectCompany, onOpen
   };
 
   const filteredApps = applications.filter(app => {
-    const matchesSearch = (app.companyName || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-                          (app.roleTitle || '').toLowerCase().includes((searchQuery || '').toLowerCase());
+    const q = (searchQuery || '').trim().toLowerCase();
+    const matchesSearch = !q ||
+      (app.companyName || '').toLowerCase().includes(q) ||
+      (app.roleTitle || '').toLowerCase().includes(q) ||
+      (app.notes || '').toLowerCase().includes(q) ||
+      (app.status || '').toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'ALL' || app.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -262,12 +267,13 @@ export default function MyApplicationsPage({ onNavigate, onSelectCompany, onOpen
       <Card className="p-4 border-slate-200">
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           <div className="w-full md:w-80">
-            <Input
-              type="text"
-              placeholder="Filter by company or role..."
-              leftIcon={Search}
+            <SearchBar
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
+              placeholder="Filter by company, role, status..."
+              resultCount={filteredApps.length}
+              totalCount={applications.length}
             />
           </div>
 
@@ -308,19 +314,31 @@ export default function MyApplicationsPage({ onNavigate, onSelectCompany, onOpen
       ) : filteredApps.length === 0 ? (
         <EmptyState
           icon={FileCheck2}
-          title={searchQuery || statusFilter !== 'ALL' ? 'No matching applications found' : 'No applications tracked yet'}
+          title={searchQuery.trim() || statusFilter !== 'ALL' ? 'No matching applications found' : 'No applications tracked yet'}
           description={
-            searchQuery || statusFilter !== 'ALL'
-              ? 'Try adjusting your search query or status filter.'
+            searchQuery.trim() || statusFilter !== 'ALL'
+              ? `No applications matched "${searchQuery.trim()}". Try adjusting your search query or status filter.`
               : 'Start tracking your campus placement drives to view upcoming rounds, deadline reminders, and preparation shortcuts.'
           }
           action={
-            <Button
-              variant="primary"
-              onClick={() => onNavigate && onNavigate('drives')}
-            >
-              Browse Campus Drives
-            </Button>
+            searchQuery.trim() || statusFilter !== 'ALL' ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('ALL');
+                }}
+              >
+                Reset Search & Filter
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={() => onNavigate && onNavigate('drives')}
+              >
+                Browse Campus Drives
+              </Button>
+            )
           }
         />
       ) : (

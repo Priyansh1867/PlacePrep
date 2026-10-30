@@ -66,6 +66,7 @@ import CurriculumGovernanceView from '../components/curriculum/CurriculumGoverna
 import FacultyOperationsMonitoringView from '../components/monitoring/FacultyOperationsMonitoringView';
 import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
+import { getAllStudents, syncAcademicRecordsWithDatabase } from '../services/academicRecordsService';
 import UserProfileModal from '../components/profile/UserProfileModal';
 import MockInterviewPage from './MockInterviewPage';
 import { calculateProfileCompletion } from '../utils/profileCompletion';
@@ -136,18 +137,59 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       if (document.body) document.body.scrollTop = 0;
     }
   }, [activeTab]);
-  const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [databaseUsers, setDatabaseUsers] = useState([]);
+  const getFallbackStudents = () => {
+    try {
+      const records = getAllStudents();
+      if (Array.isArray(records) && records.length > 0) {
+        return records.map((s, idx) => ({
+          id: s.id || `rec-${idx}`,
+          name: s.fullName || s.name || 'Candidate',
+          email: s.email,
+          rollNumber: s.rollNumber || s.registrationNumber || 'N/A',
+          branch: s.branch || 'CSE',
+          graduationBatch: s.graduationBatch || '2026',
+          status: s.status || 'ACTIVE',
+          isOfflineFallback: true
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed to get fallback students:', e);
+    }
+    return [];
+  };
 
-  const refreshDatabaseUsers = () => {
-    if (AuthApi?.getAllUsers) {
-      AuthApi.getAllUsers()
-        .then((users) => {
-          if (Array.isArray(users)) {
-            setDatabaseUsers(users);
-          }
-        })
-        .catch((err) => console.log('Backend users fetch note:', err?.message));
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [databaseUsers, setDatabaseUsers] = useState(() => getFallbackStudents());
+  const [isLoadingDatabaseUsers, setIsLoadingDatabaseUsers] = useState(false);
+  const [databaseUsersError, setDatabaseUsersError] = useState(null);
+
+  const refreshDatabaseUsers = async () => {
+    setIsLoadingDatabaseUsers(true);
+    setDatabaseUsersError(null);
+    try {
+      // 1. Sync academic records to database duplicate-safely
+      await syncAcademicRecordsWithDatabase().catch((syncErr) => {
+        console.warn('Academic records sync warning:', syncErr);
+      });
+
+      // 2. Fetch registered student users from database
+      if (AuthApi?.getAllUsers) {
+        const users = await AuthApi.getAllUsers('student');
+        if (Array.isArray(users) && users.length > 0) {
+          setDatabaseUsers(users);
+          setIsBackendConnected(true);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Backend users fetch error:', err);
+      setDatabaseUsersError(err?.message || 'Failed to fetch registered candidates from database');
+      const fallbackList = getFallbackStudents();
+      if (fallbackList.length > 0) {
+        setDatabaseUsers(fallbackList);
+      }
+    } finally {
+      setIsLoadingDatabaseUsers(false);
     }
   };
 
@@ -228,9 +270,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     e.preventDefault();
     setRegistrationErrorMsg('');
 
-    // 1. Sync directly to Spring Boot backend database
+    // 1. Sync directly to Spring Boot backend database using registerStudent
     try {
-      await AuthApi.register({
+      await AuthApi.registerStudent({
         name: newStudentForm.name,
         email: newStudentForm.email.trim().toLowerCase(),
         password: 'password123',
@@ -238,13 +280,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         branch: newStudentForm.branch,
         graduationBatch: newStudentForm.batch,
         role: 'student',
-        rollNumber: newStudentForm.rollNumber
+        rollNumber: newStudentForm.rollNumber,
+        cgpa: newStudentForm.cgpa ? parseFloat(newStudentForm.cgpa) : null
       });
     } catch (backendErr) {
-      console.log('Spring Boot backend user sync note:', backendErr.message);
+      console.warn('Spring Boot backend user sync note:', backendErr.message);
     }
-
-    refreshDatabaseUsers();
 
     // 2. Also register in local storage / academic records
     const res = registerSingleStudent(newStudentForm, currentUser);
@@ -260,6 +301,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         cgpa: '8.5'
       });
       setTimeout(() => setRegistrationSuccessMsg(''), 5000);
+      // 3. Immediately refresh registered candidate records from database
+      await refreshDatabaseUsers();
     } else {
       setRegistrationErrorMsg(res.errors ? res.errors.join('. ') : 'Failed to register student.');
     }
@@ -750,14 +793,34 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     <h4 className="font-bold text-slate-900 text-sm">Registered Candidates in Database ({databaseUsers.length})</h4>
                     <p className="text-xs text-slate-500">Live records synced with Spring Boot MySQL database.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={refreshDatabaseUsers}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
-                  >
-                    Refresh List
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={refreshDatabaseUsers}
+                      disabled={isLoadingDatabaseUsers}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDatabaseUsers ? 'animate-spin text-indigo-600' : ''}`} />
+                      <span>{isLoadingDatabaseUsers ? 'Syncing...' : 'Refresh List'}</span>
+                    </button>
+                  </div>
                 </div>
+
+                {databaseUsersError && (
+                  <div className="mb-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-between gap-3 animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="text-xs font-medium">{databaseUsersError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={refreshDatabaseUsers}
+                      className="px-2.5 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold text-xs cursor-pointer transition shrink-0"
+                    >
+                      Retry Sync
+                    </button>
+                  </div>
+                )}
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
@@ -771,31 +834,44 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {databaseUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-slate-50 transition">
-                          <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">
-                              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                            </div>
-                            <span>{user.name}</span>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
-                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{user.rollNumber || 'N/A'}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || '2028'})</td>
-                          <td className="py-2.5 px-3">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              Synced in DB
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                      {databaseUsers.length === 0 && (
+                      {isLoadingDatabaseUsers && databaseUsers.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="py-6 text-center text-slate-400">
-                            No students registered yet. Click 'Register Form' to add candidates.
+                          <td colSpan="5" className="py-8 text-center text-slate-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                              <span>Syncing candidates with database...</span>
+                            </div>
                           </td>
                         </tr>
+                      ) : (
+                        <>
+                          {databaseUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-slate-50 transition">
+                              <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">
+                                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <span>{user.name}</span>
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
+                              <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{user.rollNumber || user.studentId || 'N/A'}</td>
+                              <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || '2026'})</td>
+                              <td className="py-2.5 px-3">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Synced in DB
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                          {databaseUsers.length === 0 && (
+                            <tr>
+                              <td colSpan="5" className="py-6 text-center text-slate-400">
+                                No students registered yet. Click 'Register Form' or 'Bulk Import' to add candidates.
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       )}
                     </tbody>
                   </table>

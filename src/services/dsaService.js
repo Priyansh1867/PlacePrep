@@ -29,10 +29,11 @@ export const DSA_CANONICAL_TOPICS = [
 ];
 
 export const SUPPORTED_LANGUAGES = [
-  { id: 'java', label: 'Java', extension: 'java', defaultFile: 'Solution.java' },
+  { id: 'java', label: 'Java', extension: 'java', defaultFile: 'Main.java' },
   { id: 'python', label: 'Python 3', extension: 'py', defaultFile: 'solution.py' },
   { id: 'cpp', label: 'C++', extension: 'cpp', defaultFile: 'solution.cpp' },
-  { id: 'javascript', label: 'JavaScript', extension: 'js', defaultFile: 'solution.js' }
+  { id: 'javascript', label: 'JavaScript', extension: 'js', defaultFile: 'solution.js' },
+  { id: 'sql', label: 'SQL (SQLite)', extension: 'sql', defaultFile: 'solution.sql' }
 ];
 
 /**
@@ -109,9 +110,10 @@ export function normalizeDsaQuestion(rawQ, index = 0) {
 
   const examples = rawQ.examples || [
     {
-      input: 'Standard recruiter test input',
-      output: 'Expected output conforming to problem specification',
-      explanation: rawQ.approach ? rawQ.approach.slice(0, 150) + '...' : 'Verify edge cases including empty/single-element collections.'
+      input: '',
+      output: '',
+      hasExpectedOutput: false,
+      explanation: 'No executable sample input/output is provided for this question. Code can be run, but correctness cannot be automatically checked until concrete test cases are added.'
     }
   ];
 
@@ -139,19 +141,45 @@ export function getStarterCodeTemplate(question, language = 'java') {
   const methodName = qTitle.charAt(0).toLowerCase() + qTitle.slice(1) || 'solve';
 
   switch (language) {
+    case 'sql':
+      return `-- SQLite example: WHERE filters input rows before grouping.
+-- HAVING filters the grouped results after aggregation.
+CREATE TABLE employees (
+  employee_id INTEGER PRIMARY KEY,
+  employee_name TEXT NOT NULL,
+  department TEXT NOT NULL,
+  salary INTEGER NOT NULL
+);
+
+INSERT INTO employees (employee_name, department, salary) VALUES
+  ('Asha', 'Engineering', 90000),
+  ('Ben', 'Engineering', 70000),
+  ('Cara', 'Engineering', 45000),
+  ('Dev', 'Sales', 60000),
+  ('Esha', 'Sales', 55000);
+
+-- WHERE removes salaries below 50000 before COUNT(*).
+-- HAVING keeps only departments with at least 2 remaining employees.
+SELECT department, COUNT(*) AS employee_count
+FROM employees
+WHERE salary >= 50000
+GROUP BY department
+HAVING COUNT(*) >= 2
+ORDER BY department;`;
+
     case 'java':
       if (question?.sampleCode && question.sampleCode.includes('class') || question?.sampleCode?.includes('public static')) {
         return question.sampleCode;
       }
       return `import java.util.*;
 
-public class Solution {
+public class Main {
     /**
      * Problem: ${question?.title || 'Algorithmic Problem'}
      * Difficulty: ${question?.difficulty || 'Medium'} | Company: ${question?.companyName || 'Campus'}
      */
     public static void main(String[] args) {
-        Solution sol = new Solution();
+        Main sol = new Main();
         // Test with sample inputs
         System.out.println("PlacePrep DSA Studio Runner initialized.");
     }

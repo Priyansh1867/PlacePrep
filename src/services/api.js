@@ -443,6 +443,7 @@ export const DsaApi = {
   async execute(payload) {
     return await request('/dsa/execute', {
       method: 'POST',
+      timeout: 60000,
       body: JSON.stringify(payload)
     });
   }

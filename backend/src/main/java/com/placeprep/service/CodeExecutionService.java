@@ -3,16 +3,34 @@ package com.placeprep.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.*;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class CodeExecutionService {
 
     private static final Logger log = LoggerFactory.getLogger(CodeExecutionService.class);
+    private static final int MAX_POLLS = 50;
+    private static final long POLL_INTERVAL_MS = 400L;
+
+    @Value("${placeprep.judge0.enabled:false}")
+    private boolean judge0Enabled;
 
     @Value("${placeprep.judge0.api-url:https://judge0-ce.p.rapidapi.com}")
     private String judge0ApiUrl;
@@ -23,181 +41,191 @@ public class CodeExecutionService {
     @Value("${placeprep.judge0.api-host:judge0-ce.p.rapidapi.com}")
     private String judge0ApiHost;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    // Map common language names to Judge0 language IDs
     private static final Map<String, Integer> LANGUAGE_IDS = Map.of(
-            "java", 62,       // OpenJDK 13.0.1
-            "python", 71,     // Python 3.8.1
-            "cpp", 54,        // C++ (GCC 9.2.0)
-            "c", 50,          // C (GCC 9.2.0)
-            "javascript", 63, // Node.js 12.14.0
+            "java", 62,
+            "python", 71,
+            "cpp", 54,
+            "c", 50,
+            "sql", 82,
+            "javascript", 63,
             "js", 63
     );
 
-    public Map<String, Object> executeCode(Map<String, Object> payload) {
-        String language = (String) payload.getOrDefault("language", "java");
-        String code = (String) payload.getOrDefault("code", "");
-        @SuppressWarnings("unchecked")
-        List<Map<String, String>> testCases = (List<Map<String, String>>) payload.get("testCases");
+    public CodeExecutionService() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000);
+        requestFactory.setReadTimeout(10000);
+        this.restTemplate = new RestTemplate(requestFactory);
+    }
 
-        if (code == null || code.trim().isEmpty()) {
-            return Map.of(
-                    "success", false,
-                    "passed", false,
-                    "error", "Source code cannot be empty."
+    public Map<String, Object> executeCode(Map<String, Object> payload) {
+        if (!judge0Enabled) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Real code execution is not configured. Set PLACEPREP_JUDGE0_ENABLED=true and configure a Judge0 endpoint."
             );
         }
 
-        if (testCases == null || testCases.isEmpty()) {
-            // Provide default test case if none provided
-            testCases = List.of(Map.of("input", "", "expectedOutput", ""));
+        String language = String.valueOf(payload.getOrDefault("language", "java")).toLowerCase(Locale.ROOT);
+        Integer languageId = LANGUAGE_IDS.get(language);
+        if (languageId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported language: " + language);
         }
 
-        int languageId = LANGUAGE_IDS.getOrDefault(language.toLowerCase(Locale.ROOT), 62);
+        Object rawCode = payload.get("code");
+        String code = rawCode == null ? "" : String.valueOf(rawCode);
+        if (code.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source code cannot be empty.");
+        }
 
+        List<Map<String, Object>> testCases = normalizeTestCases(payload.get("testCases"));
         List<Map<String, Object>> results = new ArrayList<>();
-        boolean allPassed = true;
         int passedCount = 0;
-
-        // If Judge0 API key is not configured, fallback to robust simulation/local execution validation
-        boolean useMock = (judge0ApiKey == null || judge0ApiKey.trim().isEmpty());
+        boolean hasExpectedOutputChecks = testCases.stream()
+                .anyMatch(testCase -> Boolean.TRUE.equals(testCase.get("hasExpectedOutput")));
 
         for (int i = 0; i < testCases.size(); i++) {
-            Map<String, String> tc = testCases.get(i);
-            String stdin = tc.getOrDefault("input", "");
-            String expectedOutput = tc.getOrDefault("expectedOutput", "").trim();
-
-            if (useMock) {
-                Map<String, Object> simResult = simulateExecution(code, language, stdin, expectedOutput, i);
-                results.add(simResult);
-                Boolean passed = (Boolean) simResult.get("passed");
-                if (passed != null && passed) {
-                    passedCount++;
-                } else {
-                    allPassed = false;
-                }
-            } else {
-                try {
-                    Map<String, Object> judgeResult = callJudge0Api(code, languageId, stdin, expectedOutput, i);
-                    results.add(judgeResult);
-                    Boolean passed = (Boolean) judgeResult.get("passed");
-                    if (passed != null && passed) {
-                        passedCount++;
-                    } else {
-                        allPassed = false;
-                    }
-                } catch (Exception e) {
-                    log.warn("Judge0 API call failed, falling back to local simulation: {}", e.getMessage());
-                    Map<String, Object> simResult = simulateExecution(code, language, stdin, expectedOutput, i);
-                    results.add(simResult);
-                    Boolean passed = (Boolean) simResult.get("passed");
-                    if (passed != null && passed) {
-                        passedCount++;
-                    } else {
-                        allPassed = false;
-                    }
-                }
+            Map<String, Object> testCase = testCases.get(i);
+            String stdin = String.valueOf(testCase.getOrDefault("input", ""));
+            String expectedOutput = String.valueOf(testCase.getOrDefault("expectedOutput", ""));
+            boolean hasExpectedOutput = Boolean.TRUE.equals(testCase.get("hasExpectedOutput"));
+            Map<String, Object> result = executeOne(code, languageId, stdin, expectedOutput, hasExpectedOutput, i);
+            results.add(result);
+            if (Boolean.TRUE.equals(result.get("passed"))) {
+                passedCount++;
             }
         }
 
         return Map.of(
                 "success", true,
-                "passed", allPassed,
+                "passed", passedCount == testCases.size(),
                 "totalTestCases", testCases.size(),
                 "passedTestCases", passedCount,
+                "hasExpectedOutputChecks", hasExpectedOutputChecks,
                 "results", results,
-                "executionEngine", useMock ? "PlacePrep Sandbox Simulation Engine" : "Judge0 CE API"
+                "executionEngine", "Judge0 CE"
         );
     }
 
-    private Map<String, Object> callJudge0Api(String code, int languageId, String stdin, String expectedOutput, int index) {
-        String url = judge0ApiUrl.replaceAll("/+$", "") + "/submissions?base64_encoded=false&wait=true";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        if (judge0ApiKey != null && !judge0ApiKey.trim().isEmpty()) {
-            headers.set("X-RapidAPI-Key", judge0ApiKey);
-            headers.set("X-RapidAPI-Host", judge0ApiHost);
+    private List<Map<String, Object>> normalizeTestCases(Object rawTestCases) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (rawTestCases instanceof List<?> cases) {
+            for (Object rawCase : cases) {
+                if (rawCase instanceof Map<?, ?> map) {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("input", map.containsKey("input") ? map.get("input") : "");
+                    item.put("expectedOutput", map.containsKey("expectedOutput") ? map.get("expectedOutput") : "");
+                    item.put("hasExpectedOutput", Boolean.TRUE.equals(map.get("hasExpectedOutput")));
+                    result.add(item);
+                }
+            }
         }
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("source_code", code);
-        body.put("language_id", languageId);
-        body.put("stdin", stdin);
-        body.put("expected_output", expectedOutput);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        Map respBody = response.getBody();
-        if (respBody == null) {
-            throw new RuntimeException("Empty response from Judge0 API");
+        if (result.isEmpty()) {
+            result.add(Map.of("input", "", "expectedOutput", ""));
         }
-
-        Map<String, Object> statusObj = (Map<String, Object>) respBody.get("status");
-        int statusId = statusObj != null && statusObj.get("id") != null ? ((Number) statusObj.get("id")).intValue() : 0;
-        String statusDescription = statusObj != null ? (String) statusObj.get("description") : "Unknown";
-
-        String stdout = (String) respBody.get("stdout");
-        if (stdout == null) stdout = "";
-        stdout = stdout.trim();
-
-        String stderr = (String) respBody.get("stderr");
-        String compileOutput = (String) respBody.get("compile_output");
-        String message = (String) respBody.get("message");
-
-        String time = respBody.get("time") != null ? respBody.get("time") + "s" : "0.03s";
-        String memory = respBody.get("memory") != null ? respBody.get("memory") + " KB" : "3840 KB";
-
-        boolean passed = (statusId == 3); // Status ID 3 = Accepted in Judge0
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("testCaseIndex", index);
-        result.put("passed", passed);
-        result.put("status", statusDescription);
-        result.put("stdout", stdout);
-        result.put("expected", expectedOutput);
-        result.put("stderr", stderr != null ? stderr : (compileOutput != null ? compileOutput : message));
-        result.put("time", time);
-        result.put("memory", memory);
-
         return result;
     }
 
-    private Map<String, Object> simulateExecution(String code, String language, String stdin, String expectedOutput, int index) {
-        // Basic syntax validation
-        boolean hasBracesMismatch = false;
-        int openBraces = 0, closeBraces = 0;
-        for (char c : code.toCharArray()) {
-            if (c == '{') openBraces++;
-            if (c == '}') closeBraces++;
+    private Map<String, Object> executeOne(String code, int languageId, String stdin, String expectedOutput, boolean hasExpectedOutput, int index) {
+        try {
+            String baseUrl = judge0ApiUrl.replaceAll("/+$", "");
+            URI submitUri = UriComponentsBuilder.fromUriString(baseUrl)
+                    .path("/submissions")
+                    .queryParam("base64_encoded", "false")
+                    .queryParam("wait", "false")
+                    .build()
+                    .toUri();
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("source_code", code);
+            body.put("language_id", languageId);
+            body.put("stdin", stdin);
+            if (hasExpectedOutput) {
+                body.put("expected_output", expectedOutput);
+            }
+
+            ResponseEntity<Map> created = restTemplate.postForEntity(
+                    submitUri,
+                    new HttpEntity<>(body, buildHeaders()),
+                    Map.class
+            );
+            Map<?, ?> createdBody = created.getBody();
+            Object tokenValue = createdBody == null ? null : createdBody.get("token");
+            if (tokenValue == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Judge0 did not return a submission token.");
+            }
+
+            String token = String.valueOf(tokenValue);
+            URI resultUri = UriComponentsBuilder.fromUriString(baseUrl)
+                    .path("/submissions/{token}")
+                    .queryParam("base64_encoded", "false")
+                    .buildAndExpand(token)
+                    .toUri();
+
+            Map<?, ?> execution = null;
+            for (int poll = 0; poll < MAX_POLLS; poll++) {
+                Thread.sleep(POLL_INTERVAL_MS);
+                ResponseEntity<Map> response = restTemplate.exchange(
+                        resultUri,
+                        org.springframework.http.HttpMethod.GET,
+                        new HttpEntity<>(buildHeaders()),
+                        Map.class
+                );
+                execution = response.getBody();
+                Map<?, ?> status = execution == null ? null : (Map<?, ?>) execution.get("status");
+                Object id = status == null ? null : status.get("id");
+                if (id instanceof Number statusId && statusId.intValue() > 2) {
+                    return toResult(execution, expectedOutput, hasExpectedOutput, index);
+                }
+            }
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Timed out waiting for the code runner.");
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Code execution was interrupted.");
+        } catch (RestClientException e) {
+            log.warn("Judge0 request failed: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not reach the configured Judge0 code runner.");
         }
-        if (openBraces != closeBraces) {
-            hasBracesMismatch = true;
+    }
+
+    private HttpHeaders buildHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        if (judge0ApiKey != null && !judge0ApiKey.isBlank()) {
+            headers.set("X-RapidAPI-Key", judge0ApiKey);
+            if (judge0ApiHost != null && !judge0ApiHost.isBlank()) {
+                headers.set("X-RapidAPI-Host", judge0ApiHost);
+            }
         }
+        return headers;
+    }
+
+    private Map<String, Object> toResult(Map<?, ?> response, String expectedOutput, boolean hasExpectedOutput, int index) {
+        if (response == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Judge0 returned an empty execution result.");
+        }
+        Map<?, ?> status = (Map<?, ?>) response.get("status");
+        int statusId = status != null && status.get("id") instanceof Number n ? n.intValue() : 0;
+        String description = status != null ? String.valueOf(status.containsKey("description") ? status.get("description") : "Unknown") : "Unknown";
+        Object stdout = response.get("stdout");
+        Object stderr = response.get("stderr");
+        Object compileOutput = response.get("compile_output");
+        Object message = response.get("message");
 
         Map<String, Object> result = new HashMap<>();
         result.put("testCaseIndex", index);
-
-        if (hasBracesMismatch) {
-            result.put("passed", false);
-            result.put("status", "Compilation Error");
-            result.put("stdout", "");
-            result.put("expected", expectedOutput);
-            result.put("stderr", "Compilation Error: Unbalanced braces '{' and '}' detected in " + language + " code.");
-            result.put("time", "0.01s");
-            result.put("memory", "2048 KB");
-        } else {
-            result.put("passed", true);
-            result.put("status", "Accepted");
-            result.put("stdout", expectedOutput.isEmpty() ? "Success" : expectedOutput);
-            result.put("expected", expectedOutput);
-            result.put("stderr", null);
-            result.put("time", "0.04s");
-            result.put("memory", "4120 KB");
-        }
-
+        result.put("passed", statusId == 3);
+        result.put("status", description);
+        result.put("stdout", stdout == null ? "" : stdout);
+        result.put("expected", expectedOutput);
+        result.put("checkedAgainstExpectedOutput", hasExpectedOutput);
+        result.put("stderr", stderr != null ? stderr : (compileOutput != null ? compileOutput : message));
+        result.put("time", response.get("time") == null ? "" : response.get("time") + "s");
+        result.put("memory", response.get("memory") == null ? "" : response.get("memory") + " KB");
         return result;
     }
 }

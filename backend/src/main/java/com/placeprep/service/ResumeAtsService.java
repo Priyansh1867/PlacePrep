@@ -281,52 +281,6 @@ public class ResumeAtsService {
      * Curated sample job descriptions for prominent campus recruiters.
      */
     public List<SampleJdDto> getSampleJds() {
-        return List.of(
-                SampleJdDto.builder()
-                        .id("jd-tcs-digital")
-                        .company("TCS")
-                        .role("Software Engineer (Digital Cadre)")
-                        .category("IT Services & Consulting")
-                        .ctc("₹7.5 - ₹9.0 LPA")
-                        .description("TCS Digital is hiring passionate Software Engineers proficient in Java, Spring Boot, REST APIs, and modern web frameworks like React. The candidate must possess solid foundations in Data Structures, Algorithms, Object Oriented Programming, and Relational Database management with SQL Queries. Familiarity with Docker Containers, CI/CD pipelines, and Cloud Computing concepts is a plus.")
-                        .keySkills(List.of("Java", "Spring Boot", "REST API", "React", "Data Structures", "Algorithms", "SQL Query", "Git"))
-                        .build(),
-                SampleJdDto.builder()
-                        .id("jd-infosys-sp")
-                        .company("Infosys")
-                        .role("Specialist Programmer (Power Programmer)")
-                        .category("Product Engineering & Elite Hiring")
-                        .ctc("₹9.5 - ₹11.0 LPA")
-                        .description("We are seeking high-caliber problem solvers for the Specialist Programmer role. Key competencies: advanced Data Structures, dynamic programming, Graph algorithms, Microservices Architecture, Python, or Java. Experience with distributed caching, Docker, Kubernetes, Unit Testing, and AWS Cloud services will give candidates an edge.")
-                        .keySkills(List.of("Data Structures", "Algorithms", "Microservices", "Java", "Python", "Docker", "Kubernetes", "AWS Cloud"))
-                        .build(),
-                SampleJdDto.builder()
-                        .id("jd-amazon-sde1")
-                        .company("Amazon")
-                        .role("Software Development Engineer I (SDE-1)")
-                        .category("Product & Big Tech")
-                        .ctc("₹28.0 - ₹34.0 LPA")
-                        .description("Amazon is seeking ambitious SDE 1 candidates. You will design, build, and deploy high-throughput distributed systems. Required: exceptional mastery of Object Oriented Programming in Java, C++, or Go; deep understanding of System Design, multi-threading, REST APIs, and database indexing. You should have hands-on experience with Unit Testing, Test Driven Development, Version Control with Git GitHub, and Cloud Computing on AWS.")
-                        .keySkills(List.of("Java", "System Design", "Distributed Systems", "REST API", "Data Structures", "Unit Testing", "AWS Cloud", "Git GitHub"))
-                        .build(),
-                SampleJdDto.builder()
-                        .id("jd-atlassian-ase")
-                        .company("Atlassian")
-                        .role("Associate Software Engineer")
-                        .category("Product / SaaS")
-                        .ctc("₹22.5 LPA")
-                        .description("Join our engineering team to build world-class collaborative developer tools. We require strong skills in React, TypeScript, JavaScript, Java, and Spring Boot. You must write Clean Code with high unit test coverage, design scalable REST APIs, and participate in Agile Methodology sprints. Understanding of Docker, CI/CD, and Microservices Architecture is strongly valued.")
-                        .keySkills(List.of("React", "TypeScript", "Java", "Spring Boot", "REST API", "CI/CD", "Docker", "Clean Code"))
-                        .build(),
-                SampleJdDto.builder()
-                        .id("jd-capgemini-diff")
-                        .company("Capgemini")
-                        .role("Senior Analyst / Differential Developer")
-                        .category("IT & Digital Solutions")
-                        .ctc("₹7.0 - ₹8.5 LPA")
-                        .description("Looking for full stack and backend developers with proficiency in Java, Spring Boot, SQL Queries, and frontend integration. Must demonstrate clear understanding of Object Oriented Programming, Data Structures, Relational Database normalization, and version control. Experience with cloud platforms (Azure Cloud or AWS) and agile delivery is preferred.")
-                        .keySkills(List.of("Java", "Spring Boot", "SQL Query", "Data Structures", "Object Oriented Programming", "Git", "Cloud Computing"))
-                        .build()
-        );
+        return List.of();
     }
 }

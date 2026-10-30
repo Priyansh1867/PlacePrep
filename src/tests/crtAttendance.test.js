@@ -1,3 +1,4 @@
+import { seedTestRecords, SEED_CRT_STUDENTS } from './fixtures/records.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -9,7 +10,6 @@ import {
   CRT_SESSION_STATUSES,
   CRT_BATCHES,
   ATTENDANCE_STATUS,
-  SEED_CRT_STUDENTS,
   fetchCrtSessions,
   createCrtSession,
   updateCrtSession,
@@ -45,6 +45,7 @@ describe('CRT Training Attendance & Eligibility Module Tests', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    seedTestRecords('crt');
   });
 
   test('CRT sessions can be created, retrieved, and filtered by category and batch', async () => {

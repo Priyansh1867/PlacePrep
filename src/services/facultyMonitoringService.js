@@ -55,7 +55,7 @@ export async function fetchFacultyOperations(params = {}, currentUser) {
   const classRecords = safeGetJson(ATTENDANCE_RECORDS_KEY, []);
 
   classSessions.forEach((s) => {
-    const fName = s.facultyName && s.facultyName.trim() ? s.facultyName.trim() : 'Dr. Neha Sharma';
+    const fName = s.facultyName && s.facultyName.trim() ? s.facultyName.trim() : 'Not recorded';
     const fId = s.facultyId && s.facultyId.trim() ? s.facultyId.trim() : 'FAC-CSE-042';
     const sessionRecs = classRecords.filter((r) => String(r.sessionId) === String(s.id));
     const recordsCount = sessionRecs.length;

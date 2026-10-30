@@ -238,7 +238,7 @@ export default function CompanyHubPage({
                   </button>
                 )}
                 <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  Verified Experiences: {company.experienceCount || 10}+
+                  Verified Experiences: {company.experienceCount || 'Not available'}+
                 </span>
                 <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                   Telemetry Freshness: {company.latestUpdateDate || 'October 2026'}
@@ -533,7 +533,7 @@ export default function CompanyHubPage({
                           </span>
                         </div>
                         <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                          <Flame className="w-3 h-3" /> {q.frequencyScore || 90}%
+                          <Flame className="w-3 h-3" /> {q.frequencyScore || 'Not available'}%
                         </span>
                       </div>
 

@@ -54,7 +54,7 @@ export default function ReportsExporterPage({ onNavigate, onBack }) {
 
   // 1. Drive Eligibility Filters
   const drives = useMemo(() => getUpcomingDrives(), []);
-  const [selectedDriveId, setSelectedDriveId] = useState(drives[0]?.id || 'drv-hcl-2026');
+  const [selectedDriveId, setSelectedDriveId] = useState(drives[0]?.id || '');
   const [driveBranchFilter, setDriveBranchFilter] = useState('All');
 
   const selectedDrive = useMemo(() => {
@@ -66,8 +66,8 @@ export default function ReportsExporterPage({ onNavigate, onBack }) {
   const [deduplicateStudents, setDeduplicateStudents] = useState(true);
 
   // 3. Monthly Attendance Filters
-  const [attendanceMonth, setAttendanceMonth] = useState(10); // Default to October 2026
-  const [attendanceYear, setAttendanceYear] = useState(2026);
+  const [attendanceMonth, setAttendanceMonth] = useState(new Date().getMonth() + 1);
+  const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
   const [attendanceDeptFilter, setAttendanceDeptFilter] = useState('All');
 
   // Datasets

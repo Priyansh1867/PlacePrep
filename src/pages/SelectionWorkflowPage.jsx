@@ -102,8 +102,8 @@ export default function SelectionWorkflowPage({ onNavigate, onBack, onSelectQues
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({
     role: 'Student', // 'Student', 'TPO', 'Faculty', 'Company'
-    author: 'Priyansh Jain (2028 Batch)',
-    companyName: 'HCLTech',
+    author: getCurrentUser()?.name || '',
+    companyName: '',
     driveName: 'Campus Hiring Drive 2026',
     rating: 5,
     roundDiscussed: 'Technical Interview',
@@ -356,8 +356,7 @@ export default function SelectionWorkflowPage({ onNavigate, onBack, onSelectQues
 
   const downloadCandidateCsvTemplate = () => {
     const headers = ['name', 'email', 'college', 'branch', 'batch', 'companyName', 'currentRound', 'status', 'evaluator', 'aptitude', 'technical', 'managerial', 'hr', 'notes'];
-    const example = ['Aarav Sharma', 'aarav.sharma@example.edu', 'Delhi Technological University', 'B.Tech CSE', '2028', 'HCLTech', 'technical', 'Shortlisted', 'Vikram Mehta', '84', '88', '', '', 'Strong problem-solving and communication'];
-    const csv = [headers, example].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const csv = [headers].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     link.download = 'placeprep-candidate-import-template.csv';

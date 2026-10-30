@@ -14,12 +14,13 @@ import {
   Sparkles
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
-import { setCurrentUser, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
+import { setCurrentUser, setGraduationBatch } from '../services/storage';
 import { isCollegeEmail } from '../pages/AuthPortalPage';
 import PlacePrepLogo from './PlacePrepLogo';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
+import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
   const [tab, setTab] = useState('login'); // 'login' | 'signup' | 'demo'
@@ -57,38 +58,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setLoading(true);
     setErrorMsg('');
     try {
-      const emailTrim = formData.email.trim().toLowerCase();
-      const localUser = findRegisteredUser(emailTrim);
-      let userObj = localUser ? { ...localUser, authenticatedAt: new Date().toISOString() } : {
-        id: `user-${Date.now()}`,
-        name: formData.email.split('@')[0],
-        fullName: formData.email.split('@')[0],
-        email: emailTrim,
-        role: 'student',
-        graduationBatch: '2028',
-        college: '',
-        branch: '',
-        rollNumber: '',
-        authenticatedAt: new Date().toISOString()
-      };
+      const res = await AuthApi.login({
+        email: formData.email.trim(),
+        password: formData.password
+      });
 
-      try {
-        const res = await AuthApi.login({
-          email: emailTrim,
-          password: formData.password
-        });
-        if (res && res.user) {
-          userObj = { ...userObj, ...res.user, id: res.user.id || userObj.id };
-        }
-      } catch (authErr) {
-        console.warn('Backend unavailable, proceeding with local verified session:', authErr);
-      }
-
-      setCurrentUser(userObj);
-      saveRegisteredUser(userObj);
-      setSuccessMsg(`Welcome back, ${userObj.name}!`);
+      setCurrentUser(res.user);
+      setSuccessMsg(`Welcome back, ${res.user.name}!`);
       setTimeout(() => {
-        onAuthSuccess?.(userObj);
+        onAuthSuccess?.(res.user);
         onClose();
       }, 250);
     } catch (err) {
@@ -100,7 +78,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email || !formData.password || !formData.branch) {
       setErrorMsg('Please fill in all mandatory fields.');
       return;
     }
@@ -120,53 +98,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setLoading(true);
     setErrorMsg('');
     try {
-      const nameTrim = formData.name.trim();
-      let userObj = {
-        id: `user-${Date.now()}`,
-        name: nameTrim,
-        fullName: nameTrim,
-        email: formData.email.trim().toLowerCase(),
-        role: 'student',
-        college: formData.college.trim() || '',
-        branch: formData.branch.trim() || '',
-        graduationBatch: formData.graduationBatch,
-        rollNumber: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: '',
-        currentAddress: '',
-        tenthPercentage: '',
-        twelfthPercentage: '',
-        authenticatedAt: new Date().toISOString()
-      };
+      const res = await AuthApi.register({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        college: formData.college.trim(),
+        branch: formData.branch.trim(),
+        graduationBatch: formData.graduationBatch
+      });
 
-      try {
-        const res = await AuthApi.register({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          college: userObj.college,
-          branch: userObj.branch,
-          graduationBatch: userObj.graduationBatch
-        });
-        if (res && res.user) {
-          userObj = { ...userObj, ...res.user, id: res.user.id || userObj.id };
-        }
-      } catch (authErr) {
-        if (authErr && authErr.message && authErr.message.toLowerCase().includes('already exists')) {
-          setErrorMsg(authErr.message);
-          setLoading(false);
-          return;
-        }
-        console.warn('Backend offline, proceeding with local student account:', authErr);
-      }
-
-      setCurrentUser(userObj);
-      saveRegisteredUser(userObj);
+      setCurrentUser(res.user);
       setGraduationBatch(formData.graduationBatch);
       setSuccessMsg('Account created successfully! Welcome to PlacePrep.');
       setTimeout(() => {
-        onAuthSuccess?.(userObj);
+        onAuthSuccess?.(res.user);
         onClose();
       }, 250);
     } catch (err) {
@@ -176,25 +121,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     }
   };
 
-  const handleDemoLogin = async (role = 'student') => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const res = await AuthApi.demoLogin(role);
-      setCurrentUser(res.user);
-      setSuccessMsg(`Signed in as Demo ${role === 'admin' ? 'Placement Officer (Admin)' : 'Student'}!`);
-      setTimeout(() => {
-        onAuthSuccess?.(res.user);
-        onClose();
-      }, 500);
-    } catch (err) {
-      setErrorMsg(err.message || 'Failed to sign in with demo credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
+return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
@@ -324,7 +251,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="e.g. Rahul Sharma"
+                placeholder="Enter full name"
                 icon={UserIcon}
                 required
               />
@@ -348,6 +275,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                   )}
                 </div>
               )}
+
+              <Select
+                label="Branch / specialization"
+                name="branch"
+                value={formData.branch}
+                onChange={handleChange}
+                options={[
+                  { value: '', label: 'Select your branch' },
+                  ...INITIAL_BRANCHES.map((branch) => ({ value: branch, label: branch }))
+                ]}
+                required
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <Input

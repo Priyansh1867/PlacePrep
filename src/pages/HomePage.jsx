@@ -39,35 +39,7 @@ export default function HomePage({ onNavigate, onSelectCompany, onSelectQuestion
   const topQuestions = [...questions].sort((a, b) => b.frequencyScore - a.frequencyScore).slice(0, 4);
 
   // Student reviews
-  const successStories = [
-    {
-      name: 'Aditya Verma',
-      college: 'SRM Institute of Science & Tech',
-      company: 'HCLTech',
-      role: 'Software Engineer (GET)',
-      batch: '2026 Batch',
-      package: '₹8.5 LPA',
-      quote: 'The HCLTech specific questions on DBMS and the simulated mock interview gave me the exact confidence needed. The interviewer asked the exact linked-list cycle question I practiced here.'
-    },
-    {
-      name: 'Pooja Sundaram',
-      college: 'Anna University',
-      company: 'TCS',
-      role: 'TCS Digital Engineer',
-      batch: '2026 Batch',
-      package: '₹7.2 LPA',
-      quote: 'PlacePrep helped me focus on modern cloud and microservice questions instead of outdated syntax. Cleared both technical and managerial rounds on day one.'
-    },
-    {
-      name: 'Kunal Deshmukh',
-      college: 'Pune Institute of Computer Tech',
-      company: 'Deloitte',
-      role: 'Analyst - Technology Consulting',
-      batch: '2026 Batch',
-      package: '₹11.5 LPA',
-      quote: 'The managerial STAR framework practice from PlacePrep sharpened my scenario explanations. The partner round was completely focused on conflict resolution, exactly as prepared.'
-    }
-  ];
+  const successStories = [];
 
   return (
     <div className="space-y-16 py-8">

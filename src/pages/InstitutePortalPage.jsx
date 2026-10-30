@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import ProfilePopover from '../components/profile/ProfilePopover';
+import { getProfileMetrics, attendancePercentage, displayValue } from '../services/profileMetrics';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Bot,
   School,
@@ -89,20 +91,26 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   }); 
   // 'student-data', 'curriculum-governance', 'reports-exporter', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus'
   
-  const studentBatch = getGraduationBatch() || '2028';
+  const studentBatch = getGraduationBatch() || '';
   const isFinalYear = studentBatch === '2025' || studentBatch === '2026';
 
   // Datasets from storage
   const [crtSessions, setCrtSessions] = useState(() => getCrtSessions() || []);
-  const [studentCrt, setStudentCrt] = useState(() => getStudentCrtAttendance() || { percentage: 80 });
+  const [studentCrt, setStudentCrt] = useState(() => getStudentCrtAttendance() || { percentage: null, records: [] });
   const [classAttendance, setClassAttendance] = useState(() => getClassAttendance() || []);
-  const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: 85 });
+  const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: null });
   const [studentRounds, setStudentRounds] = useState(() => getStudentRounds() || []);
   const [hackathons, setHackathons] = useState(() => getHackathons() || []);
   const [internships, setInternships] = useState(() => getInternships() || []);
   const [offCampusCompanies, setOffCampusCompanies] = useState(() => getOffCampusCompanies() || []);
   const [upcomingDrives, setUpcomingDrives] = useState(() => getUpcomingDrives() || []);
   const [questions, setQuestions] = useState(() => getInterviewQuestions() || []);
+
+  const academicMetrics = getProfileMetrics(currentUser);
+  const classPercentage = attendancePercentage(classAttendance);
+  const crtPercentage = studentCrt?.percentage;
+  const crtLabel = crtPercentage == null ? 'No attendance records' : `${crtPercentage}%`;
+  const atsLabel = displayValue(resumeStatus?.atsScore);
 
   // Search & Filter state
   const profileCompletion = useMemo(() => {
@@ -121,6 +129,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [resumeSuccessMsg, setResumeSuccessMsg] = useState('');
 
   // Top-Right Profile & Backend Connection States
+  const profileTriggerRef = useRef(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
 
@@ -157,7 +166,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     if (DriveApi?.getAll) {
       DriveApi.getAll()
         .then((liveDrives) => {
-          if (Array.isArray(liveDrives) && liveDrives.length > 0) {
+          if (Array.isArray(liveDrives)) {
             setUpcomingDrives(liveDrives);
             setIsBackendConnected(true);
           }
@@ -169,7 +178,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     if (AttendanceApi?.getCrtSessions) {
       AttendanceApi.getCrtSessions()
         .then((liveSessions) => {
-          if (Array.isArray(liveSessions) && liveSessions.length > 0) {
+          if (Array.isArray(liveSessions)) {
             setCrtSessions(liveSessions);
             setIsBackendConnected(true);
           }
@@ -181,7 +190,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     if (QuestionApi?.getAll) {
       QuestionApi.getAll()
         .then((liveQuestions) => {
-          if (Array.isArray(liveQuestions) && liveQuestions.length > 0) {
+          if (Array.isArray(liveQuestions)) {
             setQuestions(liveQuestions);
             setIsBackendConnected(true);
           }
@@ -217,9 +226,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     name: '',
     email: '',
     rollNumber: '',
-    branch: 'Computer Science and Engineering',
-    batch: '2028',
-    cgpa: '8.5'
+    branch: '',
+    batch: '',
+    cgpa: ''
   });
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
   const [registrationErrorMsg, setRegistrationErrorMsg] = useState('');
@@ -233,8 +242,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       await AuthApi.register({
         name: newStudentForm.name,
         email: newStudentForm.email.trim().toLowerCase(),
-        password: 'password123',
-        college: currentUser?.college || 'Delhi Technological University (DTU)',
+        password: crypto.randomUUID(),
+        college: currentUser?.college || '',
         branch: newStudentForm.branch,
         graduationBatch: newStudentForm.batch,
         role: 'student',
@@ -249,15 +258,15 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     // 2. Also register in local storage / academic records
     const res = registerSingleStudent(newStudentForm, currentUser);
     if (res.success) {
-      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in database & Institute records!`);
+      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) saved to Institute records.`);
       setIsRegisterStudentModalOpen(false);
       setNewStudentForm({
         name: '',
         email: '',
         rollNumber: '',
-        branch: 'Computer Science and Engineering',
-        batch: '2028',
-        cgpa: '8.5'
+        branch: '',
+        batch: '',
+        cgpa: ''
       });
       setTimeout(() => setRegistrationSuccessMsg(''), 5000);
     } else {
@@ -265,25 +274,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     }
   };
 
-  const handleAnalyzeResume = () => {
-    setIsAnalyzingResume(true);
-    setTimeout(() => {
-      const updated = updateResumeStatus({
-        atsScore: 91,
-        verdict: 'Excellent - High Match for Tech Roles',
-        verificationStatus: 'Verified by TPO Cell',
-        matchedKeywords: [
-          'Java', 'Spring Boot', 'REST APIs', 'SQL', 'Data Structures & Algorithms',
-          'Microservices', 'Git', 'Maven', 'B-Tree Indexing', 'Docker', 'AWS'
-        ],
-        missingKeywords: ['CI/CD Pipelines']
-      });
-      setResumeStatus(updated);
-      setIsAnalyzingResume(false);
-      setResumeSuccessMsg('ATS Analysis completed! Resume score increased to 91/100.');
-      setTimeout(() => setResumeSuccessMsg(''), 4000);
-    }, 1200);
-  };
+  const handleAnalyzeResume = () => onNavigate('resume-ats');
 
   const navTabs = [
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
@@ -293,10 +284,10 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}`, excludedRoles: ['teacher', 'faculty'] },
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
-    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage ?? 80}%` },
+    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: studentCrt?.percentage == null ? 'No records' : `${studentCrt.percentage}%` },
     { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, badge: 'LIVE', roles: ['student'] },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
-    { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus?.atsScore || 85}/100`, roles: ['student'] },
+    { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: resumeStatus?.atsScore == null ? 'Not assessed' : `${resumeStatus.atsScore}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
     { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'faculty', 'hod'] },
@@ -399,6 +390,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               <div className="relative z-50">
                 <button
                   type="button"
+                  ref={profileTriggerRef}
+                  aria-expanded={isProfileDropdownOpen}
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md transition shadow-md group text-left cursor-pointer"
                   aria-label="User profile menu"
@@ -419,7 +412,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
                 {/* Profile Dropdown Popup (Non-clipped) */}
                 {isProfileDropdownOpen && (
-                  <>
+                  <ProfilePopover anchorRef={profileTriggerRef} onClose={() => setIsProfileDropdownOpen(false)}>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
@@ -437,24 +430,24 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
 
                       {/* Profile details */}
-                      <div className="py-3 space-y-2.5 text-[11px] border-b border-slate-100">
-                        <div className="flex items-center justify-between gap-2 text-slate-500">
-                          <span className="shrink-0 font-medium">Institute:</span>
-                          <span className="font-semibold text-slate-800 truncate text-right max-w-[180px]">{currentUser.college || 'Not specified'}</span>
+                      <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Institute:</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || ''}</span>
                         </div>
                         {currentUser.role === 'student' ? (
                           <>
-                            <div className="flex items-center justify-between gap-2 text-slate-500">
-                              <span className="shrink-0 font-medium">Roll Number:</span>
-                              <span className="font-bold text-slate-800 font-mono text-right truncate max-w-[180px]">{currentUser.rollNumber || 'Not specified'}</span>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Roll Number:</span>
+                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || ''}</span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-slate-500">
-                              <span className="shrink-0 font-medium">Branch & Batch:</span>
-                              <span className="font-semibold text-slate-800 text-right truncate max-w-[180px]">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Branch & Batch:</span>
+                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({studentBatch || ''})</span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-slate-500">
-                              <span className="shrink-0 font-medium">Academic Standing:</span>
-                              <span className="font-bold text-emerald-600 text-right">Active • 0 Backlogs</span>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Academic Standing:</span>
+                              <span className="font-bold text-emerald-600">Backlogs: {displayValue(academicMetrics.backlogs)}</span>
                             </div>
                           </>
                         ) : (
@@ -507,7 +500,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                         </button>
                       </div>
                     </div>
-                  </>
+                  </ProfilePopover>
                 )}
               </div>
             </div>
@@ -518,12 +511,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             <div>
               <span className="text-indigo-300 block">CRT Attendance:</span>
               <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {studentCrt.percentage}% ({studentCrt.percentage >= 75 ? 'Eligible' : 'Warning'})
+                {crtLabel}
               </span>
             </div>
             <div>
               <span className="text-indigo-300 block">Class Attendance:</span>
-              <span className="font-black text-base text-white">86.8% Average</span>
+              <span className="font-black text-base text-white">{displayValue(classPercentage, '% Average')}</span>
             </div>
             <div>
               <span className="text-indigo-300 block">Resume ATS Score:</span>
@@ -630,7 +623,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <h3 className="font-black text-lg text-slate-900">{currentUser.name}</h3>
                   <p className="text-xs text-slate-500">{currentUser.email}</p>
                   <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] uppercase inline-block mt-1">
-                    Roll: {currentUser.rollNumber || '2024/CSE/084'}
+                    Roll: {currentUser.rollNumber || ''}
                   </span>
                 </div>
               </div>
@@ -638,7 +631,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               <div className="space-y-3 text-xs border-t border-slate-100 pt-4">
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">College:</span>
-                  <span className="font-semibold text-slate-700">{currentUser.college || 'Delhi Technological University (DTU)'}</span>
+                  <span className="font-semibold text-slate-700">{currentUser.college || ''}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">Branch:</span>
@@ -650,15 +643,15 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">Current CGPA:</span>
-                  <span className="font-extrabold text-emerald-600">8.64 / 10.0</span>
+                  <span className="font-extrabold text-emerald-600">{displayValue(academicMetrics.cgpa)} / 10.0</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">Active Backlogs:</span>
-                  <span className="font-bold text-slate-700">0 (Clear Standing)</span>
+                  <span className="font-bold text-slate-700">{displayValue(academicMetrics.backlogs)}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">CRT Status:</span>
-                  <span className="font-bold text-emerald-600">Eligible (87.5%)</span>
+                  <span className="font-bold text-emerald-600">{crtLabel}</span>
                 </div>
               </div>
 
@@ -711,7 +704,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
                     </div>
                     <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                      87.5% - Cleared
+                      {crtLabel}
                     </span>
                   </div>
 
@@ -724,7 +717,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
                     </div>
                     <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                      86.8% - Cleared
+                      {displayValue(classPercentage, '%')}
                     </span>
                   </div>
 
@@ -733,11 +726,11 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                       <div>
                         <span className="font-bold text-slate-800 block">ATS Resume Verification</span>
-                        <span className="text-slate-500">Requirement: Verified by Department Placement Coordinator.</span>
+                        <span className="text-slate-500">Requirement: Reviewed after submission.</span>
                       </div>
                     </div>
                     <span className="font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                      Score: 88/100
+                      Score: {atsLabel}
                     </span>
                   </div>
                 </div>
@@ -781,7 +774,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                           </td>
                           <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
                           <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{user.rollNumber || 'N/A'}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || '2028'})</td>
+                          <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || ''})</td>
                           <td className="py-2.5 px-3">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -1424,7 +1417,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   required
                   value={newStudentForm.name}
                   onChange={(e) => setNewStudentForm({ ...newStudentForm, name: e.target.value })}
-                  placeholder="e.g. Ananya Sharma"
+                  placeholder="Enter student name"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -1457,7 +1450,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <label className="block font-semibold text-slate-700 mb-1">Graduation Batch *</label>
                   <select
                     value={newStudentForm.batch}
-                    onChange={(e) => setNewStudentForm({ ...newStudentForm, batch: e.target.value })}
+                    onChange={(e) => setNewStudentForm({ ...newStudentForm, batch: '' })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   >
                     <option value="2025">2025 (Final Year)</option>
@@ -1474,7 +1467,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <input
                     type="text"
                     value={newStudentForm.branch}
-                    onChange={(e) => setNewStudentForm({ ...newStudentForm, branch: e.target.value })}
+                    onChange={(e) => setNewStudentForm({ ...newStudentForm, branch: '' })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -1484,7 +1477,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     type="number"
                     step="0.01"
                     value={newStudentForm.cgpa}
-                    onChange={(e) => setNewStudentForm({ ...newStudentForm, cgpa: e.target.value })}
+                    onChange={(e) => setNewStudentForm({ ...newStudentForm, cgpa: '' })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>

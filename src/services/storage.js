@@ -92,9 +92,7 @@ function dispatchSafeCustomEvent(eventName, detail) {
 }
 
 // User Profile
-export function getCurrentUser() {
-  return getStorageItem(STORAGE_KEYS.CURRENT_USER, null);
-}
+export function getCurrentUser() { return getStorageItem(STORAGE_KEYS.CURRENT_USER, null); }
 
 export function setCurrentUser(user) {
   try {
@@ -123,92 +121,96 @@ export function generateUniqueStudentId(seed = '') {
 
 export function getInitialFullStudentProfile(currentUser = null) {
   const user = currentUser || getCurrentUser() || {};
-  const userEmail = user?.email || '';
-  const userName = user?.name || '';
-  const uniqueId = user?.uniqueStudentId || (userEmail ? generateUniqueStudentId(userEmail) : '');
-
-  return {
-    uniqueStudentId: uniqueId,
-    verified: false,
-    avatarTheme: 'emerald',
-    basicDetails: {
-      fullName: userName,
-      email: userEmail,
-      phone: user?.phone || '',
-      alternatePhone: '',
-      dateOfBirth: user?.dateOfBirth || '',
-      gender: user?.gender || '',
-      bloodGroup: '',
-      category: '',
-      differentlyAbled: '',
-      currentAddress: user?.currentAddress || '',
-      permanentAddress: '',
-      pincode: '',
-      hometown: '',
-      state: '',
-      nationality: '',
-      linkedIn: user?.linkedIn || '',
-      github: user?.github || '',
-      portfolio: user?.portfolio || '',
-      leetCode: user?.leetCode || ''
-    },
-    educationDetails: {
-      college: user?.college || '',
-      degree: '',
-      branch: user?.branch || '',
-      graduationBatch: user?.graduationBatch || '',
-      rollNumber: user?.rollNumber || '',
-      registrationNumber: user?.rollNumber || '',
-      cgpa: user?.cgpa || '',
-      activeBacklogs: 0,
-      totalCreditsEarned: '',
-      twelfthSchool: '',
-      twelfthBoard: '',
-      twelfthStream: '',
-      twelfthPercentage: user?.twelfthPercentage || '',
-      twelfthYear: '',
-      tenthSchool: '',
-      tenthBoard: '',
-      tenthPercentage: user?.tenthPercentage || '',
-      tenthYear: ''
-    },
-    workExperiences: [],
-    skills: {
-      technical: [],
-      coreSubjects: [],
-      languages: []
-    },
-    responsibilities: [],
-    projects: [],
-    accomplishments: [],
-    volunteering: [],
-    extraCurricular: [],
-    documents: {
-      resumeFileName: '',
-      resumeLastUpdated: '',
-      resumeUrl: '',
-      aboutMe: '',
-      transcriptsUploaded: false,
-      idProofUploaded: false
-    },
-    guardians: {
-      fatherName: '',
-      fatherOccupation: '',
-      fatherPhone: '',
-      fatherEmail: '',
-      motherName: '',
-      motherOccupation: '',
-      motherPhone: '',
-      emergencyContactName: '',
-      emergencyRelation: '',
-      emergencyPhone: '',
-      residentialAddress: ''
-    }
-  };
+  const profile = {
+  "uniqueStudentId": "",
+  "verified": false,
+  "avatarTheme": "emerald",
+  "basicDetails": {
+    "fullName": "",
+    "email": "",
+    "phone": "",
+    "alternatePhone": "",
+    "dateOfBirth": "",
+    "gender": "",
+    "bloodGroup": "",
+    "category": "",
+    "differentlyAbled": "",
+    "currentAddress": "",
+    "permanentAddress": "",
+    "pincode": "",
+    "hometown": "",
+    "state": "",
+    "nationality": "",
+    "linkedIn": "",
+    "github": "",
+    "portfolio": "",
+    "leetCode": ""
+  },
+  "educationDetails": {
+    "college": "",
+    "degree": "",
+    "branch": "",
+    "graduationBatch": "",
+    "rollNumber": "",
+    "registrationNumber": "",
+    "cgpa": "",
+    "activeBacklogs": "",
+    "totalCreditsEarned": "",
+    "twelfthSchool": "",
+    "twelfthBoard": "",
+    "twelfthStream": "",
+    "twelfthPercentage": "",
+    "twelfthYear": "",
+    "tenthSchool": "",
+    "tenthBoard": "",
+    "tenthPercentage": "",
+    "tenthYear": ""
+  },
+  "workExperiences": [],
+  "skills": {
+    "technical": [],
+    "coreSubjects": [],
+    "languages": []
+  },
+  "responsibilities": [],
+  "projects": [],
+  "accomplishments": [],
+  "volunteering": [],
+  "extraCurricular": [],
+  "documents": {
+    "resumeFileName": "",
+    "resumeLastUpdated": "",
+    "resumeUrl": "",
+    "aboutMe": "",
+    "transcriptsUploaded": false,
+    "idProofUploaded": false
+  },
+  "guardians": {
+    "fatherName": "",
+    "fatherOccupation": "",
+    "fatherPhone": "",
+    "fatherEmail": "",
+    "motherName": "",
+    "motherOccupation": "",
+    "motherPhone": "",
+    "emergencyContactName": "",
+    "emergencyRelation": "",
+    "emergencyPhone": "",
+    "residentialAddress": ""
+  }
+};
+  profile.uniqueStudentId = user.uniqueStudentId || (user.email || user.id ? generateUniqueStudentId(user.email || user.id) : '');
+  profile.verified = user.verified === true;
+  const basicFields = { fullName: user.name, email: user.email, phone: user.phone, gender: user.gender, linkedIn: user.linkedIn, github: user.github, portfolio: user.portfolio, leetCode: user.leetCode };
+  for (const [field, value] of Object.entries(basicFields)) profile.basicDetails[field] = value ?? '';
+  const academicFields = { college: user.college, branch: user.branch, graduationBatch: user.graduationBatch, rollNumber: user.rollNumber, cgpa: user.cgpa, activeBacklogs: user.activeBacklogs, tenthPercentage: user.tenthPercentage, twelfthPercentage: user.twelfthPercentage };
+  for (const [field, value] of Object.entries(academicFields)) profile.educationDetails[field] = value ?? '';
+  return profile;
 }
 
 export function getFullStudentProfile(currentUser = null) {
   const current = currentUser || getCurrentUser() || {};
+  if (!current.email && !current.id) return getInitialFullStudentProfile(current);
   const userEmail = (current.email || '').toLowerCase().trim();
   const storageKey = userEmail ? `placeprep_student_full_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}` : STORAGE_KEYS.FULL_STUDENT_PROFILE;
 
@@ -218,7 +220,7 @@ export function getFullStudentProfile(currentUser = null) {
       if (!saved.uniqueStudentId) {
         saved.uniqueStudentId = generateUniqueStudentId(userEmail || current.id);
       }
-      if (current.name && (!saved.basicDetails.fullName || saved.basicDetails.fullName !== current.name)) {
+      if (current.name && saved.basicDetails.fullName !== current.name && !saved.basicDetails.fullName) {
         saved.basicDetails.fullName = current.name;
       }
       if (current.rollNumber && !saved.educationDetails?.rollNumber) {
@@ -291,7 +293,7 @@ export function getGraduationBatch() {
   const directBatch = getStorageItem(STORAGE_KEYS.GRADUATION_BATCH, null);
   if (directBatch) return directBatch;
   const user = getCurrentUser();
-  return user?.graduationBatch || '2028';
+  return user?.graduationBatch || '';
 }
 
 export function setGraduationBatch(batchId) {
@@ -362,7 +364,7 @@ export function addInterviewQuestion(newQuestion) {
 
 // Questions Practiced / Saved / Revision
 export function getPracticedQuestions() {
-  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, ['hcl-tech-01', 'hcl-hr-01']);
+  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, []);
 }
 
 export function togglePracticedQuestion(questionId) {
@@ -379,7 +381,7 @@ export function togglePracticedQuestion(questionId) {
 }
 
 export function getSavedQuestions() {
-  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, ['hcl-tech-02', 'hcl-tech-03']);
+  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, []);
 }
 
 export function toggleSavedQuestion(questionId) {
@@ -396,7 +398,7 @@ export function toggleSavedQuestion(questionId) {
 }
 
 export function getRevisionList() {
-  return getStorageItem(STORAGE_KEYS.REVISION_LIST, ['hcl-mgr-01']);
+  return getStorageItem(STORAGE_KEYS.REVISION_LIST, []);
 }
 
 export function toggleRevisionQuestion(questionId) {
@@ -414,7 +416,7 @@ export function toggleRevisionQuestion(questionId) {
 
 // Saved Companies
 export function getSavedCompanies() {
-  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, ['hcltech', 'tcs']);
+  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, []);
 }
 
 export function toggleSavedCompany(companyId) {
@@ -451,59 +453,10 @@ export function addInterviewExperience(newExp) {
 }
 
 // AI Insights
-export function getAiInsights(companyId) {
-  if (INITIAL_AI_INSIGHTS[companyId]) {
-    return INITIAL_AI_INSIGHTS[companyId];
-  }
-  // Fallback intelligent generator for any company
-  const company = getCompanyBySlugOrId(companyId);
-  return {
-    companyId,
-    dataFreshness: 'October 2026',
-    totalSamplesAnalyzed: company?.experienceCount || 45,
-    confidenceScore: '92%',
-    verifiedSourcesBadge: `Campus Drive Logs (${company?.name})`,
-    frequentQuestions: [
-      { question: 'Data Structures: HashMaps, Arrays & Two Pointers', frequency: '42% of technical tests', trend: '+14% recent', category: 'DSA' },
-      { question: 'Core Fundamentals: OOPs Polymorphism & Inheritance', frequency: '36% of interviews', trend: 'Consistent', category: 'OOP' },
-      { question: 'Behavioral: Challenging team scenario & resolution', frequency: '85% of HR rounds', trend: 'Universal', category: 'HR' }
-    ],
-    trendingTopics: [
-      { topic: 'Cloud & System Reliability', change: '+35% increase in 2026', reason: 'High client shift towards cloud architectures' },
-      { topic: 'Hands-on live coding over pure theoretical MCQs', change: '+40% increase', reason: 'Evaluates hands-on implementation ability' }
-    ],
-    historicalVsRecentAnalysis: {
-      olderTrends: 'Earlier drives emphasized static textbook theory and rote-learned definitions.',
-      recentTrends: 'Recent interviews focus heavily on project architectural decisions, clean code, and practical problem solving.',
-      keyTakeaway: 'Ensure you can explain your GitHub projects and commit histories fluently.'
-    },
-    preparationPriority: [
-      { priority: 'High Priority (Must-Do)', topics: ['Data Structures (Arrays, Strings, Maps)', 'OOP Concepts in chosen language', 'Top 5 STAR behavioral responses'] },
-      { priority: 'Medium Priority (Concept Reinforcement)', topics: ['DBMS Normalization & SQL Queries', 'Operating Systems Core Concepts'] },
-      { priority: 'Additional Practice', topics: ['System Design Overview', 'Aptitude & Speed Math'] }
-    ],
-    disclaimer: 'Note: AI insights are synthesized from historical reports and candidate experiences.'
-  };
-}
+export function getAiInsights(companyId) { return { companyId, hasData: false, dataFreshness: null, totalSamplesAnalyzed: 0, confidenceScore: null, verifiedSourcesBadge: 'No analysis available', frequentQuestions: [], trendingTopics: [], historicalVsRecentAnalysis: { olderTrends: '', recentTrends: '', keyTakeaway: '' }, preparationPriority: [], disclaimer: 'No verified insights are available for this company.' }; }
 
 // Mock Interview Session Storage
-export function getMockSessions() {
-  return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, [
-    {
-      id: 'mock-01',
-      companyId: 'hcltech',
-      companyName: 'HCLTech',
-      round: 'Technical Interview',
-      date: '2026-10-10',
-      score: 84,
-      correctness: 86,
-      clarity: 82,
-      structure: 85,
-      questionsAnswered: 3,
-      feedbackSummary: 'Strong technical explanation of Floyd\'s cycle detection and SQL joins. Work on structuring your STAR answer for project challenges.'
-    }
-  ]);
-}
+export function getMockSessions() { return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, []); }
 
 export function saveMockSession(session) {
   const list = getMockSessions();
@@ -526,38 +479,7 @@ export function submitPlatformFeedback(fb) {
 // Company & Placement Management Engine
 // ----------------------------------------------------
 
-export const INITIAL_STUDENT_APPLICATIONS = [
-  {
-    applicationId: 'APP-HCL-101',
-    studentId: 'user-demo-01',
-    studentName: 'Priyansh Jain',
-    studentEmail: 'priyansh.jain@example.edu',
-    college: 'Delhi Technological University (DTU)',
-    branch: 'Computer Science and Engineering',
-    graduationBatch: '2028',
-    cgpa: 8.85,
-    tenthPercentage: 92.4,
-    twelfthPercentage: 89.6,
-    activeBacklogs: 0,
-    driveId: 'drv-hcl-2026',
-    companyId: 'hcltech',
-    companyName: 'HCLTech',
-    role: 'Graduate Engineer Trainee (GET)',
-    appliedAt: '2026-10-14 10:15',
-    status: 'INTERVIEW_SCHEDULED', // 'APPLIED', 'ELIGIBLE', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'REJECTED'
-    eligibilityStatus: 'ELIGIBLE',
-    eligibilityRemarks: 'Candidate satisfies all academic criteria (CGPA 8.85 >= 6.5, Backlogs 0 <= 0).',
-    currentRound: 'Round 2: Live Coding Test',
-    scheduledDate: '2026-11-18',
-    scheduledTime: '10:00 AM',
-    scheduledEndTime: '11:15 AM',
-    venue: 'Auditorium Hall A, Panel Desk #4',
-    reportingTime: '08:15 AM (Strictly 45 mins prior)',
-    candidateInstructions: 'Formal attire mandatory. Carry 3 printed copies of resume, College ID card, and a laptop with Wi-Fi.',
-    conflictFlagged: true,
-    conflictReason: 'Schedule collision flagged: Direct time collision with Accenture Virtual Panel assessment scheduled on Nov 18, 2026.'
-  }
-];
+export const INITIAL_STUDENT_APPLICATIONS = [];
 
 // Student Applications Management
 export function getStudentApplications() {
@@ -618,12 +540,15 @@ export function evaluateStudentEligibility(studentMetrics, drive) {
   const failureReasons = [];
   let overallEligible = true;
 
-  const cgpa = parseFloat(studentMetrics?.cgpa) || 8.4;
-  const tenth = parseFloat(studentMetrics?.tenthPercentage) || 88.0;
-  const twelfth = parseFloat(studentMetrics?.twelfthPercentage) || 86.0;
+  const requiredFields = ['cgpa', 'tenthPercentage', 'twelfthPercentage', 'activeBacklogs', 'branch', 'graduationBatch'];
+  const missing = requiredFields.filter(field => studentMetrics?.[field] === null || studentMetrics?.[field] === undefined || studentMetrics?.[field] === '');
+  if (missing.length) return { isEligible: false, status: 'INCOMPLETE_PROFILE', driveId: drive?.id, companyName: drive?.companyName, checks: [], failureReasons: missing.map(field => `Provide ${field} in your profile.`), summary: 'Complete your academic profile before checking eligibility.' };
+  const cgpa = Number(studentMetrics.cgpa);
+  const tenth = Number(studentMetrics.tenthPercentage);
+  const twelfth = Number(studentMetrics.twelfthPercentage);
   const backlogs = parseInt(studentMetrics?.activeBacklogs, 10) || 0;
-  const branch = studentMetrics?.branch || 'Computer Science and Engineering';
-  const batch = studentMetrics?.graduationBatch || '2028';
+  const branch = studentMetrics.branch;
+  const batch = studentMetrics.graduationBatch;
 
   // 1. CGPA
   const minCgpa = drive?.minCgpa ?? 6.0;
@@ -1052,18 +977,7 @@ export function addFeedbackLoopEntry(entry) {
 // ----------------------------------------------------
 // Institute Location & Geofencing Persistence
 // ----------------------------------------------------
-export function getSavedInstituteLocation() {
-  return getStorageItem('placeprep_institute_location', {
-    instituteName: 'Delhi Technological University (DTU)',
-    instituteAddress: 'Shahbad Daulatpur, Main Bawana Road',
-    city: 'Delhi',
-    state: 'Delhi',
-    latitude: 28.7495,
-    longitude: 77.1180,
-    geofenceRadiusMeters: 100,
-    locationStatus: 'ACTIVE'
-  });
-}
+export function getSavedInstituteLocation() { return getStorageItem('placeprep_institute_location', { instituteName: '', instituteAddress: '', city: '', state: '', latitude: null, longitude: null, geofenceRadiusMeters: 100, locationStatus: 'NOT_CONFIGURED' }); }
 
 export function saveInstituteLocation(loc) {
   const current = getSavedInstituteLocation();

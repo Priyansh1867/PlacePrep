@@ -85,20 +85,7 @@ function dispatchSafeCustomEvent(eventName, detail) {
 }
 
 // User Profile
-export function getCurrentUser() {
-  return getStorageItem(STORAGE_KEYS.CURRENT_USER, {
-    id: 'user-demo-01',
-    name: 'Priyansh Jain',
-    email: 'priyansh.jain@example.edu',
-    college: 'Delhi Technological University (DTU)',
-    branch: 'Computer Science and Engineering',
-    graduationBatch: '2028',
-    role: 'student', // 'student' or 'admin'
-    targetCompanies: ['hcltech', 'tcs', 'accenture'],
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString()
-  });
-}
+export function getCurrentUser() { return getStorageItem(STORAGE_KEYS.CURRENT_USER, null); }
 
 export function setCurrentUser(user) {
   setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
@@ -120,189 +107,96 @@ export function generateUniqueStudentId(seed = '') {
 
 export function getInitialFullStudentProfile(currentUser = null) {
   const user = currentUser || getCurrentUser() || {};
-  const userEmail = user?.email || 'student@placeprep.com';
-  const userName = user?.name || (userEmail.split('@')[0].replace(/[._0-9]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
-  const uniqueId = user?.uniqueStudentId || generateUniqueStudentId(userEmail);
-
-  return {
-    uniqueStudentId: uniqueId,
-    verified: true,
-    avatarTheme: 'emerald',
-    basicDetails: {
-      fullName: user?.name || userName,
-      email: userEmail,
-      phone: user?.phone || '+91 98765 43210',
-      alternatePhone: '+91 91234 56789',
-      dateOfBirth: '2004-06-15',
-      gender: user?.gender || 'Female',
-      bloodGroup: 'B+',
-      category: 'General (UR)',
-      differentlyAbled: 'No',
-      currentAddress: 'Room 204, Aryabhatta Hostel, DTU Campus, Shahbad Daulatpur, Delhi',
-      permanentAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085',
-      pincode: '110042',
-      hometown: 'New Delhi',
-      state: 'Delhi',
-      nationality: 'Indian',
-      linkedIn: user?.linkedIn || `https://linkedin.com/in/${userName.toLowerCase().replace(/\s+/g, '-')}`,
-      github: user?.github || `https://github.com/${userName.toLowerCase().replace(/\s+/g, '')}`,
-      portfolio: user?.portfolio || '',
-      leetCode: user?.leetCode || ''
-    },
-    educationDetails: {
-      college: user?.college || 'Delhi Technological University (DTU)',
-      degree: 'Bachelor of Technology (B.Tech)',
-      branch: user?.branch || 'Computer Science and Engineering',
-      graduationBatch: user?.graduationBatch || '2027',
-      rollNumber: user?.rollNumber || '23EJCAD122',
-      registrationNumber: user?.rollNumber ? `DTU/2023/BTECH/${user.rollNumber.slice(-4)}` : 'DTU/2023/BTECH/0122',
-      cgpa: user?.cgpa || 8.5,
-      activeBacklogs: user?.activeBacklogs || 0,
-      totalCreditsEarned: 132,
-      twelfthSchool: 'Delhi Public School (DPS), R.K. Puram',
-      twelfthBoard: 'CBSE',
-      twelfthStream: 'Science (PCM with Computer Science)',
-      twelfthPercentage: user?.twelfthPercentage || 86.0,
-      twelfthYear: '2023',
-      tenthSchool: 'Delhi Public School (DPS), R.K. Puram',
-      tenthBoard: 'CBSE',
-      tenthPercentage: user?.tenthPercentage || 88.0,
-      tenthYear: '2021'
-    },
-    workExperiences: [
-      {
-        id: 'work-1',
-        company: 'CloudScale Technologies',
-        role: 'Full Stack Engineering Intern',
-        location: 'Bengaluru (Remote)',
-        startDate: 'May 2025',
-        endDate: 'July 2025',
-        currentlyWorking: false,
-        stipend: '₹35,000 / month',
-        description: 'Engineered high-performance REST APIs with Spring Boot and designed responsive client dashboards with React and Tailwind CSS. Reduced query latency by 28% using Redis cache.'
-      }
-    ],
-    skills: {
-      technical: ['Java', 'Spring Boot', 'React', 'JavaScript', 'TypeScript', 'MySQL', 'Python', 'Tailwind CSS', 'Docker', 'Git & GitHub'],
-      coreSubjects: ['Data Structures & Algorithms', 'Database Management Systems', 'Computer Networks', 'Operating Systems', 'Object Oriented Programming', 'System Design'],
-      languages: [
-        { language: 'English', proficiency: 'Professional Working / Fluent' },
-        { language: 'Hindi', proficiency: 'Native / Bilingual' }
-      ]
-    },
-    responsibilities: [
-      {
-        id: 'por-1',
-        title: 'Training & Placement Student Coordinator',
-        organization: 'Corporate Relations & Placement Cell, DTU',
-        duration: 'Aug 2024 - Present',
-        description: 'Orchestrated smooth conduction of campus recruitment drives for 45+ premier recruiters. Liaised between visiting HR executives and a cohort of 1,200+ eligible final year students.'
-      },
-      {
-        id: 'por-2',
-        title: 'Technical Lead',
-        organization: 'Google Developer Student Clubs (GDSC)',
-        duration: 'Oct 2024 - Present',
-        description: 'Conducted 5+ hands-on technical workshops on full-stack web architectures and cloud deployments for 300+ university undergraduates.'
-      }
-    ],
-    projects: [
-      {
-        id: 'proj-1',
-        title: 'PlacePrep AI - Comprehensive Campus Placement Suite',
-        techStack: 'React, Spring Boot, MySQL, Vite, TailwindCSS',
-        liveUrl: 'https://placeprep.edu',
-        githubUrl: 'https://github.com/priyanshjain/placeprep',
-        duration: 'Jan 2025 - Present',
-        description: 'Architected end-to-end recruitment platform with 9 specialized modules including intelligent eligibility checker, auto-report exporter, mock interviews, and live CRT session attendance.'
-      },
-      {
-        id: 'proj-2',
-        title: 'Distributed Real-Time Code Execution Engine',
-        techStack: 'Java, Docker, Redis, WebSocket, Node.js',
-        liveUrl: 'https://code-engine.dev',
-        githubUrl: 'https://github.com/priyanshjain/code-engine',
-        duration: 'Sep 2024 - Nov 2024',
-        description: 'Built sandboxed isolated code runner executing C++, Java, and Python scripts with sub-second turnaround and memory constraint governance.'
-      }
-    ],
-    accomplishments: [
-      {
-        id: 'acc-1',
-        title: 'Finalist - Smart India Hackathon (SIH)',
-        category: 'Hackathon & Competitions',
-        issuedBy: 'Ministry of Education & AICTE',
-        year: '2024',
-        description: 'Ranked top 10 nationwide out of 25,000+ participating teams for building AI-driven disaster response dispatching.'
-      },
-      {
-        id: 'acc-2',
-        title: 'Knight Badge (Rating 1940+)',
-        category: 'Competitive Programming',
-        issuedBy: 'LeetCode',
-        year: '2025',
-        description: 'Solved over 650+ algorithmic coding problems across Data Structures, Dynamic Programming, and Graph Theory.'
-      },
-      {
-        id: 'acc-3',
-        title: 'AWS Certified Cloud Practitioner',
-        category: 'Industry Certification',
-        issuedBy: 'Amazon Web Services',
-        year: '2025',
-        description: 'Demonstrated overall understanding of cloud concepts, security, technology, architecture, and billing.'
-      }
-    ],
-    volunteering: [
-      {
-        id: 'vol-1',
-        organization: 'National Service Scheme (NSS)',
-        role: 'Student Volunteer Lead',
-        duration: 'Jan 2024 - Present',
-        description: 'Organized campus-wide blood donation drives mobilizing 450+ donors, and mentored underprivileged local high school students in basic computer literacy.'
-      }
-    ],
-    extraCurricular: [
-      {
-        id: 'ec-1',
-        activity: 'University Inter-College Football Tournament',
-        role: 'Vice Captain',
-        year: '2024',
-        description: 'Represented DTU university team at zonal inter-varsity championships, securing runner-up trophy.'
-      },
-      {
-        id: 'ec-2',
-        activity: 'Annual Cultural Fest Debating Society',
-        role: 'Parliamentary Debate Finalist',
-        year: '2024',
-        description: 'Adjudged best speaker in parliamentary debate on modern tech monopolies and algorithmic ethics.'
-      }
-    ],
-    documents: {
-      resumeFileName: 'Priyansh_Jain_Software_Engineer_Resume.pdf',
-      resumeLastUpdated: 'Oct 24, 2026',
-      resumeUrl: '#',
-      aboutMe: 'Driven Computer Science undergraduate with hands-on experience in full-stack architecture, microservices, and distributed systems. Passionate about solving complex algorithmic challenges and building impactful scalable digital products for modern enterprise needs.',
-      transcriptsUploaded: true,
-      idProofUploaded: true
-    },
-    guardians: {
-      fatherName: 'Rajesh Jain',
-      fatherOccupation: 'Senior Business Consultant',
-      fatherPhone: '+91 98110 54321',
-      fatherEmail: 'rajesh.jain@example.com',
-      motherName: 'Sunita Jain',
-      motherOccupation: 'Educationist / Principal',
-      motherPhone: '+91 98110 54322',
-      emergencyContactName: 'Rajesh Jain',
-      emergencyRelation: 'Father',
-      emergencyPhone: '+91 98110 54321',
-      residentialAddress: 'B-42, Sector 14, Rohini, New Delhi, Delhi 110085'
-    }
-  };
+  const profile = {
+  "uniqueStudentId": "",
+  "verified": false,
+  "avatarTheme": "emerald",
+  "basicDetails": {
+    "fullName": "",
+    "email": "",
+    "phone": "",
+    "alternatePhone": "",
+    "dateOfBirth": "",
+    "gender": "",
+    "bloodGroup": "",
+    "category": "",
+    "differentlyAbled": "",
+    "currentAddress": "",
+    "permanentAddress": "",
+    "pincode": "",
+    "hometown": "",
+    "state": "",
+    "nationality": "",
+    "linkedIn": "",
+    "github": "",
+    "portfolio": "",
+    "leetCode": ""
+  },
+  "educationDetails": {
+    "college": "",
+    "degree": "",
+    "branch": "",
+    "graduationBatch": "",
+    "rollNumber": "",
+    "registrationNumber": "",
+    "cgpa": "",
+    "activeBacklogs": "",
+    "totalCreditsEarned": "",
+    "twelfthSchool": "",
+    "twelfthBoard": "",
+    "twelfthStream": "",
+    "twelfthPercentage": "",
+    "twelfthYear": "",
+    "tenthSchool": "",
+    "tenthBoard": "",
+    "tenthPercentage": "",
+    "tenthYear": ""
+  },
+  "workExperiences": [],
+  "skills": {
+    "technical": [],
+    "coreSubjects": [],
+    "languages": []
+  },
+  "responsibilities": [],
+  "projects": [],
+  "accomplishments": [],
+  "volunteering": [],
+  "extraCurricular": [],
+  "documents": {
+    "resumeFileName": "",
+    "resumeLastUpdated": "",
+    "resumeUrl": "",
+    "aboutMe": "",
+    "transcriptsUploaded": false,
+    "idProofUploaded": false
+  },
+  "guardians": {
+    "fatherName": "",
+    "fatherOccupation": "",
+    "fatherPhone": "",
+    "fatherEmail": "",
+    "motherName": "",
+    "motherOccupation": "",
+    "motherPhone": "",
+    "emergencyContactName": "",
+    "emergencyRelation": "",
+    "emergencyPhone": "",
+    "residentialAddress": ""
+  }
+};
+  profile.uniqueStudentId = user.uniqueStudentId || (user.email || user.id ? generateUniqueStudentId(user.email || user.id) : '');
+  profile.verified = user.verified === true;
+  const basicFields = { fullName: user.name, email: user.email, phone: user.phone, gender: user.gender, linkedIn: user.linkedIn, github: user.github, portfolio: user.portfolio, leetCode: user.leetCode };
+  for (const [field, value] of Object.entries(basicFields)) profile.basicDetails[field] = value ?? '';
+  const academicFields = { college: user.college, branch: user.branch, graduationBatch: user.graduationBatch, rollNumber: user.rollNumber, cgpa: user.cgpa, activeBacklogs: user.activeBacklogs, tenthPercentage: user.tenthPercentage, twelfthPercentage: user.twelfthPercentage };
+  for (const [field, value] of Object.entries(academicFields)) profile.educationDetails[field] = value ?? '';
+  return profile;
 }
 
 export function getFullStudentProfile(currentUser = null) {
   const current = currentUser || getCurrentUser() || {};
+  if (!current.email && !current.id) return getInitialFullStudentProfile(current);
   const userEmail = (current.email || '').toLowerCase().trim();
   const storageKey = userEmail ? `placeprep_student_full_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}` : STORAGE_KEYS.FULL_STUDENT_PROFILE;
 
@@ -312,7 +206,7 @@ export function getFullStudentProfile(currentUser = null) {
       if (!saved.uniqueStudentId) {
         saved.uniqueStudentId = generateUniqueStudentId(userEmail || current.id);
       }
-      if (current.name && saved.basicDetails.fullName !== current.name && (!saved.basicDetails.fullName || saved.basicDetails.fullName === 'Priyansh Jain')) {
+      if (current.name && saved.basicDetails.fullName !== current.name && !saved.basicDetails.fullName) {
         saved.basicDetails.fullName = current.name;
       }
       return saved;
@@ -362,7 +256,7 @@ export function getGraduationBatch() {
   const directBatch = getStorageItem(STORAGE_KEYS.GRADUATION_BATCH, null);
   if (directBatch) return directBatch;
   const user = getCurrentUser();
-  return user?.graduationBatch || '2028';
+  return user?.graduationBatch || '';
 }
 
 export function setGraduationBatch(batchId) {
@@ -433,7 +327,7 @@ export function addInterviewQuestion(newQuestion) {
 
 // Questions Practiced / Saved / Revision
 export function getPracticedQuestions() {
-  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, ['hcl-tech-01', 'hcl-hr-01']);
+  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, []);
 }
 
 export function togglePracticedQuestion(questionId) {
@@ -450,7 +344,7 @@ export function togglePracticedQuestion(questionId) {
 }
 
 export function getSavedQuestions() {
-  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, ['hcl-tech-02', 'hcl-tech-03']);
+  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, []);
 }
 
 export function toggleSavedQuestion(questionId) {
@@ -467,7 +361,7 @@ export function toggleSavedQuestion(questionId) {
 }
 
 export function getRevisionList() {
-  return getStorageItem(STORAGE_KEYS.REVISION_LIST, ['hcl-mgr-01']);
+  return getStorageItem(STORAGE_KEYS.REVISION_LIST, []);
 }
 
 export function toggleRevisionQuestion(questionId) {
@@ -485,7 +379,7 @@ export function toggleRevisionQuestion(questionId) {
 
 // Saved Companies
 export function getSavedCompanies() {
-  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, ['hcltech', 'tcs']);
+  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, []);
 }
 
 export function toggleSavedCompany(companyId) {
@@ -522,59 +416,10 @@ export function addInterviewExperience(newExp) {
 }
 
 // AI Insights
-export function getAiInsights(companyId) {
-  if (INITIAL_AI_INSIGHTS[companyId]) {
-    return INITIAL_AI_INSIGHTS[companyId];
-  }
-  // Fallback intelligent generator for any company
-  const company = getCompanyBySlugOrId(companyId);
-  return {
-    companyId,
-    dataFreshness: 'October 2026',
-    totalSamplesAnalyzed: company?.experienceCount || 45,
-    confidenceScore: '92%',
-    verifiedSourcesBadge: `Campus Drive Logs (${company?.name})`,
-    frequentQuestions: [
-      { question: 'Data Structures: HashMaps, Arrays & Two Pointers', frequency: '42% of technical tests', trend: '+14% recent', category: 'DSA' },
-      { question: 'Core Fundamentals: OOPs Polymorphism & Inheritance', frequency: '36% of interviews', trend: 'Consistent', category: 'OOP' },
-      { question: 'Behavioral: Challenging team scenario & resolution', frequency: '85% of HR rounds', trend: 'Universal', category: 'HR' }
-    ],
-    trendingTopics: [
-      { topic: 'Cloud & System Reliability', change: '+35% increase in 2026', reason: 'High client shift towards cloud architectures' },
-      { topic: 'Hands-on live coding over pure theoretical MCQs', change: '+40% increase', reason: 'Evaluates hands-on implementation ability' }
-    ],
-    historicalVsRecentAnalysis: {
-      olderTrends: 'Earlier drives emphasized static textbook theory and rote-learned definitions.',
-      recentTrends: 'Recent interviews focus heavily on project architectural decisions, clean code, and practical problem solving.',
-      keyTakeaway: 'Ensure you can explain your GitHub projects and commit histories fluently.'
-    },
-    preparationPriority: [
-      { priority: 'High Priority (Must-Do)', topics: ['Data Structures (Arrays, Strings, Maps)', 'OOP Concepts in chosen language', 'Top 5 STAR behavioral responses'] },
-      { priority: 'Medium Priority (Concept Reinforcement)', topics: ['DBMS Normalization & SQL Queries', 'Operating Systems Core Concepts'] },
-      { priority: 'Additional Practice', topics: ['System Design Overview', 'Aptitude & Speed Math'] }
-    ],
-    disclaimer: 'Note: AI insights are synthesized from historical reports and candidate experiences.'
-  };
-}
+export function getAiInsights(companyId) { return { companyId, hasData: false, dataFreshness: null, totalSamplesAnalyzed: 0, confidenceScore: null, verifiedSourcesBadge: 'No analysis available', frequentQuestions: [], trendingTopics: [], historicalVsRecentAnalysis: { olderTrends: '', recentTrends: '', keyTakeaway: '' }, preparationPriority: [], disclaimer: 'No verified insights are available for this company.' }; }
 
 // Mock Interview Session Storage
-export function getMockSessions() {
-  return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, [
-    {
-      id: 'mock-01',
-      companyId: 'hcltech',
-      companyName: 'HCLTech',
-      round: 'Technical Interview',
-      date: '2026-10-10',
-      score: 84,
-      correctness: 86,
-      clarity: 82,
-      structure: 85,
-      questionsAnswered: 3,
-      feedbackSummary: 'Strong technical explanation of Floyd\'s cycle detection and SQL joins. Work on structuring your STAR answer for project challenges.'
-    }
-  ]);
-}
+export function getMockSessions() { return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, []); }
 
 export function saveMockSession(session) {
   const list = getMockSessions();
@@ -597,38 +442,7 @@ export function submitPlatformFeedback(fb) {
 // Company & Placement Management Engine
 // ----------------------------------------------------
 
-export const INITIAL_STUDENT_APPLICATIONS = [
-  {
-    applicationId: 'APP-HCL-101',
-    studentId: 'user-demo-01',
-    studentName: 'Priyansh Jain',
-    studentEmail: 'priyansh.jain@example.edu',
-    college: 'Delhi Technological University (DTU)',
-    branch: 'Computer Science and Engineering',
-    graduationBatch: '2028',
-    cgpa: 8.85,
-    tenthPercentage: 92.4,
-    twelfthPercentage: 89.6,
-    activeBacklogs: 0,
-    driveId: 'drv-hcl-2026',
-    companyId: 'hcltech',
-    companyName: 'HCLTech',
-    role: 'Graduate Engineer Trainee (GET)',
-    appliedAt: '2026-10-14 10:15',
-    status: 'INTERVIEW_SCHEDULED', // 'APPLIED', 'ELIGIBLE', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'REJECTED'
-    eligibilityStatus: 'ELIGIBLE',
-    eligibilityRemarks: 'Candidate satisfies all academic criteria (CGPA 8.85 >= 6.5, Backlogs 0 <= 0).',
-    currentRound: 'Round 2: Live Coding Test',
-    scheduledDate: '2026-11-18',
-    scheduledTime: '10:00 AM',
-    scheduledEndTime: '11:15 AM',
-    venue: 'Auditorium Hall A, Panel Desk #4',
-    reportingTime: '08:15 AM (Strictly 45 mins prior)',
-    candidateInstructions: 'Formal attire mandatory. Carry 3 printed copies of resume, College ID card, and a laptop with Wi-Fi.',
-    conflictFlagged: true,
-    conflictReason: 'Schedule collision flagged: Direct time collision with Accenture Virtual Panel assessment scheduled on Nov 18, 2026.'
-  }
-];
+export const INITIAL_STUDENT_APPLICATIONS = [];
 
 // Student Applications Management
 export function getStudentApplications() {
@@ -689,12 +503,15 @@ export function evaluateStudentEligibility(studentMetrics, drive) {
   const failureReasons = [];
   let overallEligible = true;
 
-  const cgpa = parseFloat(studentMetrics?.cgpa) || 8.4;
-  const tenth = parseFloat(studentMetrics?.tenthPercentage) || 88.0;
-  const twelfth = parseFloat(studentMetrics?.twelfthPercentage) || 86.0;
+  const requiredFields = ['cgpa', 'tenthPercentage', 'twelfthPercentage', 'activeBacklogs', 'branch', 'graduationBatch'];
+  const missing = requiredFields.filter(field => studentMetrics?.[field] === null || studentMetrics?.[field] === undefined || studentMetrics?.[field] === '');
+  if (missing.length) return { isEligible: false, status: 'INCOMPLETE_PROFILE', driveId: drive?.id, companyName: drive?.companyName, checks: [], failureReasons: missing.map(field => `Provide ${field} in your profile.`), summary: 'Complete your academic profile before checking eligibility.' };
+  const cgpa = Number(studentMetrics.cgpa);
+  const tenth = Number(studentMetrics.tenthPercentage);
+  const twelfth = Number(studentMetrics.twelfthPercentage);
   const backlogs = parseInt(studentMetrics?.activeBacklogs, 10) || 0;
-  const branch = studentMetrics?.branch || 'Computer Science and Engineering';
-  const batch = studentMetrics?.graduationBatch || '2028';
+  const branch = studentMetrics.branch;
+  const batch = studentMetrics.graduationBatch;
 
   // 1. CGPA
   const minCgpa = drive?.minCgpa ?? 6.0;
@@ -1123,18 +940,7 @@ export function addFeedbackLoopEntry(entry) {
 // ----------------------------------------------------
 // Institute Location & Geofencing Persistence
 // ----------------------------------------------------
-export function getSavedInstituteLocation() {
-  return getStorageItem('placeprep_institute_location', {
-    instituteName: 'Delhi Technological University (DTU)',
-    instituteAddress: 'Shahbad Daulatpur, Main Bawana Road',
-    city: 'Delhi',
-    state: 'Delhi',
-    latitude: 28.7495,
-    longitude: 77.1180,
-    geofenceRadiusMeters: 100,
-    locationStatus: 'ACTIVE'
-  });
-}
+export function getSavedInstituteLocation() { return getStorageItem('placeprep_institute_location', { instituteName: '', instituteAddress: '', city: '', state: '', latitude: null, longitude: null, geofenceRadiusMeters: 100, locationStatus: 'NOT_CONFIGURED' }); }
 
 export function saveInstituteLocation(loc) {
   const current = getSavedInstituteLocation();

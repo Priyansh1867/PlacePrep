@@ -20,6 +20,7 @@ import PlacePrepLogo from './PlacePrepLogo';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
+import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
   const [tab, setTab] = useState('login'); // 'login' | 'signup' | 'demo'
@@ -77,7 +78,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email || !formData.password || !formData.branch) {
       setErrorMsg('Please fill in all mandatory fields.');
       return;
     }
@@ -101,8 +102,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        college: formData.college.trim() || 'Engineering College',
-        branch: formData.branch.trim() || 'Computer Science',
+        college: formData.college.trim(),
+        branch: formData.branch.trim(),
         graduationBatch: formData.graduationBatch
       });
 
@@ -120,25 +121,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     }
   };
 
-  const handleDemoLogin = async (role = 'student') => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const res = await AuthApi.demoLogin(role);
-      setCurrentUser(res.user);
-      setSuccessMsg(`Signed in as Demo ${role === 'admin' ? 'Placement Officer (Admin)' : 'Student'}!`);
-      setTimeout(() => {
-        onAuthSuccess?.(res.user);
-        onClose();
-      }, 500);
-    } catch (err) {
-      setErrorMsg(err.message || 'Failed to sign in with demo credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
+return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
@@ -268,7 +251,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Priyansh Jain"
+                placeholder="Enter full name"
                 icon={UserIcon}
                 required
               />
@@ -292,6 +275,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                   )}
                 </div>
               )}
+
+              <Select
+                label="Branch / specialization"
+                name="branch"
+                value={formData.branch}
+                onChange={handleChange}
+                options={[
+                  { value: '', label: 'Select your branch' },
+                  ...INITIAL_BRANCHES.map((branch) => ({ value: branch, label: branch }))
+                ]}
+                required
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <Input

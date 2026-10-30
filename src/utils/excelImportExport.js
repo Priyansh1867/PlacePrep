@@ -130,52 +130,7 @@ export function exportStudentsToCSV(students, filename = 'PlacePrep_Student_Acad
  * Download a standardized sample template in XLSX or CSV
  */
 export function downloadSampleTemplate(format = 'xlsx') {
-  const sampleData = [
-    {
-      'Full Name *': 'Aarav Sharma',
-      'Roll Number *': '22CS0201',
-      'University Registration Number *': 'REG-2022-CSE-0201',
-      'College / Institute Name *': 'Delhi Technological University (DTU)',
-      'Course *': 'B.Tech (Bachelor of Technology)',
-      'Branch / Specialization *': 'Computer Science and Engineering',
-      'Graduation Batch (e.g. 2026) *': '2026',
-      'Admission Year (e.g. 2022) *': '2022',
-      'Current Semester (1-8) *': '6',
-      'Admission Type (Regular Entry / Diploma / Lateral Entry) *': 'Regular Entry',
-      'Date of Birth (YYYY-MM-DD) *': '2004-06-15',
-      'Gender (Male/Female/Other)': 'Male',
-      'Email Address *': 'aarav.sharma@example.edu',
-      'Mobile Number *': '+91 9876543210',
-      'Current Address *': 'Flat 402, Sunshine Heights, New Delhi 110001',
-      'Class 10 Percentage *': '92.5',
-      'Class 12 Percentage (Required for Regular Entry)': '89.4',
-      'Diploma College (Required for Lateral Entry)': '',
-      'Diploma Branch (Required for Lateral Entry)': '',
-      'Diploma Percentage (Required for Lateral Entry)': ''
-    },
-    {
-      'Full Name *': 'Simran Kaur',
-      'Roll Number *': '23IT0302',
-      'University Registration Number *': 'REG-2023-IT-0302',
-      'College / Institute Name *': 'Netaji Subhas University of Technology (NSUT)',
-      'Course *': 'B.Tech (Bachelor of Technology)',
-      'Branch / Specialization *': 'Information Technology',
-      'Graduation Batch (e.g. 2026) *': '2026',
-      'Admission Year (e.g. 2023) *': '2023',
-      'Current Semester (1-8) *': '6',
-      'Admission Type (Regular Entry / Diploma / Lateral Entry) *': 'Diploma / Lateral Entry',
-      'Date of Birth (YYYY-MM-DD) *': '2003-09-22',
-      'Gender (Male/Female/Other)': 'Female',
-      'Email Address *': 'simran.kaur@example.edu',
-      'Mobile Number *': '+91 9811223344',
-      'Current Address *': 'Pocket B, Mayur Vihar Phase 2, Delhi 110091',
-      'Class 10 Percentage *': '88.0',
-      'Class 12 Percentage (Required for Regular Entry)': '',
-      'Diploma College (Required for Lateral Entry)': 'Guru Tegh Bahadur Polytechnic Institute',
-      'Diploma Branch (Required for Lateral Entry)': 'Information Technology & Systems',
-      'Diploma Percentage (Required for Lateral Entry)': '87.5'
-    }
-  ];
+  const sampleData = [{"Full Name *":"","Roll Number *":"","University Registration Number *":"","College / Institute Name *":"","Course *":"","Branch / Specialization *":"","Graduation Batch (e.g. 2026) *":"","Admission Year (e.g. 2022) *":"","Current Semester (1-8) *":"","Admission Type (Regular Entry / Diploma / Lateral Entry) *":"","Date of Birth (YYYY-MM-DD) *":"","Gender (Male/Female/Other)":"","Email Address *":"","Mobile Number *":"","Current Address *":"","Class 10 Percentage *":"","Class 12 Percentage (Required for Regular Entry)":"","Diploma College (Required for Lateral Entry)":"","Diploma Branch (Required for Lateral Entry)":"","Diploma Percentage (Required for Lateral Entry)":""}];
 
   const filename = `PlacePrep_Student_Import_Template.${format}`;
   if (format === 'csv') {

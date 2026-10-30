@@ -25,36 +25,7 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 
-const PRESET_SAMPLE_JDS = [
-  {
-    id: 'tcs',
-    company: 'TCS',
-    role: 'Software Engineer (Digital Cadre)',
-    label: 'TCS Digital',
-    description: 'TCS Digital is hiring passionate Software Engineers proficient in Java, Spring Boot, REST APIs, and modern web frameworks like React. The candidate must possess solid foundations in Data Structures, Algorithms, Object Oriented Programming, and Relational Database management with SQL Queries. Familiarity with Docker Containers, CI/CD pipelines, and Cloud Computing concepts is a plus.'
-  },
-  {
-    id: 'infosys',
-    company: 'Infosys',
-    role: 'Specialist Programmer (Power Programmer)',
-    label: 'Infosys Specialist',
-    description: 'We are seeking high-caliber problem solvers for the Specialist Programmer role. Key competencies: advanced Data Structures, dynamic programming, Graph algorithms, Microservices Architecture, Python, or Java. Experience with distributed caching, Docker, Kubernetes, Unit Testing, and AWS Cloud services will give candidates an edge.'
-  },
-  {
-    id: 'amazon',
-    company: 'Amazon',
-    role: 'Software Development Engineer I (SDE-1)',
-    label: 'Amazon SDE-1',
-    description: 'Amazon is seeking ambitious SDE 1 candidates. You will design, build, and deploy high-throughput distributed systems. Required: exceptional mastery of Object Oriented Programming in Java, C++, or Go; deep understanding of System Design, multi-threading, REST APIs, and database indexing. You should have hands-on experience with Unit Testing, Test Driven Development, Version Control with Git GitHub, and Cloud Computing on AWS.'
-  },
-  {
-    id: 'atlassian',
-    company: 'Atlassian',
-    role: 'Associate Software Engineer',
-    label: 'Atlassian ASE',
-    description: 'Join our engineering team to build world-class collaborative developer tools. We require strong skills in React, TypeScript, JavaScript, Java, and Spring Boot. You must write Clean Code with high unit test coverage, design scalable REST APIs, and participate in Agile Methodology sprints. Understanding of Docker, CI/CD, and Microservices Architecture is strongly valued.'
-  }
-];
+const PRESET_SAMPLE_JDS = [];
 
 export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany }) {
   // Existing data options
@@ -63,10 +34,10 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany }) {
   // Form State
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState(existingCompanies[0]?.name || 'TCS');
+  const [selectedCompany, setSelectedCompany] = useState(existingCompanies[0]?.name || '');
   const [customCompany, setCustomCompany] = useState('');
-  const [selectedRole, setSelectedRole] = useState('Software Engineer (SDE-1)');
-  const [jobDescription, setJobDescription] = useState(PRESET_SAMPLE_JDS[0].description);
+  const [selectedRole, setSelectedRole] = useState('');
+  const [jobDescription, setJobDescription] = useState((PRESET_SAMPLE_JDS[0]?.description || ''));
 
   // Analysis State
   const [isAnalyzing, setIsAnalyzing] = useState(false);

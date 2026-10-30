@@ -8,6 +8,7 @@ import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
 import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
 import { AuthApi } from '../services/api';
+import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 
 const portalOptions = [
   { id: 'institute', label: 'Institute', icon: School },
@@ -43,18 +44,6 @@ export const isCollegeEmail = (email) => {
   );
 };
 
-const demoDetails = {
-  student: { fullName: 'Priyansh Jain', email: 'priyansh.jain@example.edu', password: 'password123', rollNumber: '2024/CSE/084', branch: 'Computer Science and Engineering', batch: '2028', college: 'Delhi Technological University (DTU)' },
-  teacher: { fullName: 'Dr. Neha Sharma', email: 'neha.sharma@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Associate Professor & Class Incharge', college: 'Delhi Technological University (DTU)' },
-  hod: { fullName: 'Prof. Alok Verma', email: 'hod.cse@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Head of Department (HOD)', college: 'Delhi Technological University (DTU)' },
-  management: { fullName: 'Dr. Ramesh Gupta', email: 'management@placeprep.com', password: 'demo123', designation: 'Director & Location Authority', college: 'Delhi Technological University (DTU)' },
-  tpo: { fullName: 'Prof. Rajesh Raman', email: 'tpo@placeprep.edu', password: 'password123', designation: 'Head - Training & Placement Cell', college: 'Delhi Technological University (DTU)' },
-  coordinator: { fullName: 'Sneha Kapur', email: 'coordinator.tpo@dtu.ac.in', password: 'password123', designation: 'Lead Student Placement Coordinator', college: 'Delhi Technological University (DTU)' },
-  hr: { fullName: 'Vikram Mehta', email: 'vikram.mehta@hcltech.com', password: 'password123', companyName: 'HCLTech', designation: 'University Talent Acquisition Partner' },
-  director: { fullName: 'Dr. P. K. Malhotra', email: 'director@dtu.ac.in', password: 'password123', designation: 'Director of Corporate & Academic Affairs', college: 'Delhi Technological University (DTU)' },
-  super_admin: { fullName: 'Super Administrator', email: 'admin@placeprep.edu', password: 'adminpassword123', adminKey: 'SUPER_ADMIN_MASTER_KEY' },
-};
-
 const fieldClass = 'auth-input';
 
 export default function AuthPortalPage({ initialPortal = 'institute', onAuthSuccess, onBackToGateway }) {
@@ -67,8 +56,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const [successMsg, setSuccessMsg] = useState('');
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', rollNumber: '',
-    college: 'Delhi Technological University (DTU)', branch: 'Computer Science and Engineering', batch: '2028',
-    department: 'Computer Science and Engineering', designation: 'Class Incharge', companyName: 'HCLTech', adminKey: '',
+    college: '', branch: '', batch: '',
+    department: '', designation: '', companyName: '', adminKey: '',
   });
 
   const activePortal = useMemo(() => portalOptions.find((item) => item.id === portalBranch), [portalBranch]);
@@ -87,137 +76,30 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
-  const handleAutofillDemo = () => {
-    setFormData((current) => ({ ...current, ...demoDetails[selectedRole] }));
-    setErrorMsg('');
-  };
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
-    setErrorMsg('');
-    setIsSubmitting(true);
-
-    if (authMode === 'login') {
-      if (!formData.email || !formData.password) {
-        setErrorMsg('Please enter both email and password.');
-        setIsSubmitting(false);
-        return;
-      }
-    } else {
-      if (selectedRole === 'management') {
-        setErrorMsg('Management accounts cannot self-register. Please contact the administrator or use Sign in.');
-        setIsSubmitting(false);
-        return;
-      }
-      if (!formData.fullName || !formData.email || !formData.password) {
-        setErrorMsg('Please complete all required fields.');
-        setIsSubmitting(false);
-        return;
-      }
-      if (selectedRole === 'student' && !isCollegeEmail(formData.email)) {
-        setErrorMsg('Student registration requires an official college email (.edu, .ac.in, or .edu.in).');
-        return;
-      }
-      if (formData.password !== formData.confirmPassword) {
-        setErrorMsg('Passwords do not match.');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    const roleMeta = roleOptions.find((item) => item.id === selectedRole);
-    let userObj = {
-      id: `user-${Date.now()}`,
-      name: formData.fullName || (formData.email.split('@')[0]),
-      email: formData.email.trim().toLowerCase(),
-      role: selectedRole,
-      roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
-      portal: portalBranch,
-      college: formData.college || 'Delhi Technological University (DTU)',
-      branch: formData.branch || 'Computer Science and Engineering',
-      graduationBatch: formData.batch || '2028',
-      department: formData.department || 'Computer Science and Engineering',
-      designation: formData.designation,
-      company: formData.companyName || 'HCLTech',
-      rollNumber: formData.rollNumber || '2024/CSE/084',
-      authenticatedAt: new Date().toISOString(),
-    };
-
-    // Synchronize directly with Spring Boot MySQL Database
-    try {
-      if (authMode === 'register') {
-        const payload = {
-          name: userObj.name,
-          email: userObj.email,
-          password: formData.password,
-          college: userObj.college,
-          branch: userObj.branch,
-          graduationBatch: userObj.graduationBatch,
-          role: selectedRole,
-          rollNumber: userObj.rollNumber
-        };
-        const backendRes = await AuthApi.register(payload);
-        if (backendRes && backendRes.user) {
-          userObj = { ...userObj, ...backendRes.user, id: backendRes.user.id || userObj.id };
-        }
-      } else {
-        // Mode is login: attempt live database login
-        try {
-          const loginRes = await AuthApi.login({
-            email: formData.email.trim().toLowerCase(),
-            password: formData.password
-          });
-          if (loginRes && loginRes.user) {
-            userObj = { ...userObj, ...loginRes.user, id: loginRes.user.id || userObj.id };
-          }
-        } catch (loginErr) {
-          // If user does not exist in backend database yet, auto-register them seamlessly into DB!
-          try {
-            const autoRegPayload = {
-              name: userObj.name,
-              email: userObj.email,
-              password: formData.password,
-              college: userObj.college,
-              branch: userObj.branch,
-              graduationBatch: userObj.graduationBatch,
-              role: selectedRole,
-              rollNumber: userObj.rollNumber
-            };
-            const autoRegRes = await AuthApi.register(autoRegPayload);
-            if (autoRegRes && autoRegRes.user) {
-              userObj = { ...userObj, ...autoRegRes.user, id: autoRegRes.user.id || userObj.id };
-            }
-          } catch {
-            // Local fallback
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Backend database registration note:', err.message);
-      if (authMode === 'register' && err.message && err.message.toLowerCase().includes('already exists')) {
-        setErrorMsg(err.message + '. Please switch to Sign in.');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
-
-    // Persist session to local storage
-    setCurrentUser(userObj);
-    setPortalMode(destinationPortal);
-    setPortalRole(selectedRole);
-    if (selectedRole === 'student' && userObj.graduationBatch) {
-      setGraduationBatch(userObj.graduationBatch);
-    }
-
-    setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${destinationPortal.toUpperCase()} workspace...`);
-    setTimeout(() => {
-      onAuthSuccess(userObj, destinationPortal);
-    }, 550);
-  };
+ event.preventDefault(); setErrorMsg(''); setIsSubmitting(true);
+ try {
+  const email = formData.email.trim().toLowerCase();
+  if (!email || !formData.password) throw new Error('Enter your email and password.');
+  if (authMode === 'register') {
+   if (selectedRole === 'management') throw new Error('Management accounts must be created by an administrator.');
+   if (!formData.fullName.trim()) throw new Error('Enter your full name.');
+   if (selectedRole === 'student' && !formData.branch.trim()) throw new Error('Please select your branch.');
+   if (selectedRole === 'student' && !isCollegeEmail(email)) throw new Error('Use your official college email.');
+   if (formData.password !== formData.confirmPassword) throw new Error('Passwords do not match.');
+  }
+  const response = authMode === 'register' ? await AuthApi.register({name:formData.fullName.trim(),email,password:formData.password,college:formData.college,branch:formData.branch,graduationBatch:formData.batch,role:selectedRole,rollNumber:formData.rollNumber,department:formData.department,designation:formData.designation,company:formData.companyName}) : await AuthApi.login({email,password:formData.password});
+  if (!response?.user || !response.token) throw new Error('The server did not return a valid session.');
+  const user = response.user;
+  const destinationPortal = user.role === 'management' ? 'management' : portalBranch;
+  setCurrentUser(user); setPortalMode(destinationPortal); setPortalRole(user.role);
+  if (user.graduationBatch) setGraduationBatch(user.graduationBatch);
+  onAuthSuccess(user,destinationPortal);
+ } catch (error) { setErrorMsg(error.message || 'Unable to sign in. Please try again.'); }
+ finally { setIsSubmitting(false); }
+};
 
   return (
     <div className="auth-page min-h-screen w-full flex flex-col justify-between py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8 antialiased">
@@ -270,9 +152,9 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
               
               <div className="mt-6 grid grid-cols-3 gap-2.5">
                 {[
-                  ['95%', 'placement ready'],
-                  ['300+', 'partner companies'],
-                  ['24/7', 'career intelligence'],
+                  ['Learn', 'academic workspace'],
+                  ['Prepare', 'career workspace'],
+                  ['Connect', 'placement workspace'],
                 ].map(([value, label]) => (
                   <div key={label} className="rounded-2xl border border-white/15 bg-slate-950/25 p-2.5 backdrop-blur-md text-center">
                     <div className="text-base sm:text-lg font-black tracking-tight text-white">{value}</div>
@@ -364,21 +246,6 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                 </div>
               </div>
 
-              {/* Demo Autofill Banner */}
-              <div className="mb-3.5 flex items-center justify-between gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/70 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-indigo-600" />
-                  <p className="text-xs font-medium text-indigo-950">Exploring the demo? Fill sample details instantly.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAutofillDemo}
-                  className="shrink-0 rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100 transition hover:bg-indigo-600 hover:text-white"
-                >
-                  Autofill
-                </button>
-              </div>
-
               {/* Feedback Alerts */}
               {errorMsg && <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{errorMsg}</div>}
               {successMsg && <div className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4" />{successMsg}</div>}
@@ -392,7 +259,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      placeholder="e.g. Priyansh Jain"
+                      placeholder="Enter full name"
                       className={fieldClass}
                       required
                     />
@@ -428,6 +295,24 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                 
 
                 {authMode === 'register' && selectedRole === 'student' && (
+                  <InputField label="Branch / specialization" icon={GraduationCap}>
+                    <select
+                      name="branch"
+                      aria-label="Branch / specialization"
+                      value={formData.branch}
+                      onChange={handleInputChange}
+                      className={fieldClass}
+                      required
+                    >
+                      <option value="" disabled>Select your branch</option>
+                      {INITIAL_BRANCHES.map((branch) => (
+                        <option key={branch} value={branch}>{branch}</option>
+                      ))}
+                    </select>
+                  </InputField>
+                )}
+
+                {authMode === 'register' && selectedRole === 'student' && (
                   <div className="grid grid-cols-2 gap-2.5">
                     <InputField label="Roll number">
                       <input
@@ -446,7 +331,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                         onChange={handleInputChange}
                         className={`${fieldClass} no-icon`}
                       >
-                        {['2025', '2026', '2027', '2028', '2029'].map((year) => (
+                        <option value="">Choose batch</option>
+                        {Array.from({ length: 7 }, (_, index) => String(new Date().getFullYear() + index)).map((year) => (
                           <option key={year} value={year}>{year}</option>
                         ))}
                       </select>
@@ -461,7 +347,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                       name="companyName"
                       value={formData.companyName}
                       onChange={handleInputChange}
-                      placeholder="e.g. HCLTech"
+                      placeholder="Enter company name"
                       className={`${fieldClass} no-icon`}
                       required
                     />

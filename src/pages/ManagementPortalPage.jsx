@@ -1,3 +1,4 @@
+import ProfilePopover from '../components/profile/ProfilePopover';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
@@ -56,6 +57,7 @@ const SECTIONS = [
 export default function ManagementPortalPage({ onNavigate }) {
   const [currentUser] = useState(() => getCurrentUser() || {});
   const [activeTab, setActiveTab] = useState('overview');
+  const profileTriggerRef = useRef(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -156,7 +158,9 @@ export default function ManagementPortalPage({ onNavigate }) {
             {/* Profile Dropdown */}
             <div className="relative shrink-0">
               <button
-                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                ref={profileTriggerRef}
+                  aria-expanded={isProfileDropdownOpen}
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                 className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md transition shadow-md cursor-pointer"
               >
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-600 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0">
@@ -170,7 +174,7 @@ export default function ManagementPortalPage({ onNavigate }) {
               </button>
 
               {isProfileDropdownOpen && (
-                <>
+                <ProfilePopover anchorRef={profileTriggerRef} onClose={() => setIsProfileDropdownOpen(false)}>
                   <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 w-64 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-xs">
                     <div className="pb-3 border-b border-slate-100 mb-3">
@@ -185,7 +189,7 @@ export default function ManagementPortalPage({ onNavigate }) {
                       <LogOut className="w-4 h-4" /> Sign Out
                     </button>
                   </div>
-                </>
+                </ProfilePopover>
               )}
             </div>
           </div>

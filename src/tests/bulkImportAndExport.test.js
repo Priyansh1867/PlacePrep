@@ -1,3 +1,4 @@
+import { seedTestRecords } from './fixtures/records.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as XLSX from 'xlsx';
@@ -45,6 +46,7 @@ describe('PlacePrep AI - Student Bulk Registration & Ingestion Engine Tests', ()
 
   beforeEach(() => {
     localStorage.clear();
+    seedTestRecords();
   });
 
   test('Template columns match the 6 registration dialog fields plus optional academic fields', () => {

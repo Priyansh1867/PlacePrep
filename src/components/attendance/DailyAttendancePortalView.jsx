@@ -57,8 +57,8 @@ import jsQR from 'jsqr';
 
 export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current logged in user & role
-  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || { role: 'teacher', name: 'Dr. Neha Sharma', email: 'teacher@placeprep.com' });
-  const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || 'teacher'));
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || {});
+  const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || ''));
 
   // Check if current user is authorized to manage/mark attendance (declared early to avoid TDZ)
   const isAuthorized = activeRole === 'teacher' || activeRole === 'hod' || activeRole === 'admin' || activeRole === 'faculty';
@@ -133,19 +133,13 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   const modalCanvasRef = useRef(null);
   const modalStreamRef = useRef(null);
 
-  const defaultSemester6Subjects = useMemo(() => [
-    { code: 'CS306', subjectCode: 'CS306', name: 'Cloud Computing & Distributed Systems', subjectName: 'Cloud Computing & Distributed Systems', faculty: 'Dr. Neha Sharma', facultyName: 'Dr. Neha Sharma', attended: 33, total: 38, lecturesAttended: 33, totalApplicableLectures: 38, percent: 86.8, attendancePercentage: 86.8 },
-    { code: 'CS302', subjectCode: 'CS302', name: 'Operating Systems & System Programming', subjectName: 'Operating Systems & System Programming', faculty: 'Prof. Alok Verma', facultyName: 'Prof. Alok Verma', attended: 31, total: 34, lecturesAttended: 31, totalApplicableLectures: 34, percent: 91.2, attendancePercentage: 91.2 },
-    { code: 'CS304', subjectCode: 'CS304', name: 'Database Management Systems', subjectName: 'Database Management Systems', faculty: 'Dr. Vikram Malhotra', facultyName: 'Dr. Vikram Malhotra', attended: 33, total: 40, lecturesAttended: 33, totalApplicableLectures: 40, percent: 82.5, attendancePercentage: 82.5 },
-    { code: 'CS308', subjectCode: 'CS308', name: 'Compiler Design & Theory', subjectName: 'Compiler Design & Theory', faculty: 'Dr. Anjali Joshi', facultyName: 'Dr. Anjali Joshi', attended: 28, total: 36, lecturesAttended: 28, totalApplicableLectures: 36, percent: 77.8, attendancePercentage: 77.8 },
-    { code: 'CS310', subjectCode: 'CS310', name: 'Artificial Intelligence & Machine Learning', subjectName: 'Artificial Intelligence & Machine Learning', faculty: 'Prof. Sanjay Saxena', facultyName: 'Prof. Sanjay Saxena', attended: 32, total: 36, lecturesAttended: 32, totalApplicableLectures: 36, percent: 88.9, attendancePercentage: 88.9 }
-  ], []);
+  const defaultSemester6Subjects = [];
 
   const fetchStudentSubjectsFromBackend = useCallback(async () => {
     setLoadingStudentSubjects(true);
     try {
       const res = await StudentAttendanceApi.getEnrolledSubjects(currentUser.email);
-      if (Array.isArray(res) && res.length > 0) {
+      if (Array.isArray(res)) {
         setStudentSubjects(res);
       }
     } catch (err) {
@@ -164,29 +158,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     return () => window.removeEventListener('student-attendance-marked', handleAttendanceUpdate);
   }, [fetchStudentSubjectsFromBackend]);
 
-  const displaySubjects = useMemo(() => {
-    if (!studentSubjects.length) return defaultSemester6Subjects;
-    // Map backend subjects or merge with default curriculum
-    return defaultSemester6Subjects.map(def => {
-      const match = studentSubjects.find(s => (s.subjectCode === def.code || s.subjectCode === def.subjectCode || (s.subjectName && s.subjectName.toLowerCase().includes(def.name.slice(0, 10).toLowerCase()))));
-      if (match) {
-        return {
-          ...def,
-          ...match,
-          code: match.subjectCode || def.code,
-          name: match.subjectName || def.name,
-          faculty: match.facultyName || def.faculty,
-          attended: match.lecturesAttended !== undefined ? match.lecturesAttended : def.attended,
-          total: match.totalApplicableLectures !== undefined ? match.totalApplicableLectures : def.total,
-          percent: match.attendancePercentage !== undefined ? match.attendancePercentage : def.percent,
-          isShortage: match.isShortage !== undefined ? match.isShortage : (match.attendancePercentage < 75.0),
-          hasOpenSession: match.hasOpenSession,
-          nextOpenSession: match.nextOpenSession
-        };
-      }
-      return def;
-    });
-  }, [studentSubjects, defaultSemester6Subjects]);
+  const displaySubjects = useMemo(() => studentSubjects.map(subject => ({ ...subject, code: subject.subjectCode || subject.code, name: subject.subjectName || subject.name, faculty: subject.facultyName || '', attended: subject.lecturesAttended ?? 0, total: subject.totalApplicableLectures ?? 0, percent: subject.attendancePercentage ?? null })), [studentSubjects]);
 
   const studentOverallStats = useMemo(() => {
     let totAtt = 0;
@@ -281,7 +253,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
       const payload = {
         sessionId: markingLectureSession?.sessionId || currentSessionId || 1,
         qrToken: qrToken,
-        studentEmail: currentUser?.email || 'priyansh.jain@example.edu',
+        studentEmail: currentUser?.email || '',
         latitude: gpsResult?.studentLat,
         longitude: gpsResult?.studentLon,
         gpsAccuracy: gpsResult?.gpsAccuracy
@@ -317,7 +289,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
         sessionId: targetSessionId,
         durationMinutes: facultyQrDuration,
         geofenceRequired: facultyQrGeofenceRequired,
-        facultyEmail: currentUser?.email || 'teacher@placeprep.com'
+        facultyEmail: currentUser?.email || ''
       });
 
       setFacultyQrActive(true);
@@ -352,7 +324,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     try {
       const res = await StudentAttendanceApi.stopQrAttendance({
         sessionId: targetSessionId,
-        facultyEmail: currentUser?.email || 'teacher@placeprep.com'
+        facultyEmail: currentUser?.email || ''
       });
       setFacultyQrActive(false);
       setFacultyQrToken(null);
@@ -501,7 +473,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
     );
   };
 
-  
+
 
   const handleOpenLecturesDrawer = async (sub) => {
     setViewingSubjectLectures(sub);
@@ -532,39 +504,14 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   const currentSubject = useMemo(() => {
     return availableSubjects.find(s => s.code === selectedSubjectCode) || availableSubjects[0] || {
       code: selectedSubjectCode,
-      name: 'Cloud Computing & Distributed Systems'
+      name: 'Select a subject'
     };
   }, [availableSubjects, selectedSubjectCode]);
 
 
 
   // Quick Demo Role Switcher
-  const handleSwitchDemoRole = async (newRole) => {
-    setActiveRole(newRole);
-    setPortalRole(newRole);
-    let updatedUser = { ...currentUser, role: newRole };
-    if (newRole === 'teacher') {
-      updatedUser.name = 'Dr. Neha Sharma';
-      updatedUser.email = 'teacher@placeprep.com';
-    } else if (newRole === 'hod') {
-      updatedUser.name = 'Prof. Alok Verma';
-      updatedUser.email = 'hod@placeprep.com';
-    } else if (newRole === 'student') {
-      updatedUser.name = 'Priyansh Jain';
-      updatedUser.email = 'priyansh.jain@example.edu';
-    }
-    setCurrentUser(updatedUser);
-    setCurrentUserState(updatedUser);
 
-    // Call demoLogin in background to acquire role JWT token from backend
-    try {
-      await AuthApi.demoLogin(newRole);
-    } catch {
-      // Offline fallback
-    }
-
-    showToast(`Switched active portal view to: ${newRole.toUpperCase()}`, 'info');
-  };
 
   // Toast notification helper
   const showToast = (message, type = 'success') => {
@@ -650,8 +597,8 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
         section: selectedSection,
         periodNumber: selectedPeriod,
         sessionDate: sessionDate,
-        facultyName: currentUser?.name || 'Dr. Neha Sharma',
-        facultyId: currentUser?.email || 'FAC-CSE-042'
+        facultyName: currentUser?.name || '',
+        facultyId: currentUser?.email || ''
       });
 
       setCurrentSessionId(session?.id || null);
@@ -2248,7 +2195,7 @@ export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
             <div className="bg-emerald-50/70 rounded-2xl p-5 border border-emerald-200 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-emerald-800 block mb-1">Average Attendance</span>
-                <span className="text-3xl font-black text-emerald-700">{cumulativeReport?.averageAttendance || 100}%</span>
+                <span className="text-3xl font-black text-emerald-700">{cumulativeReport?.averageAttendance ?? 'Not available'}%</span>
                 <span className="text-[11px] text-emerald-600 block mt-1">Across all enrolled students</span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">

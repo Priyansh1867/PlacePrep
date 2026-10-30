@@ -1,3 +1,4 @@
+import { getAllStudents } from './academicRecordsService.js';
 // PlacePrep AI - Daily Class Attendance State & Persistence Service
 // Handles cascading selectors, attendance calculations, shortage thresholds,
 // and hybrid persistence (Spring Boot Backend API + LocalStorage fallback).
@@ -46,143 +47,12 @@ const STORAGE_KEYS = {
 };
 
 // Seed student rosters for departments
-const SEED_ROSTERS = {
-  CSE: [
-    { studentId: 'priyansh.jain@example.edu', rollNumber: '22CS0101', name: 'Priyansh Jain', email: 'priyansh.jain@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'ananya.sharma@example.edu', rollNumber: '22CS0102', name: 'Ananya Sharma', email: 'ananya.sharma@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'rohan.kulkarni@example.edu', rollNumber: '22CS0103', name: 'Rohan Kulkarni', email: 'rohan.kulkarni@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'siddharth.nair@example.edu', rollNumber: '22CS0104', name: 'Siddharth Nair', email: 'siddharth.nair@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'meera.venkat@example.edu', rollNumber: '22CS0105', name: 'Meera Venkat', email: 'meera.venkat@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'kabir.mehta@example.edu', rollNumber: '22CS0106', name: 'Kabir Mehta', email: 'kabir.mehta@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'divya.reddy@example.edu', rollNumber: '22CS0107', name: 'Divya Reddy', email: 'divya.reddy@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'aarav.gupta@example.edu', rollNumber: '22CS0108', name: 'Aarav Gupta', email: 'aarav.gupta@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'ishita.verma@example.edu', rollNumber: '22CS0109', name: 'Ishita Verma', email: 'ishita.verma@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'tanmay.deshmukh@example.edu', rollNumber: '22CS0110', name: 'Tanmay Deshmukh', email: 'tanmay.deshmukh@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'sneha.iyer@example.edu', rollNumber: '22CS0111', name: 'Sneha Iyer', email: 'sneha.iyer@example.edu', department: 'CSE', semester: '6' },
-    { studentId: 'aditya.rawat@example.edu', rollNumber: '22CS0112', name: 'Aditya Rawat', email: 'aditya.rawat@example.edu', department: 'CSE', semester: '6' }
-  ],
-  IT: [
-    { studentId: 'ananya.sharma@example.edu', rollNumber: '22IT0101', name: 'Ananya Sharma', email: 'ananya.sharma@example.edu', department: 'IT', semester: '6' },
-    { studentId: 'rohit.gupta@example.edu', rollNumber: '22IT0102', name: 'Rohit Gupta', email: 'rohit.gupta@example.edu', department: 'IT', semester: '6' },
-    { studentId: 'kavita.sen@example.edu', rollNumber: '22IT0103', name: 'Kavita Sen', email: 'kavita.sen@example.edu', department: 'IT', semester: '6' },
-    { studentId: 'deepak.joshi@example.edu', rollNumber: '22IT0104', name: 'Deepak Joshi', email: 'deepak.joshi@example.edu', department: 'IT', semester: '6' },
-    { studentId: 'pooja.verma@example.edu', rollNumber: '22IT0105', name: 'Pooja Verma', email: 'pooja.verma@example.edu', department: 'IT', semester: '6' },
-    { studentId: 'manish.kumar@example.edu', rollNumber: '22IT0106', name: 'Manish Kumar', email: 'manish.kumar@example.edu', department: 'IT', semester: '6' }
-  ],
-  ECE: [
-    { studentId: 'rohan.kulkarni@example.edu', rollNumber: '22EC0101', name: 'Rohan Kulkarni', email: 'rohan.kulkarni@example.edu', department: 'ECE', semester: '6' },
-    { studentId: 'neha.patil@example.edu', rollNumber: '22EC0102', name: 'Neha Patil', email: 'neha.patil@example.edu', department: 'ECE', semester: '6' },
-    { studentId: 'vikram.singh@example.edu', rollNumber: '22EC0103', name: 'Vikram Singh', email: 'vikram.singh@example.edu', department: 'ECE', semester: '6' },
-    { studentId: 'sonali.nair@example.edu', rollNumber: '22EC0104', name: 'Sonali Nair', email: 'sonali.nair@example.edu', department: 'ECE', semester: '6' }
-  ]
-};
+const SEED_ROSTERS = {};
 
 // Initial Seed Sessions & Records so reports have rich instant data
-function getInitialSeedSessions() {
-  return [
-    {
-      id: 101,
-      department: 'CSE',
-      semester: '6',
-      subjectCode: 'CS306',
-      subjectName: 'Cloud Computing & Distributed Systems',
-      sessionDate: '2026-10-15',
-      periodNumber: 2,
-      section: 'A',
-      facultyId: 'FAC-CSE-042',
-      facultyName: 'Dr. Neha Sharma',
-      createdAt: '2026-10-15 09:00'
-    },
-    {
-      id: 102,
-      department: 'CSE',
-      semester: '6',
-      subjectCode: 'CS306',
-      subjectName: 'Cloud Computing & Distributed Systems',
-      sessionDate: '2026-10-17',
-      periodNumber: 3,
-      section: 'A',
-      facultyId: 'FAC-CSE-042',
-      facultyName: 'Dr. Neha Sharma',
-      createdAt: '2026-10-17 11:15'
-    },
-    {
-      id: 103,
-      department: 'CSE',
-      semester: '6',
-      subjectCode: 'CS306',
-      subjectName: 'Cloud Computing & Distributed Systems',
-      sessionDate: '2026-10-19',
-      periodNumber: 1,
-      section: 'A',
-      facultyId: 'FAC-CSE-042',
-      facultyName: 'Dr. Neha Sharma',
-      createdAt: '2026-10-19 09:00'
-    },
-    {
-      id: 104,
-      department: 'CSE',
-      semester: '6',
-      subjectCode: 'CS306',
-      subjectName: 'Cloud Computing & Distributed Systems',
-      sessionDate: '2026-10-21',
-      periodNumber: 4,
-      section: 'A',
-      facultyId: 'FAC-CSE-042',
-      facultyName: 'Dr. Neha Sharma',
-      createdAt: '2026-10-21 12:15'
-    }
-  ];
-}
+function getInitialSeedSessions() { return []; }
 
-function getInitialSeedRecords() {
-  // Attendance records across 4 sessions (IDs 101, 102, 103, 104)
-  // Demonstrating:
-  // Priyansh: 4/4 = 100%
-  // Ananya: 3/4 = 75.0% (EXACTLY 75% -> NO shortage warning)
-  // Rohan: 2/4 = 50.0% (Below 75% -> SHORTAGE ALERT)
-  // Siddharth: 4/4 = 100%
-  // Meera: 1/4 = 25.0% (Below 75% -> SHORTAGE ALERT)
-  // Kabir: 3/4 = 75.0% (EXACTLY 75% -> NO shortage warning)
-  // Divya: 4/4 = 100%
-  // Aarav: 2/4 = 50.0% (Below 75% -> SHORTAGE ALERT)
-  const pattern = [
-    { email: 'priyansh.jain@example.edu', roll: '22CS0101', name: 'Priyansh Jain', s1: 'PRESENT', s2: 'PRESENT', s3: 'PRESENT', s4: 'PRESENT' },
-    { email: 'ananya.sharma@example.edu', roll: '22CS0102', name: 'Ananya Sharma', s1: 'PRESENT', s2: 'ABSENT', s3: 'PRESENT', s4: 'PRESENT' },
-    { email: 'rohan.kulkarni@example.edu', roll: '22CS0103', name: 'Rohan Kulkarni', s1: 'ABSENT', s2: 'PRESENT', s3: 'ABSENT', s4: 'PRESENT' },
-    { email: 'siddharth.nair@example.edu', roll: '22CS0104', name: 'Siddharth Nair', s1: 'PRESENT', s2: 'PRESENT', s3: 'PRESENT', s4: 'LATE' },
-    { email: 'meera.venkat@example.edu', roll: '22CS0105', name: 'Meera Venkat', s1: 'ABSENT', s2: 'ABSENT', s3: 'ABSENT', s4: 'PRESENT' },
-    { email: 'kabir.mehta@example.edu', roll: '22CS0106', name: 'Kabir Mehta', s1: 'PRESENT', s2: 'LATE', s3: 'ABSENT', s4: 'PRESENT' },
-    { email: 'divya.reddy@example.edu', roll: '22CS0107', name: 'Divya Reddy', s1: 'PRESENT', s2: 'PRESENT', s3: 'PRESENT', s4: 'PRESENT' },
-    { email: 'aarav.gupta@example.edu', roll: '22CS0108', name: 'Aarav Gupta', s1: 'PRESENT', s2: 'ABSENT', s3: 'ABSENT', s4: 'PRESENT' },
-    { email: 'ishita.verma@example.edu', roll: '22CS0109', name: 'Ishita Verma', s1: 'PRESENT', s2: 'PRESENT', s3: 'PRESENT', s4: 'PRESENT' },
-    { email: 'tanmay.deshmukh@example.edu', roll: '22CS0110', name: 'Tanmay Deshmukh', s1: 'PRESENT', s2: 'PRESENT', s3: 'PRESENT', s4: 'ABSENT' },
-    { email: 'sneha.iyer@example.edu', roll: '22CS0111', name: 'Sneha Iyer', s1: 'LATE', s2: 'PRESENT', s3: 'PRESENT', s4: 'PRESENT' },
-    { email: 'aditya.rawat@example.edu', roll: '22CS0112', name: 'Aditya Rawat', s1: 'ABSENT', s2: 'PRESENT', s3: 'PRESENT', s4: 'ABSENT' }
-  ];
-
-  const records = [];
-  const sessionIds = [101, 102, 103, 104];
-  const dates = ['2026-10-15', '2026-10-17', '2026-10-19', '2026-10-21'];
-
-  pattern.forEach(p => {
-    const statuses = [p.s1, p.s2, p.s3, p.s4];
-    sessionIds.forEach((sId, idx) => {
-      records.push({
-        id: `rec-${sId}-${p.roll}`,
-        sessionId: sId,
-        studentId: p.email,
-        studentRollNumber: p.roll,
-        studentName: p.name,
-        status: statuses[idx],
-        remarks: statuses[idx] === 'LATE' ? 'Late arrival (10 mins)' : '',
-        recordedAt: `${dates[idx]} 09:15`
-      });
-    });
-  });
-
-  return records;
-}
+function getInitialSeedRecords() { return []; }
 
 // LocalStorage Helpers
 export function getLocalSessions() {
@@ -232,7 +102,7 @@ export function saveLocalRecords(records) {
 // Helper to look up cascading subjects for a department and semester
 export function getSubjectsForDeptAndSemester(departmentCode, semesterNumber) {
   const deptObj = DEPARTMENTS.find(d => d.code === departmentCode || d.short === departmentCode);
-  const fullName = deptObj ? deptObj.name : 'Computer Science and Engineering';
+  const fullName = deptObj?.name;
 
   const semNum = parseInt(semesterNumber, 10) || 6;
   const deptSubjectsMap = BRANCH_SEMESTER_SUBJECTS[fullName];
@@ -241,28 +111,17 @@ export function getSubjectsForDeptAndSemester(departmentCode, semesterNumber) {
     return deptSubjectsMap[semNum];
   }
 
-  // Fallback subjects if not mapped in dictionary
-  return [
-    { code: `${departmentCode}${semNum}01`, name: `${deptObj?.short || 'Core'} Advanced Theory`, credits: 4 },
-    { code: `${departmentCode}${semNum}02`, name: `${deptObj?.short || 'Core'} Systems Architecture`, credits: 4 },
-    { code: `${departmentCode}${semNum}03`, name: `${deptObj?.short || 'Core'} Laboratory Workshop`, credits: 2 },
-    { code: `${departmentCode}${semNum}06`, name: `${deptObj?.short || 'Core'} Domain Elective`, credits: 3 }
-  ];
+  return [];
 }
 
 // Get student roster for selected department and semester
 export function getRosterForClass(departmentCode = 'CSE', semesterNumber = '6') {
-  const normDept = (departmentCode || 'CSE').toUpperCase();
-  if (SEED_ROSTERS[normDept]) {
-    return SEED_ROSTERS[normDept].map(s => ({ ...s, semester: String(semesterNumber) }));
-  }
-  // Generic fallback if department is unfamiliar
-  return SEED_ROSTERS.CSE.map(s => ({
-    ...s,
-    department: departmentCode,
-    rollNumber: s.rollNumber.replace('CS', normDept.slice(0, 2)),
-    semester: String(semesterNumber)
-  }));
+  const department = DEPARTMENTS.find(item => item.code === departmentCode || item.name === departmentCode);
+  return getAllStudents().filter(student => {
+    const branch = String(student.branchCode || student.department || student.branch || '').toUpperCase();
+    const matchesDepartment = branch === String(departmentCode).toUpperCase() || branch === department?.name.toUpperCase();
+    return matchesDepartment && String(student.semester || student.currentSemester || '') === String(semesterNumber);
+  }).map(student => ({ ...student, studentId: student.email || student.id, name: student.fullName || student.name, rollNumber: student.rollNumber, department: departmentCode, semester: String(semesterNumber) }));
 }
 
 // Hybrid API / Storage Operations:

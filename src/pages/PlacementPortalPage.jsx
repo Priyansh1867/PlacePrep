@@ -1,4 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import ProfilePopover from '../components/profile/ProfilePopover';
+import { getProfileMetrics, displayValue } from '../services/profileMetrics';
+import { DriveApi, WorkflowApi, CompanyApi, ApplicationApi, request } from '../services/api';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   Briefcase,
   Building2,
@@ -88,8 +91,8 @@ const ROLE_METAS = {
 
 export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   // User profile strictly fixed based on authentic logged in session
-  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
-  const rawRole = (currentUser?.role || 'tpo').toLowerCase();
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || {});
+  const rawRole = (currentUser?.role || 'student').toLowerCase();
   const activeRole = ['hr', 'recruiter'].includes(rawRole) ? 'hr' :
                      ['coordinator', 'student', 'director'].includes(rawRole) ? rawRole : 'tpo';
 
@@ -114,6 +117,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       if (document.body) document.body.scrollTop = 0;
     }
   }, [activeTab]);
+  const profileTriggerRef = useRef(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
 
@@ -134,7 +138,17 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const [notifications, setNotifications] = useState(() => getPushNotifications());
   const [feedbackLoop, setFeedbackLoop] = useState(() => getFeedbackLoop());
   const [internships, setInternships] = useState(() => getInternships());
-  const [candidates, setCandidates] = useState(() => INITIAL_CANDIDATES_PIPELINE);
+  const [candidates, setCandidates] = useState(() => JSON.parse(localStorage.getItem('placeprep_candidates_pipeline') || '[]'));
+  const [myApplications, setMyApplications] = useState([]);
+  const [registeredCompanies, setRegisteredCompanies] = useState([]);
+  const [dataError, setDataError] = useState('');
+  const academicMetrics = getProfileMetrics(currentUser || {});
+  useEffect(() => {
+    let cancelled = false;
+    const sources = [[() => DriveApi.getAll(), setDrives], [() => WorkflowApi.getCandidates(), setCandidates], [() => CompanyApi.getAll(), setRegisteredCompanies], [() => ApplicationApi.getMyApplications(), setMyApplications], [() => request('/opportunities/internships'), setInternships], [() => request('/notifications'), setNotifications]];
+    Promise.allSettled(sources.map(async ([fetcher, setter]) => { const data = await fetcher(); if (!cancelled && Array.isArray(data)) setter(data); })).then(results => { if (!cancelled && results.some(result => result.status === 'rejected')) setDataError('Some live records could not be loaded. Only previously saved records are shown.'); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Student specific mock applications / tracking
   const [appliedDrives, setAppliedDrives] = useState({});
@@ -144,38 +158,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const [portalInternshipSearch, setPortalInternshipSearch] = useState('');
   const [portalOffCampusSearch, setPortalOffCampusSearch] = useState('');
   const [appliedInternships, setAppliedInternships] = useState({});
-  const [studentOffCampusList, setStudentOffCampusList] = useState([
-    {
-      id: 'soc-1',
-      companyName: 'Atlassian',
-      role: 'Associate Software Engineer',
-      ctc: '₹22.5 LPA',
-      appliedDate: '2026-10-14',
-      status: 'Interview Scheduled',
-      link: 'https://atlassian.com/careers'
-    },
-    {
-      id: 'soc-2',
-      companyName: 'Zomato',
-      role: 'Backend SDE Trainee',
-      ctc: '₹14.0 LPA',
-      appliedDate: '2026-10-18',
-      status: 'Online Assessment Cleared',
-      link: 'https://zomato.com/careers'
-    }
-  ]);
+  const [studentOffCampusList, setStudentOffCampusList] = useState(() => JSON.parse(localStorage.getItem('placeprep_my_off_campus') || '[]'));
 
   // Student self-eligibility tester state
-  const [studentProfile] = useState({
-    name: currentUser?.name || 'Priyansh Jain',
-    rollNumber: currentUser?.rollNumber || '2024/CSE/084',
-    branch: currentUser?.branch || 'Computer Science and Engineering',
-    batch: currentUser?.graduationBatch || '2028',
-    cgpa: 8.4,
-    backlogs: 0,
-    tenthPercent: 88,
-    twelfthPercent: 90
-  });
+  const studentProfile = { name: currentUser?.name || '', rollNumber: currentUser?.rollNumber || '', branch: currentUser?.branch || '', batch: currentUser?.graduationBatch || '', cgpa: academicMetrics.cgpa, backlogs: academicMetrics.backlogs, tenthPercent: academicMetrics.tenthPercentage, twelfthPercent: academicMetrics.twelfthPercentage };
 
   // Modals & Feedback form states
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
@@ -183,12 +169,12 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     companyName: '',
     role: '',
     ctc: '',
-    driveDate: '2026-11-28',
-    venue: 'Auditorium Hall A & Online Labs',
+    driveDate: '',
+    venue: '',
     minCgpa: 6.5,
     maxBacklogs: 0,
-    eligibleBatches: '2026, 2027, 2028',
-    allowedBranches: 'CSE, IT, ECE, EEE'
+    eligibleBatches: '',
+    allowedBranches: ''
   });
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
@@ -202,25 +188,25 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
   const [liveForm, setLiveForm] = useState({
-    companyName: isRecruiter ? (currentUser?.company || 'HCLTech') : 'TCS',
+    companyName: '',
     title: '',
     speaker: '',
-    date: '2026-10-29',
-    time: '04:00 PM - 05:30 PM',
+    date: '',
+    time: '',
     platform: 'Google Meet',
-    joinUrl: 'https://meet.google.com/campus-live-session',
+    joinUrl: '',
     agenda: ''
   });
 
   const [isInternModalOpen, setIsInternModalOpen] = useState(false);
   const [internForm, setInternForm] = useState({
-    companyName: isRecruiter ? (currentUser?.company || 'HCLTech') : '',
+    companyName: '',
     role: '',
-    stipend: '₹50,000 / month',
-    duration: '2 Months (Summer 2027)',
-    location: 'Bengaluru / Hybrid',
+    stipend: '',
+    duration: '',
+    location: '',
     minCgpa: 7.0,
-    deadline: '2026-11-20'
+    deadline: ''
   });
 
   const [isOffCampusModalOpen, setIsOffCampusModalOpen] = useState(false);
@@ -235,7 +221,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({
-    companyName: 'HCLTech',
+    companyName: '',
     rating: 5,
     difficulty: 'Moderate',
     comments: '',
@@ -414,10 +400,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     const newIntern = {
       id: `intern-${Date.now()}`,
       ...internForm,
-      eligibleBatches: ['2027', '2028'],
-      branches: ['CSE', 'IT', 'ECE'],
+      eligibleBatches: [],
+      branches: [],
       status: 'Actively Hiring',
-      applicationUrl: 'https://careers.google.com'
+      applicationUrl: ''
     };
     const updated = addInternship(newIntern);
     setInternships(updated);
@@ -453,7 +439,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     const updated = addFeedbackLoopEntry(newEntry);
     setFeedbackLoop(updated);
     setIsFeedbackModalOpen(false);
-    setFeedbackForm({ companyName: 'HCLTech', rating: 5, difficulty: 'Moderate', comments: '', category: isStudent ? 'Student Feedback' : 'Recruiter Assessment' });
+    setFeedbackForm({ companyName: '', rating: 5, difficulty: 'Moderate', comments: '', category: isStudent ? 'Student Feedback' : 'Recruiter Assessment' });
     showToast('Feedback submitted and recorded into TPO intelligence loop!');
   };
 
@@ -481,12 +467,12 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   // Filter drives for specific roles
   const displayedDrives = useMemo(() => {
     if (isRecruiter) {
-      const recruiterCompany = (currentUser?.company || 'HCLTech').toLowerCase();
+      const recruiterCompany = (currentUser?.company || '').toLowerCase();
       const filtered = drives.filter(d => (d.companyName || '').toLowerCase().includes(recruiterCompany) || (d.companyId || '').toLowerCase().includes(recruiterCompany));
       return filtered.length > 0 ? filtered : drives.slice(0, 1);
     }
     if (isStudent) {
-      return drives.filter(d => !d.eligibleBatches || d.eligibleBatches.includes('2028') || d.eligibleBatches.includes('all'));
+      return drives.filter(d => !d.eligibleBatches || d.eligibleBatches.includes(currentUser.graduationBatch) || d.eligibleBatches.includes('all'));
     }
     return drives;
   }, [drives, isRecruiter, isStudent, currentUser]);
@@ -494,19 +480,19 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   // Recruiter candidate list (masked sensitive data)
   const displayedCandidates = useMemo(() => {
     if (isRecruiter) {
-      const recruiterCompany = (currentUser?.company || 'HCLTech').toLowerCase();
+      const recruiterCompany = (currentUser?.company || '').toLowerCase();
       const matched = candidates.filter(c => (c.companyName || '').toLowerCase().includes(recruiterCompany));
       return matched.length > 0 ? matched : candidates.slice(0, 2);
     }
     if (isStudent) {
-      return candidates.filter(c => c.name.toLowerCase().includes('priyansh') || c.id === 'cand-101');
+      return candidates.filter(c => currentUser.email && c.email?.toLowerCase() === currentUser.email.toLowerCase());
     }
     return candidates;
   }, [candidates, isRecruiter, isStudent, currentUser]);
 
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
-      
+
       {/* 0. UPPER LEFT BACK BUTTON */}
       <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
         <button
@@ -521,7 +507,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* Workspace Mode Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Spring Boot Connected (:8082)</span>
+          <span>Placement workspace</span>
         </div>
       </div>
 
@@ -550,7 +536,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 Corporate Hiring & Placement Control Center
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl font-medium">
-                Logged in as <strong className="text-white font-extrabold">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 font-bold uppercase text-[11px]">{roleMeta.label}</span> • Placement Season 2026-2027
+                Logged in as <strong className="text-white font-extrabold">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 font-bold uppercase text-[11px]">{roleMeta.label}</span> • Placement workspace
               </p>
             </div>
 
@@ -582,6 +568,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               <div className="relative">
                 <button
                   type="button"
+                  ref={profileTriggerRef}
+                  aria-expanded={isProfileDropdownOpen}
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition shadow-md group text-left cursor-pointer"
                   aria-label="User profile menu"
@@ -602,7 +590,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
                 {/* Profile Dropdown Popup */}
                 {isProfileDropdownOpen && (
-                  <>
+                  <ProfilePopover anchorRef={profileTriggerRef} onClose={() => setIsProfileDropdownOpen(false)}>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-slate-900 text-xs animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
@@ -623,28 +611,28 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                       <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
                         <div className="flex justify-between text-slate-500">
                           <span>Institute:</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || 'Delhi Technological University'}</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || ''}</span>
                         </div>
                         {isStudent && (
                           <>
                             <div className="flex justify-between text-slate-500">
                               <span>Roll Number:</span>
-                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || '2024/CSE/084'}</span>
+                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || ''}</span>
                             </div>
                             <div className="flex justify-between text-slate-500">
                               <span>Branch & Batch:</span>
-                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({currentUser.graduationBatch || '2028'})</span>
+                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({currentUser.graduationBatch || ''})</span>
                             </div>
                             <div className="flex justify-between text-slate-500">
                               <span>Academic Standing:</span>
-                              <span className="font-bold text-emerald-600">CGPA 8.4 • 0 Backlogs</span>
+                              <span className="font-bold text-emerald-600">CGPA {displayValue(academicMetrics.cgpa)} • Backlogs {displayValue(academicMetrics.backlogs)}</span>
                             </div>
                           </>
                         )}
                         {isRecruiter && (
                           <div className="flex justify-between text-slate-500">
                             <span>Organization:</span>
-                            <span className="font-bold text-slate-800">{currentUser.company || 'HCLTech'}</span>
+                            <span className="font-bold text-slate-800">{currentUser.company || ''}</span>
                           </div>
                         )}
                         {(isTPO || isCoordinator || isDirector) && (
@@ -683,7 +671,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         </button>
                       </div>
                     </div>
-                  </>
+                  </ProfilePopover>
                 )}
               </div>
             </div>
@@ -700,8 +688,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-md">
                   <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider block">My Shortlists</span>
-                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">1 Advanced (HCLTech)</span>
-                  <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Round 2 scheduled</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">{myApplications.filter(item => /SHORTLISTED|INTERVIEW_SCHEDULED|OFFERED/.test(item.status || '')).length} shortlisted</span>
+                  <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Based on saved application status</span>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
                   <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Off-Campus Tracked</span>
@@ -710,31 +698,31 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
                   <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Verified Status</span>
-                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">CGPA 8.4 • 0 Backlogs</span>
-                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">All cutoffs satisfied</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">CGPA {displayValue(academicMetrics.cgpa)} • Backlogs {displayValue(academicMetrics.backlogs)}</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Eligibility depends on each drive</span>
                 </div>
               </>
             ) : isDirector ? (
               <>
                 <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
                   <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider block">Placement Rate</span>
-                  <span className="font-black text-base sm:text-lg text-white mt-0.5 block">88.4% Placed</span>
-                  <span className="text-[11px] text-slate-400 mt-0.5 block">Batch of 2026</span>
+                  <span className="font-black text-base sm:text-lg text-white mt-0.5 block">Not reported</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">No verified cohort summary</span>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-md">
                   <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider block">Average Package</span>
-                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">₹8.60 LPA</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">Not reported</span>
                   <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Across all branches</span>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
                   <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Highest Package</span>
-                  <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">₹44.0 LPA</span>
-                  <span className="text-[11px] text-amber-400/80 mt-0.5 block">Microsoft Redmond</span>
+                  <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">Not reported</span>
+                  <span className="text-[11px] text-amber-400/80 mt-0.5 block">No verified package summary</span>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
                   <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Corporate Partners</span>
-                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">52 Companies</span>
-                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Tier-1 & Core employers</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">{registeredCompanies.length} Companies</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Registered employers</span>
                 </div>
               </>
             ) : isRecruiter ? (
@@ -756,8 +744,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
                   <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Interviews</span>
-                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">Round 2 Active</span>
-                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Live video evaluation</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">{myApplications.filter(item => item.status === 'INTERVIEW_SCHEDULED').length} scheduled</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Recorded interview schedules</span>
                 </div>
               </>
             ) : (
@@ -799,6 +787,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         )}
       </div>
 
+      {dataError && <p role="status" className="max-w-7xl mx-auto mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{dataError}</p>}
       {/* 2. ROLE-FILTERED MODULE CARDS NAVIGATION */}
       <div className="max-w-7xl mx-auto mb-8">
         <PortalModuleCards items={visibleNavTabs} activeId={activeTab} onSelect={handleCardSelect} tone="emerald" />
@@ -806,7 +795,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 3. TAB CONTENTS CORRESPONDING TO THE 9 MATRIX FEATURES */}
       <div id="placement-feature-content" className="max-w-7xl mx-auto scroll-mt-24">
-        
+
         {/* ========================================================================= */}
         {/* FEATURE 1: UPCOMING DRIVES                                                */}
         {/* ========================================================================= */}
@@ -894,7 +883,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         </div>
                         <div className="flex justify-between text-slate-500">
                           <span>Min CGPA Cutoff:</span>
-                          <span className="font-bold text-emerald-600">{drive.minCgpa || 6.5} CGPA</span>
+                          <span className="font-bold text-emerald-600">{drive.minCgpa || 'Not available'} CGPA</span>
                         </div>
                       </div>
                     </div>
@@ -988,7 +977,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'eligibility-criteria' && (
           <div className="space-y-6">
-            
+
             {/* Student Self-Eligibility Check Workspace */}
             {isStudent && (
               <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-lg border border-emerald-500/20">
@@ -1014,7 +1003,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   </div>
                   <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
                     <span className="text-emerald-300 block">Active Backlogs:</span>
-                    <span className="font-black text-lg text-emerald-400">{studentProfile.backlogs} (Cleared)</span>
+                    <span className="font-black text-lg text-emerald-400">{displayValue(studentProfile.backlogs)}</span>
                   </div>
                   <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
                     <span className="text-emerald-300 block">10th / 12th Marks:</span>
@@ -1065,7 +1054,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                       const q = portalCriteriaSearch.trim().toLowerCase();
                       return !q || (item.companyName || '').toLowerCase().includes(q) || (item.role || '').toLowerCase().includes(q);
                     }).map((item, idx) => {
-                      const isEligible = studentProfile.cgpa >= item.minCgpa && studentProfile.backlogs <= item.maxActiveBacklogs;
+                      const isEligible = studentProfile.cgpa != null && studentProfile.backlogs != null && studentProfile.cgpa >= item.minCgpa && studentProfile.backlogs <= item.maxActiveBacklogs;
                       return (
                         <tr key={idx} className="hover:bg-slate-50/70 transition">
                           <td className="p-3 font-bold text-slate-900">{item.companyName}</td>
@@ -1144,7 +1133,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         </div>
                         <div className="flex justify-between">
                           <span>Student RSVPs:</span>
-                          <span className="font-bold text-emerald-600">{session.rsvpsCount || 42} Attending</span>
+                          <span className="font-bold text-emerald-600">{session.rsvpsCount ?? 0} Attending</span>
                         </div>
                       </div>
                     </div>
@@ -1181,7 +1170,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'shortlisted' && (
           <div className="space-y-6">
-            
+
             {/* Header info */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -1219,23 +1208,23 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-6 rounded-3xl bg-white border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 block mb-1">Total Registered:</span>
-                  <span className="text-2xl font-black text-slate-900">520 Students</span>
-                  <p className="text-[11px] text-slate-400 mt-1">100% of eligible cohort</p>
+                  <span className="text-2xl font-black text-slate-900">{candidates.length} Candidates</span>
+                  <p className="text-[11px] text-slate-400 mt-1">Saved candidate records</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-white border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 block mb-1">Aptitude Cleared:</span>
-                  <span className="text-2xl font-black text-indigo-600">240 Shortlisted</span>
-                  <p className="text-[11px] text-slate-400 mt-1">46.1% passing rate</p>
+                  <span className="text-2xl font-black text-indigo-600">{candidates.filter(item => item.status === 'Shortlisted').length} Shortlisted</span>
+                  <p className="text-[11px] text-slate-400 mt-1">Based on recorded statuses</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-white border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 block mb-1">Technical Cleared:</span>
-                  <span className="text-2xl font-black text-amber-600">110 Advanced</span>
-                  <p className="text-[11px] text-slate-400 mt-1">21.2% selection rate</p>
+                  <span className="text-2xl font-black text-amber-600">{candidates.filter(item => item.status === 'Advanced').length} Advanced</span>
+                  <p className="text-[11px] text-slate-400 mt-1">Based on recorded statuses</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-white border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 block mb-1">Offers Extended:</span>
-                  <span className="text-2xl font-black text-emerald-600">68 Final Selections</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Highest package: ₹44 LPA</p>
+                  <span className="text-2xl font-black text-emerald-600">{candidates.filter(item => /Selected|Offered/i.test(item.status || '')).length} Selections</span>
+                  <p className="text-[11px] text-slate-400 mt-1">Package summary not available</p>
                 </div>
               </div>
             )}
@@ -1361,18 +1350,18 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Total Active Interns:</span>
-                  <span className="text-3xl font-black text-indigo-600">86 Students</span>
+                  <span className="text-3xl font-black text-indigo-600">{internships.length} Internship records</span>
                   <p className="text-xs text-slate-500 mt-2">Engaged in Microsoft, Goldman Sachs, Amazon, and DRDO.</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Average Stipend:</span>
-                  <span className="text-3xl font-black text-emerald-600">₹68,500 / mo</span>
-                  <p className="text-xs text-slate-500 mt-2">Highest stipend recorded: ₹1,25,000 / mo (Microsoft).</p>
+                  <span className="text-3xl font-black text-emerald-600">Not reported</span>
+                  <p className="text-xs text-slate-500 mt-2">No verified stipend summary.</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
                   <span className="text-xs font-bold text-slate-500 uppercase block mb-1">PPO Conversion Rate:</span>
-                  <span className="text-3xl font-black text-purple-600">82.4%</span>
-                  <p className="text-xs text-slate-500 mt-2">71 students converted internships into full-time offers.</p>
+                  <span className="text-3xl font-black text-purple-600">Not reported</span>
+                  <p className="text-xs text-slate-500 mt-2">No verified conversion summary.</p>
                 </div>
               </div>
 
@@ -1520,7 +1509,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'off-campus' && (
           <div className="space-y-6">
-            
+
             {/* Student personal off-campus tracker */}
             {isStudent && (
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
@@ -2003,10 +1992,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     onChange={(e) => setFeedbackForm({ ...feedbackForm, companyName: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="HCLTech">HCLTech</option>
-                    <option value="TCS">TCS</option>
-                    <option value="Accenture">Accenture</option>
-                    <option value="Deloitte">Deloitte</option>
+
+
+
+
                   </select>
                 </div>
                 <div>

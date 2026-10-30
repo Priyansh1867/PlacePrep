@@ -86,7 +86,7 @@ public class OpportunityController {
 
     @GetMapping("/off-campus")
     public ResponseEntity<Map<String, Object>> getOffCampusOpportunities(
-            @RequestParam(required = false, defaultValue = "demo@placeprep.com") String studentEmailOrId
+            @RequestParam(required = false) String studentEmailOrId
     ) {
         Map<String, Object> response = opportunityService.getOffCampusOpportunitiesForStudent(studentEmailOrId);
         return ResponseEntity.ok(response);

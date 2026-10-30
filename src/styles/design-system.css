@@ -151,3 +151,12 @@
 .pp-workspace .pp-hero-stats > div > span:nth-child(2) { display: block; color: #fff; margin-top: 7px; font-size: clamp(15px,1.5vw,20px); line-height: 1.4; }
 .pp-workspace .pp-hero-stats > div > span:nth-child(3) { color: #b5c6df; font-size: 11px; line-height: 1.5; }
 @media (max-width:640px) { .pp-workspace .pp-hero-stats { gap: 10px; } .pp-workspace .pp-hero-stats > div { padding: 13px; } }
+
+/* Profile menus must escape hero bounds and remain above shortcut cards. */
+.pp-workspace .dashboard-hero { overflow: hidden; }
+.pp-workspace .dashboard-hero__art, .pp-workspace .dashboard-hero__wash { border-radius: inherit; pointer-events: none; }
+.pp-workspace .dashboard-hero > .relative:not(.pp-hero-stats) { z-index: 20; }
+
+/* Body-level profile popover is independent of hero/card overflow and stacking. */
+.pp-profile-popover > .fixed { display: none; }
+.pp-profile-popover > .absolute { position: static; width: 100%; margin: 0; }

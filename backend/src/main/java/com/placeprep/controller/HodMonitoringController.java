@@ -62,7 +62,7 @@ public class HodMonitoringController {
             List<ClassAttendanceSession> classSessions = classSessionRepo.findAll();
             for (ClassAttendanceSession s : classSessions) {
                 String fName = s.getFacultyName() != null && !s.getFacultyName().trim().isEmpty()
-                        ? s.getFacultyName() : "Dr. Neha Sharma";
+                        ? s.getFacultyName() : "Not recorded";
                 String fId = s.getFacultyId() != null && !s.getFacultyId().trim().isEmpty()
                         ? s.getFacultyId() : "FAC-" + s.getDepartment() + "-01";
 

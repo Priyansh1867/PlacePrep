@@ -170,8 +170,8 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
   // - Applications Tracked: up to 15 pts (5 pts per active application, max 3)
   const questionPoints = Math.min(40, practicedQuestions.length * 4);
   const companyPoints = Math.min(15, targetCompanies.length * 5);
-  const latestMockScore = mockSessions.length > 0 ? (mockSessions[0].score || 85) : 85;
-  const mockPoints = mockSessions.length > 0 ? Math.round(latestMockScore * 0.3) : 25;
+  const latestMockScore = mockSessions.length > 0 ? (mockSessions[0].score ?? 0) : 0;
+  const mockPoints = mockSessions.length > 0 ? Math.round(latestMockScore * 0.3) : 0;
   const applicationPoints = Math.min(15, myApplications.length * 5);
 
   const totalReadinessScore = Math.min(100, questionPoints + companyPoints + mockPoints + applicationPoints);
@@ -222,7 +222,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans">
-                {user?.name || 'Priyansh Jain'}
+                {user?.name || ''}
               </h1>
               <Badge variant="purple" size="sm">
                 Batch {currentBatch} Candidate
@@ -235,7 +235,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-mono">
               <span className="px-2.5 py-1 rounded-lg bg-white/10 text-indigo-100 border border-white/15">
-                Roll: <strong className="text-white">{user?.rollNumber || '22CS0101'}</strong>
+                Roll: <strong className="text-white">{user?.rollNumber || ''}</strong>
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-white/10 text-indigo-100 border border-white/15">
                 CGPA: <strong className="text-emerald-300">8.84 / 10.0</strong> (0 Backlogs)
@@ -333,10 +333,10 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
             <Bot className="w-4 h-4 text-[#D97706]" />
           </div>
           <p className="text-2xl font-black text-[#D97706]">
-            {mockSessions.length > 0 ? `${mockSessions[0].score}%` : '85%'}
+            {mockSessions.length > 0 ? `${mockSessions[0].score}%` : 'Not attempted'}
           </p>
           <p className="text-[11px] text-[#64748B] mt-1 font-medium">
-            {mockSessions.length > 0 ? `${mockSessions.length} session(s) recorded` : 'Latest simulated score'}
+            {mockSessions.length > 0 ? `${mockSessions.length} session(s) recorded` : 'No completed interview'}
           </p>
         </div>
       </div>

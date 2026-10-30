@@ -55,7 +55,7 @@ export default function Institute3DAnimation() {
           style={{ transformStyle: 'preserve-3d' }}
         >
           <Sparkles className="w-2.5 h-2.5 text-violet-400" />
-          <span>ATS 94%</span>
+          <span>RESUME</span>
         </div>
 
         {/* Floating Holographic Satellite 3: Class Marksheets */}
@@ -63,7 +63,7 @@ export default function Institute3DAnimation() {
           className="absolute top-1/2 -left-6 -translate-y-1/2 px-1.5 py-0.5 rounded-md bg-indigo-950/80 border border-indigo-500/30 text-[8px] font-mono text-indigo-300 flex items-center gap-1 shadow-md"
         >
           <BookOpen className="w-2.5 h-2.5 text-indigo-400" />
-          <span>CGPA 8.9</span>
+          <span>ACADEMICS</span>
         </div>
 
       </div>

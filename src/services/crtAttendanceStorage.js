@@ -4,6 +4,7 @@
 
 import { AttendanceApi } from './api.js';
 import { DEPARTMENTS } from './attendanceStorage.js';
+import { getAllStudents } from './academicRecordsService.js';
 
 // Configurable CRT thresholds
 export const CRT_SHORTAGE_THRESHOLD_PERCENT = 75.0;
@@ -51,193 +52,15 @@ const STORAGE_KEYS = {
 };
 
 // Seed CRT Sessions
-export const INITIAL_CRT_TRAINING_SESSIONS = [
-  {
-    id: 1001,
-    topic: 'Quantitative Aptitude & Speed Math Masterclass',
-    moduleType: 'Quantitative Ability',
-    trainerName: 'Prof. Alok Verma',
-    trainerOrganization: 'Placement Training Cell',
-    scheduledDate: '2026-10-12',
-    timeSlot: '10:00 AM - 12:00 PM',
-    startTime: '10:00 AM',
-    endTime: '12:00 PM',
-    venue: 'Seminar Hall 1 / Online Hybrid',
-    targetBatch: '2026',
-    targetBranch: 'ALL',
-    academicYear: '3rd Year',
-    semester: '6',
-    description: 'Permutations, Combinations, Probability, and high-frequency company aptitude problem patterns.',
-    status: 'COMPLETED',
-    createdBy: 'teacher@placeprep.com',
-    createdAt: '2026-10-10 09:00',
-    updatedAt: '2026-10-12 12:30'
-  },
-  {
-    id: 1002,
-    topic: 'Data Structures & Algorithms - Dynamic Programming & Trees',
-    moduleType: 'Coding & DSA',
-    trainerName: 'Dr. Radhika Sen',
-    trainerOrganization: 'Ex-Amazon SDE / Placement Mentor',
-    scheduledDate: '2026-10-16',
-    timeSlot: '02:00 PM - 05:00 PM',
-    startTime: '02:00 PM',
-    endTime: '05:00 PM',
-    venue: 'Computer Center Lab 4',
-    targetBatch: '2026',
-    targetBranch: 'ALL',
-    academicYear: '3rd Year',
-    semester: '6',
-    description: 'Memoization, Tabulation, Knapsack variations, and Binary Tree traversals with live coding.',
-    status: 'COMPLETED',
-    createdBy: 'teacher@placeprep.com',
-    createdAt: '2026-10-14 10:00',
-    updatedAt: '2026-10-16 17:15'
-  },
-  {
-    id: 1003,
-    topic: 'Mock HR & STAR Method Behavioral Coaching',
-    moduleType: 'Soft Skills & Behavioral',
-    trainerName: 'Ms. Sunita Kapoor',
-    trainerOrganization: 'Corporate HR Consultant',
-    scheduledDate: '2026-10-19',
-    timeSlot: '11:00 AM - 01:00 PM',
-    startTime: '11:00 AM',
-    endTime: '01:00 PM',
-    venue: 'Auditorium 2',
-    targetBatch: '2026',
-    targetBranch: 'ALL',
-    academicYear: '3rd Year',
-    semester: '6',
-    description: 'Behavioral interview mastery: Situation, Task, Action, Result framing for corporate culture fit.',
-    status: 'COMPLETED',
-    createdBy: 'teacher@placeprep.com',
-    createdAt: '2026-10-17 11:00',
-    updatedAt: '2026-10-19 13:10'
-  },
-  {
-    id: 1004,
-    topic: 'SQL, Indexing & ACID Transactions Deep Dive',
-    moduleType: 'Technical Interview Preparation',
-    trainerName: 'Prof. Tarun Gupta',
-    trainerOrganization: 'Database Architect',
-    scheduledDate: '2026-10-21',
-    timeSlot: '03:00 PM - 05:00 PM',
-    startTime: '03:00 PM',
-    endTime: '05:00 PM',
-    venue: 'Lab 2',
-    targetBatch: '2026',
-    targetBranch: 'ALL',
-    academicYear: '3rd Year',
-    semester: '6',
-    description: 'Query optimization, execution plans, B-Tree indexes, and distributed transaction isolation.',
-    status: 'COMPLETED',
-    createdBy: 'teacher@placeprep.com',
-    createdAt: '2026-10-18 14:00',
-    updatedAt: '2026-10-21 17:05'
-  },
-  {
-    id: 1005,
-    topic: 'Full-Stack System Design & Microservices Architecture',
-    moduleType: 'Technical Interview Preparation',
-    trainerName: 'Er. Vikram Malhotra',
-    trainerOrganization: 'Principal Architect @ CloudCorp',
-    scheduledDate: '2026-10-25',
-    timeSlot: '10:00 AM - 01:00 PM',
-    startTime: '10:00 AM',
-    endTime: '01:00 PM',
-    venue: 'Central Auditorium & MS Teams Hybrid',
-    targetBatch: '2026',
-    targetBranch: 'ALL',
-    academicYear: '3rd Year',
-    semester: '6',
-    description: 'Load balancing, caching strategies (Redis), CDN, horizontal scaling, and CAP theorem trade-offs.',
-    status: 'SCHEDULED',
-    createdBy: 'teacher@placeprep.com',
-    createdAt: '2026-10-20 10:00',
-    updatedAt: '2026-10-20 10:00'
-  },
-  {
-    id: 1006,
-    topic: 'Campus Coding Marathon (Round 1 Rescheduled)',
-    moduleType: 'Coding & DSA',
-    trainerName: 'Internal TPO Team',
-    trainerOrganization: 'Placement Cell',
-    scheduledDate: '2026-10-14',
-    timeSlot: '09:00 AM - 12:00 PM',
-    startTime: '09:00 AM',
-    endTime: '12:00 PM',
-    venue: 'Online Assessment Lab',
-    targetBatch: '2026',
-    targetBranch: 'ALL',
-    academicYear: '3rd Year',
-    semester: '6',
-    description: 'Rescheduled due to college mid-term examination week collision.',
-    status: 'CANCELLED',
-    createdBy: 'teacher@placeprep.com',
-    createdAt: '2026-10-10 12:00',
-    updatedAt: '2026-10-13 18:00'
-  }
-];
+export const INITIAL_CRT_TRAINING_SESSIONS = [];
 
 // Seed Roster for CRT sessions
-export const SEED_CRT_STUDENTS = [
-  { studentId: 'priyansh.jain@example.edu', rollNumber: '22CS0101', name: 'Priyansh Jain', email: 'priyansh.jain@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'ananya.sharma@example.edu', rollNumber: '22CS0102', name: 'Ananya Sharma', email: 'ananya.sharma@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'rohan.kulkarni@example.edu', rollNumber: '22CS0103', name: 'Rohan Kulkarni', email: 'rohan.kulkarni@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'siddharth.nair@example.edu', rollNumber: '22CS0104', name: 'Siddharth Nair', email: 'siddharth.nair@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'meera.venkat@example.edu', rollNumber: '22CS0105', name: 'Meera Venkat', email: 'meera.venkat@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'kabir.mehta@example.edu', rollNumber: '22CS0106', name: 'Kabir Mehta', email: 'kabir.mehta@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'divya.reddy@example.edu', rollNumber: '22CS0107', name: 'Divya Reddy', email: 'divya.reddy@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'aarav.gupta@example.edu', rollNumber: '22CS0108', name: 'Aarav Gupta', email: 'aarav.gupta@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'ishita.verma@example.edu', rollNumber: '22CS0109', name: 'Ishita Verma', email: 'ishita.verma@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'tanmay.deshmukh@example.edu', rollNumber: '22CS0110', name: 'Tanmay Deshmukh', email: 'tanmay.deshmukh@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'sneha.iyer@example.edu', rollNumber: '22CS0111', name: 'Sneha Iyer', email: 'sneha.iyer@example.edu', department: 'CSE', batch: '2026' },
-  { studentId: 'aditya.rawat@example.edu', rollNumber: '22CS0112', name: 'Aditya Rawat', email: 'aditya.rawat@example.edu', department: 'CSE', batch: '2026' }
-];
+function getRegisteredCrtStudents() {
+  return getAllStudents().map(student => ({ ...student, name: student.fullName || student.name, studentId: student.email || student.id, department: student.branchCode || student.department || DEPARTMENTS.find(item => item.name === student.branch)?.code || student.branch, batch: String(student.graduationBatch || student.batch || '') }));
+}
 
 // Seed attendance records for completed sessions (1001, 1002, 1003, 1004)
-function getInitialSeedRecords() {
-  const records = [];
-  const matrix = {
-    '22CS0101': ['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT'], // 4/4 = 100% (Eligible)
-    '22CS0102': ['PRESENT', 'ABSENT', 'PRESENT', 'PRESENT'],  // 3/4 = 75.0% (EXACTLY 75% -> Not shortage!)
-    '22CS0103': ['ABSENT', 'PRESENT', 'ABSENT', 'PRESENT'],   // 2/4 = 50.0% (Shortage <75%)
-    '22CS0104': ['PRESENT', 'LATE', 'PRESENT', 'ABSENT'],     // 3/4 = 75.0% (EXACTLY 75% -> Not shortage!)
-    '22CS0105': ['ABSENT', 'ABSENT', 'ABSENT', 'PRESENT'],    // 1/4 = 25.0% (Shortage <75%)
-    '22CS0106': ['PRESENT', 'PRESENT', 'LATE', 'PRESENT'],    // 4/4 = 100% (Eligible)
-    '22CS0107': ['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT'], // 4/4 = 100% (Eligible)
-    '22CS0108': ['PRESENT', 'ABSENT', 'ABSENT', 'PRESENT'],   // 2/4 = 50.0% (Shortage <75%)
-    '22CS0109': ['PRESENT', 'PRESENT', 'ABSENT', 'PRESENT'],  // 3/4 = 75.0% (EXACTLY 75% -> Not shortage!)
-    '22CS0110': ['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT'], // 4/4 = 100% (Eligible)
-    '22CS0111': ['ABSENT', 'ABSENT', 'PRESENT', 'PRESENT'],   // 2/4 = 50.0% (Shortage <75%)
-    '22CS0112': ['PRESENT', 'LATE', 'PRESENT', 'PRESENT']     // 4/4 = 100% (Eligible)
-  };
-
-  const sessions = [1001, 1002, 1003, 1004];
-
-  SEED_CRT_STUDENTS.forEach(stu => {
-    const statuses = matrix[stu.rollNumber] || ['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT'];
-    sessions.forEach((sessId, idx) => {
-      const st = statuses[idx];
-      records.push({
-        id: `crt-rec-${sessId}-${stu.rollNumber}`,
-        crtSessionId: sessId,
-        studentId: stu.email,
-        studentRollNumber: stu.rollNumber,
-        studentName: stu.name,
-        department: stu.department,
-        status: st,
-        remarks: st === 'LATE' ? 'Reported 15 mins late after lab transit' : null,
-        assessmentScore: st === 'PRESENT' ? 88.0 : st === 'LATE' ? 76.0 : null,
-        recordedBy: 'Dr. Neha Sharma',
-        recordedAt: '2026-10-21 17:15'
-      });
-    });
-  });
-
-  return records;
-}
+function getInitialSeedRecords() { return []; }
 
 // Local Storage helpers
 export function getLocalCrtSessions() {
@@ -418,7 +241,7 @@ export async function fetchCrtSessionRoster(sessionId) {
     if (r.studentRollNumber) recordMap[r.studentRollNumber] = r;
   });
 
-  return SEED_CRT_STUDENTS.map(stu => {
+  return getRegisteredCrtStudents().filter(stu => (!session?.targetBranch || session.targetBranch === 'ALL' || session.targetBranch.includes(stu.department)) && (!session?.targetBatch || session.targetBatch === 'ALL' || String(session.targetBatch) === stu.batch)).map(stu => {
     const existing = recordMap[stu.email] || recordMap[stu.rollNumber];
     return {
       crtSessionId: sessionId,
@@ -427,7 +250,7 @@ export async function fetchCrtSessionRoster(sessionId) {
       name: stu.name,
       email: stu.email,
       department: stu.department,
-      batch: stu.batch || '2026',
+      batch: stu.batch || '',
       status: existing ? existing.status : ATTENDANCE_STATUS.UNMARKED,
       assessmentScore: existing ? existing.assessmentScore : null,
       remarks: existing ? existing.remarks : null,
@@ -584,7 +407,7 @@ export async function fetchCrtCumulativeReport({ targetBatch = 'ALL', department
   const allRecords = getLocalCrtRecords();
 
   // Filter roster by batch & department
-  const filteredStudents = SEED_CRT_STUDENTS.filter(stu => {
+  const filteredStudents = getRegisteredCrtStudents().filter(stu => {
     const bMatch = targetBatch === 'ALL' || !stu.batch || stu.batch === targetBatch;
     const dMatch = department === 'ALL' || stu.department === department;
     return bMatch && dMatch;

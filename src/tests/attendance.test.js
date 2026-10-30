@@ -1,3 +1,4 @@
+import { seedTestRecords } from './fixtures/records.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -34,6 +35,7 @@ describe('Teacher & HOD Daily Class Attendance Portal Tests', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    seedTestRecords('attendance');
   });
 
   test('Valid class selection loads the correct roster', () => {

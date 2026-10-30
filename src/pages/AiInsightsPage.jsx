@@ -67,7 +67,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
     const rawFreq = data.frequentQuestions || [];
     const normalizedFreq = rawFreq.map(q => ({
       question: q.questionText || q.question || 'Standard Technical Question',
-      frequency: q.frequency || (q.frequencyScore ? `${q.frequencyScore}% recurrence` : 'High Frequency'),
+      frequency: q.frequency || (q.frequencyScore ? `${q.frequencyScore}% recurrence` : 'Not recorded'),
       trend: q.trend || (q.difficulty ? `${q.difficulty} Difficulty` : 'Recurrent Focus'),
       category: q.category || 'Core Computer Science'
     }));
@@ -78,13 +78,13 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
       if (typeof t === 'string') {
         return {
           topic: t,
-          change: 'Elevated Recurrence',
+          change: 'Not recorded',
           reason: 'Frequently scrutinized in recent drive rounds'
         };
       }
       return {
         topic: t.topic || t.name || 'Core Domain Concept',
-        change: t.change || 'High Recurrence',
+        change: t.change || 'Not recorded',
         reason: t.reason || 'Appears in latest recruitment panels'
       };
     });
@@ -203,7 +203,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
             </div>
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Recruiter Hubs</p>
-              <p className="text-lg font-extrabold text-slate-900">{overviewStats.totalCompaniesTracked || 8} Active</p>
+              <p className="text-lg font-extrabold text-slate-900">{overviewStats.totalCompaniesTracked || 'Not available'} Active</p>
             </div>
           </div>
 
@@ -213,7 +213,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
             </div>
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Questions Vetted</p>
-              <p className="text-lg font-extrabold text-slate-900">{overviewStats.totalQuestionsIndexed || 40}+ Indexed</p>
+              <p className="text-lg font-extrabold text-slate-900">{overviewStats.totalQuestionsIndexed || 'Not available'}+ Indexed</p>
             </div>
           </div>
 
@@ -223,7 +223,7 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
             </div>
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Student Logs</p>
-              <p className="text-lg font-extrabold text-slate-900">{overviewStats.totalExperiencesLogged || 4} Verified</p>
+              <p className="text-lg font-extrabold text-slate-900">{overviewStats.totalExperiencesLogged || 'Not available'} Verified</p>
             </div>
           </div>
 
@@ -251,14 +251,14 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
               {loadingInsights && <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />}
             </p>
             <p className="text-emerald-700 mt-0.5">
-              Derived from <b>{insights.totalSamplesAnalyzed || 84}</b> authentic verified records. Latest drive recorded: <b>{insights.dataFreshness || 'October 2026'}</b>.
+              Derived from <b>{insights.totalSamplesAnalyzed || 'Not available'}</b> authentic verified records. Latest drive recorded: <b>{insights.dataFreshness || 'Not recorded'}</b>.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 font-bold text-emerald-800">
           <span className="px-2.5 py-1 bg-white rounded-lg border border-emerald-200 shadow-sm">
-            Confidence: {insights.confidenceScore || '94%'}
+            Confidence: {insights.confidenceScore || 'Not available'}
           </span>
           <button
             onClick={() => fetchCompanyInsights(selectedCompanyId)}

@@ -37,9 +37,7 @@ export default function AcademicProfilePage({ onNavigate }) {
       s => (currentUser?.email && s.email?.toLowerCase() === currentUser.email?.toLowerCase()) ||
            (currentUser?.name && s.fullName?.toLowerCase().includes(currentUser.name?.toLowerCase()))
     );
-    if (!found && allStudents.length > 0) {
-      found = allStudents[0];
-    }
+
     setStudent(found);
     if (found?.currentSemester) {
       setSelectedSemester(Math.min(found.currentSemester, 8));
@@ -92,7 +90,7 @@ export default function AcademicProfilePage({ onNavigate }) {
                 </Badge>
                 {isBacklogFree ? (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> 0 Backlogs (All Clear)
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {student.activeBacklogs == null ? 'Not recorded' : `${student.activeBacklogs} backlogs`}
                   </span>
                 ) : (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-400/30 flex items-center gap-1">
@@ -102,7 +100,7 @@ export default function AcademicProfilePage({ onNavigate }) {
               </div>
 
               <p className="text-sm text-indigo-200 mt-1 font-mono">
-                {student.collegeName || 'Delhi Technological University (DTU)'}
+                {student.collegeName || ''}
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-mono">
@@ -125,11 +123,11 @@ export default function AcademicProfilePage({ onNavigate }) {
               Cumulative CGPA
             </span>
             <div className="text-4xl font-black text-white flex items-baseline md:justify-end gap-1">
-              <span>{student.cumulativeCgpa?.toFixed(2) || '8.84'}</span>
+              <span>{student.cumulativeCgpa?.toFixed(2) || 'Not available'}</span>
               <span className="text-sm font-semibold text-indigo-300">/ 10.0</span>
             </div>
             <p className="text-xs text-emerald-300 font-semibold mt-1 flex items-center md:justify-end gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> First Class with Distinction
+              <Sparkles className="w-3.5 h-3.5" /> Recorded cumulative result
             </p>
           </div>
         </div>
@@ -145,9 +143,9 @@ export default function AcademicProfilePage({ onNavigate }) {
             </span>
           </div>
           <div className="mt-2 text-2xl font-black text-indigo-950">
-            {student.cumulativeCgpa?.toFixed(2) || '8.84'}
+            {student.cumulativeCgpa?.toFixed(2) || 'Not available'}
           </div>
-          <p className="mt-1 text-xs text-indigo-600 font-medium">Top 5% of Department</p>
+          <p className="mt-1 text-xs text-indigo-600 font-medium">Based on saved academic records</p>
         </Card>
 
         <Card className="p-5 border-emerald-100 bg-emerald-50/20">
@@ -329,7 +327,7 @@ export default function AcademicProfilePage({ onNavigate }) {
           <div>
             <h4 className="font-bold text-emerald-950 text-sm">Academic Eligibility Verified for Campus Drives</h4>
             <p className="text-xs text-emerald-800 mt-0.5">
-              With a CGPA of <strong>{student.cumulativeCgpa?.toFixed(2) || '8.84'}</strong> and <strong>0 Active Backlogs</strong>, your academic record is clear for 100% of recruitment drives.
+              With a CGPA of <strong>{student.cumulativeCgpa?.toFixed(2) || 'Not available'}</strong> and <strong>{student.activeBacklogs ?? 'Not recorded'} Active Backlogs</strong>, eligibility depends on the recorded criteria of each drive.
             </p>
           </div>
         </div>

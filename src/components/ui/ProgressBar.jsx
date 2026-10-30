@@ -9,7 +9,7 @@ export default function ProgressBar({
   size = 'md', // 'sm' | 'md' | 'lg'
   className = ''
 }) {
-  const percent = Math.min(100, Math.max(0, Math.round((value / max) * 100)));
+  const percent = Math.min(100, Math.max(0, Math.round((Number.isFinite(value) && max > 0 ? value / max : 0) * 100)));
 
   const sizeStyles = {
     sm: 'h-1.5',
@@ -32,7 +32,7 @@ export default function ProgressBar({
           <span className="text-[#64748B] font-mono">{percent}%</span>
         </div>
       )}
-      <div className={`w-full bg-slate-100 rounded-full overflow-hidden ${sizeStyles[size]}`}>
+      <div role="progressbar" aria-label={label || "Progress"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className={`pp-progress w-full bg-slate-100 rounded-full overflow-hidden ${sizeStyles[size]}`}>
         <div
           className={`h-full rounded-full transition-all duration-300 ${colorStyles[color]}`}
           style={{ width: `${percent}%` }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BatchSelectionModal from './components/BatchSelectionModal';
@@ -9,31 +9,33 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Unified Portal Pages
 import PortalGatewayPage from './pages/PortalGatewayPage';
-import AuthPortalPage from './pages/AuthPortalPage';
-import InstitutePortalPage from './pages/InstitutePortalPage';
-import PlacementPortalPage from './pages/PlacementPortalPage';
-import ManagementPortalPage from './pages/ManagementPortalPage';
-import RemiiLandingPage from './pages/RemiiLandingPage';
+const AuthPortalPage = lazy(() => import('./pages/AuthPortalPage'));
+const InstitutePortalPage = lazy(() => import('./pages/InstitutePortalPage'));
+const PlacementPortalPage = lazy(() => import('./pages/PlacementPortalPage'));
+const ManagementPortalPage = lazy(() => import('./pages/ManagementPortalPage'));
+const RemiiLandingPage = lazy(() => import('./pages/RemiiLandingPage'));
 
 // Specialized Placement Prep Pages
-import HomePage from './pages/HomePage';
-import PlacementDrivesPage from './pages/PlacementDrivesPage';
-import CompaniesPage from './pages/CompaniesPage';
-import CompanyHubPage from './pages/CompanyHubPage';
-import QuestionPrepPage from './pages/QuestionPrepPage';
-import ExperiencesPage from './pages/ExperiencesPage';
-import AiInsightsPage from './pages/AiInsightsPage';
-import MockInterviewPage from './pages/MockInterviewPage';
-import StudentDashboardPage from './pages/StudentDashboardPage';
-import AdminPage from './pages/AdminPage';
-import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
-import AcademicRecordsPage from './pages/AcademicRecordsPage';
-import DailyAttendancePage from './pages/DailyAttendancePage';
-import CrtAttendancePage from './pages/CrtAttendancePage';
-import ReportsExporterPage from './pages/ReportsExporterPage';
-import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
-import DsaPracticePage from './pages/DsaPracticePage';
-import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
+const HomePage = lazy(() => import('./pages/HomePage'));
+const PlacementDrivesPage = lazy(() => import('./pages/PlacementDrivesPage'));
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
+const CompanyHubPage = lazy(() => import('./pages/CompanyHubPage'));
+const QuestionPrepPage = lazy(() => import('./pages/QuestionPrepPage'));
+const ExperiencesPage = lazy(() => import('./pages/ExperiencesPage'));
+const AiInsightsPage = lazy(() => import('./pages/AiInsightsPage'));
+const MockInterviewPage = lazy(() => import('./pages/MockInterviewPage'));
+const StudentDashboardPage = lazy(() => import('./pages/StudentDashboardPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const SelectionWorkflowPage = lazy(() => import('./pages/SelectionWorkflowPage'));
+const AcademicRecordsPage = lazy(() => import('./pages/AcademicRecordsPage'));
+const DailyAttendancePage = lazy(() => import('./pages/DailyAttendancePage'));
+const CrtAttendancePage = lazy(() => import('./pages/CrtAttendancePage'));
+const ReportsExporterPage = lazy(() => import('./pages/ReportsExporterPage'));
+const CurriculumGovernancePage = lazy(() => import('./pages/CurriculumGovernancePage'));
+const DsaPracticePage = lazy(() => import('./pages/DsaPracticePage'));
+const ResumeAtsCheckerPage = lazy(() => import('./pages/ResumeAtsCheckerPage'));
+const AcademicProfilePage = lazy(() => import('./pages/AcademicProfilePage'));
+const MyApplicationsPage = lazy(() => import('./pages/MyApplicationsPage'));
 
 import { getCompanies, getCurrentUser } from './services/storage';
 import { getRoleDefaultDashboard } from './components/ui/BackNavButton';
@@ -237,14 +239,14 @@ export default function App() {
   // If route is 'landing', render standalone Remii-style Landing Page
   if (currentRoute === 'landing') {
     return (
-      <RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} />
+      <Suspense fallback={<div className="pp-route-loading" role="status">Opening PlacePrep…</div>}><RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} /></Suspense>
     );
   }
 
   const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
   return (
-    <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
+    <div className={`pp-app ${['gateway', 'home', 'auth-portal', 'landing'].includes(currentRoute) ? '' : 'pp-workspace'} min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
       
       {!isGuidedFlowRoute && (
         <Navbar
@@ -259,8 +261,11 @@ export default function App() {
       )}
 
       {/* Main Content Router */}
-      <main className="flex-1">
+      <a className="pp-skip-link" href="#main-content">Skip to content</a>
+      <main id="main-content" className="pp-main flex-1" data-route={currentRoute}>
         <ErrorBoundary resetKey={currentRoute}>
+        <Suspense fallback={<div className="pp-route-loading" role="status" aria-live="polite"><span className="pp-loading-mark" aria-hidden="true" /><h2>Opening your workspace</h2><p>Getting your tools ready…</p><div className="pp-loading-grid" aria-hidden="true"><span /><span /><span /></div></div>}>
+        <div key={currentRoute} className="pp-route">
                 
         {/* 1. MASTER HOME PAGE: Portal Gateway (Institute & Placement Options) */}
         {(currentRoute === 'gateway' || currentRoute === 'home') && (
@@ -420,6 +425,22 @@ export default function App() {
           />
         )}
 
+        {/* 16. ACADEMIC PROFILE & TRANSCRIPT */}
+        {currentRoute === 'academic-profile' && (
+          <AcademicProfilePage
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* 17. SELECTION ROUND TRACKER & MY APPLICATIONS */}
+        {(currentRoute === 'applications' || currentRoute === 'selection-tracker') && (
+          <MyApplicationsPage
+            onNavigate={handleNavigate}
+            onSelectCompany={handleSelectCompany}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          />
+        )}
+
         
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
@@ -480,6 +501,8 @@ export default function App() {
         )}
 
         
+        </div>
+        </Suspense>
               </ErrorBoundary>
       </main>
 

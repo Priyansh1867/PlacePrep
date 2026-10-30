@@ -70,6 +70,7 @@ import UserProfileModal from '../components/profile/UserProfileModal';
 import MockInterviewPage from './MockInterviewPage';
 import { calculateProfileCompletion } from '../utils/profileCompletion';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
+import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});

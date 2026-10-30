@@ -25,7 +25,8 @@ import BackNavButton from '../components/ui/BackNavButton';
 import { 
   getAllStudents, 
   getAllBacklogs, 
-  resetAcademicRecordsToDefault 
+  resetAcademicRecordsToDefault,
+  syncAcademicRecordsWithDatabase 
 } from '../services/academicRecordsService';
 
 export default function AcademicRecordsPage({ onNavigate, onBack }) {
@@ -61,6 +62,9 @@ export default function AcademicRecordsPage({ onNavigate, onBack }) {
 
   useEffect(() => {
     refreshData();
+    syncAcademicRecordsWithDatabase().catch((err) => {
+      console.warn('Initial academic records database sync note:', err);
+    });
   }, []);
 
   const showToast = (message, type = 'success') => {
@@ -101,6 +105,9 @@ export default function AcademicRecordsPage({ onNavigate, onBack }) {
 
   const handleSaveStudentSuccess = (savedStudent) => {
     refreshData();
+    syncAcademicRecordsWithDatabase().catch((err) => {
+      console.warn('Save student academic records sync note:', err);
+    });
     showToast(`Student record for ${savedStudent.fullName} (${savedStudent.rollNumber}) saved successfully.`);
   };
 
@@ -108,6 +115,9 @@ export default function AcademicRecordsPage({ onNavigate, onBack }) {
     if (window.confirm('Reset all Student Academic Records and Backlogs to the initial seed data?')) {
       resetAcademicRecordsToDefault();
       refreshData();
+      syncAcademicRecordsWithDatabase().catch((err) => {
+        console.warn('Reset sync note:', err);
+      });
       showToast('Database reset to default seed records.');
     }
   };

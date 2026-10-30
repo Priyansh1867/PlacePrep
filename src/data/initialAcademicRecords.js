@@ -1130,6 +1130,318 @@ export const INITIAL_STUDENT_RECORDS = [
         ]
       }
     ]
+  },
+  {
+    id: 'STU-2026-006',
+    fullName: 'Priya Sharma',
+    rollNumber: '22CS0110',
+    registrationNumber: 'REG-2022-CSE-0110',
+    collegeName: 'Delhi Technological University (DTU)',
+    course: 'B.Tech (Bachelor of Technology)',
+    branch: 'Computer Science and Engineering',
+    graduationBatch: '2026',
+    admissionYear: '2022',
+    currentSemester: 6,
+    admissionType: 'Regular Entry',
+    dateOfBirth: '2004-03-12',
+    age: 22,
+    gender: 'Female',
+    email: 'priya.sharma@example.edu',
+    mobileNumber: '+91 98112 34567',
+    alternateContact: null,
+    currentAddress: 'Pitampura, New Delhi, 110034',
+    permanentAddress: 'Pitampura, New Delhi, 110034',
+    sameAsCurrentAddress: true,
+    class10: {
+      boardName: 'CBSE',
+      schoolName: 'Bal Bharati Public School, Pitampura',
+      passingYear: '2020',
+      maxMarks: 500,
+      obtainedMarks: 458,
+      percentage: 91.6,
+      rollNumber: '10-CBSE-55219'
+    },
+    class12: {
+      boardName: 'CBSE',
+      schoolName: 'Bal Bharati Public School, Pitampura',
+      stream: 'Science',
+      passingYear: '2022',
+      maxMarks: 500,
+      obtainedMarks: 450,
+      percentage: 90.0,
+      rollNumber: '12-CBSE-88321'
+    },
+    diploma: null,
+    cumulativeCgpa: 8.90,
+    activeBacklogsCount: 0,
+    clearedBacklogsCount: 0,
+    updatedAt: '2026-10-18T14:30:00Z',
+    semesters: [
+      {
+        semester: 1,
+        academicYear: '2022-2023',
+        status: 'Completed',
+        sgpa: 8.70,
+        cgpa: 8.70,
+        maxMarks: 500,
+        obtainedMarks: 438,
+        resultStatus: 'Pass',
+        publicationDate: 'Jan 2023',
+        subjects: [
+          { code: 'MA101', name: 'Engineering Mathematics I', credits: 4, maxMarks: 100, obtainedMarks: 85, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'PH101', name: 'Engineering Physics', credits: 4, maxMarks: 100, obtainedMarks: 84, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS101', name: 'Problem Solving & Python Programming', credits: 4, maxMarks: 100, obtainedMarks: 92, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'ME101', name: 'Engineering Graphics & Design', credits: 3, maxMarks: 100, obtainedMarks: 81, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'EN101', name: 'Technical English & Communication', credits: 2, maxMarks: 100, obtainedMarks: 90, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 2,
+        academicYear: '2022-2023',
+        status: 'Completed',
+        sgpa: 8.85,
+        cgpa: 8.78,
+        maxMarks: 500,
+        obtainedMarks: 445,
+        resultStatus: 'Pass',
+        publicationDate: 'Jul 2023',
+        subjects: [
+          { code: 'MA102', name: 'Engineering Mathematics II', credits: 4, maxMarks: 100, obtainedMarks: 86, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CH102', name: 'Engineering Chemistry', credits: 4, maxMarks: 100, obtainedMarks: 88, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS102', name: 'Programming in C & Data Structures Basics', credits: 4, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'EE102', name: 'Basic Electrical & Electronics', credits: 3, maxMarks: 100, obtainedMarks: 82, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS102P', name: 'Computing Lab Workshop', credits: 2, maxMarks: 100, obtainedMarks: 95, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 3,
+        academicYear: '2023-2024',
+        status: 'Completed',
+        sgpa: 8.90,
+        cgpa: 8.82,
+        maxMarks: 500,
+        obtainedMarks: 448,
+        resultStatus: 'Pass',
+        publicationDate: 'Jan 2024',
+        subjects: [
+          { code: 'CS201', name: 'Data Structures and Algorithms', credits: 4, maxMarks: 100, obtainedMarks: 93, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS202', name: 'Object Oriented Programming with Java', credits: 4, maxMarks: 100, obtainedMarks: 91, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS203', name: 'Discrete Mathematics', credits: 4, maxMarks: 100, obtainedMarks: 84, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS204', name: 'Digital Logic and Computer Architecture', credits: 3, maxMarks: 100, obtainedMarks: 82, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS205', name: 'Data Structures Laboratory', credits: 2, maxMarks: 100, obtainedMarks: 98, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 4,
+        academicYear: '2023-2024',
+        status: 'Completed',
+        sgpa: 9.00,
+        cgpa: 8.87,
+        maxMarks: 500,
+        obtainedMarks: 452,
+        resultStatus: 'Pass',
+        publicationDate: 'Jun 2024',
+        subjects: [
+          { code: 'CS206', name: 'Design and Analysis of Algorithms', credits: 4, maxMarks: 100, obtainedMarks: 92, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS207', name: 'Database Management Systems', credits: 4, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS208', name: 'Operating Systems & System Programming', credits: 4, maxMarks: 100, obtainedMarks: 88, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS209', name: 'Theory of Computation & Automata', credits: 3, maxMarks: 100, obtainedMarks: 82, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS210', name: 'DBMS & SQL Laboratory', credits: 2, maxMarks: 100, obtainedMarks: 96, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 5,
+        academicYear: '2024-2025',
+        status: 'Completed',
+        sgpa: 8.95,
+        cgpa: 8.89,
+        maxMarks: 500,
+        obtainedMarks: 449,
+        resultStatus: 'Pass',
+        publicationDate: 'Jan 2025',
+        subjects: [
+          { code: 'CS301', name: 'Computer Networks and Protocols', credits: 4, maxMarks: 100, obtainedMarks: 88, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS302', name: 'Software Engineering & Agile Methodologies', credits: 4, maxMarks: 100, obtainedMarks: 90, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS303', name: 'Web Technologies & REST APIs', credits: 4, maxMarks: 100, obtainedMarks: 95, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS304', name: 'Compiler Design', credits: 3, maxMarks: 100, obtainedMarks: 82, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS305', name: 'Networking and Web Tech Lab', credits: 2, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 6,
+        academicYear: '2024-2025',
+        status: 'In Progress',
+        sgpa: 9.00,
+        cgpa: 8.90,
+        maxMarks: 500,
+        obtainedMarks: null,
+        resultStatus: 'Pending',
+        publicationDate: 'Jun 2025',
+        subjects: [
+          { code: 'CS306', name: 'Machine Learning & Pattern Recognition', credits: 4, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS307', name: 'Information Security & Cryptography', credits: 4, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS308', name: 'Cloud Computing & Microservices', credits: 4, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS309', name: 'Professional Elective I (Big Data / NLP)', credits: 3, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS310', name: 'AI & Machine Learning Lab', credits: 2, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'STU-2026-007',
+    fullName: 'Sahil Pratap Singh',
+    rollNumber: '22CS0111',
+    registrationNumber: 'REG-2022-CSE-0111',
+    collegeName: 'Delhi Technological University (DTU)',
+    course: 'B.Tech (Bachelor of Technology)',
+    branch: 'Computer Science and Engineering',
+    graduationBatch: '2026',
+    admissionYear: '2022',
+    currentSemester: 6,
+    admissionType: 'Regular Entry',
+    dateOfBirth: '2004-01-20',
+    age: 22,
+    gender: 'Male',
+    email: 'sahil.singh@example.edu',
+    mobileNumber: '+91 98223 45678',
+    alternateContact: null,
+    currentAddress: 'Model Town, New Delhi, 110009',
+    permanentAddress: 'Model Town, New Delhi, 110009',
+    sameAsCurrentAddress: true,
+    class10: {
+      boardName: 'CBSE',
+      schoolName: 'Delhi Public School, Mathura Road',
+      passingYear: '2020',
+      maxMarks: 500,
+      obtainedMarks: 469,
+      percentage: 93.8,
+      rollNumber: '10-CBSE-66312'
+    },
+    class12: {
+      boardName: 'CBSE',
+      schoolName: 'Delhi Public School, Mathura Road',
+      stream: 'Science',
+      passingYear: '2022',
+      maxMarks: 500,
+      obtainedMarks: 456,
+      percentage: 91.2,
+      rollNumber: '12-CBSE-99412'
+    },
+    diploma: null,
+    cumulativeCgpa: 9.20,
+    activeBacklogsCount: 0,
+    clearedBacklogsCount: 0,
+    updatedAt: '2026-10-18T14:35:00Z',
+    semesters: [
+      {
+        semester: 1,
+        academicYear: '2022-2023',
+        status: 'Completed',
+        sgpa: 9.10,
+        cgpa: 9.10,
+        maxMarks: 500,
+        obtainedMarks: 455,
+        resultStatus: 'Pass',
+        publicationDate: 'Jan 2023',
+        subjects: [
+          { code: 'MA101', name: 'Engineering Mathematics I', credits: 4, maxMarks: 100, obtainedMarks: 92, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'PH101', name: 'Engineering Physics', credits: 4, maxMarks: 100, obtainedMarks: 90, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS101', name: 'Problem Solving & Python Programming', credits: 4, maxMarks: 100, obtainedMarks: 96, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'ME101', name: 'Engineering Graphics & Design', credits: 3, maxMarks: 100, obtainedMarks: 85, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'EN101', name: 'Technical English & Communication', credits: 2, maxMarks: 100, obtainedMarks: 92, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 2,
+        academicYear: '2022-2023',
+        status: 'Completed',
+        sgpa: 9.15,
+        cgpa: 9.12,
+        maxMarks: 500,
+        obtainedMarks: 458,
+        resultStatus: 'Pass',
+        publicationDate: 'Jul 2023',
+        subjects: [
+          { code: 'MA102', name: 'Engineering Mathematics II', credits: 4, maxMarks: 100, obtainedMarks: 90, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CH102', name: 'Engineering Chemistry', credits: 4, maxMarks: 100, obtainedMarks: 92, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS102', name: 'Programming in C & Data Structures Basics', credits: 4, maxMarks: 100, obtainedMarks: 98, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'EE102', name: 'Basic Electrical & Electronics', credits: 3, maxMarks: 100, obtainedMarks: 84, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS102P', name: 'Computing Lab Workshop', credits: 2, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 3,
+        academicYear: '2023-2024',
+        status: 'Completed',
+        sgpa: 9.25,
+        cgpa: 9.17,
+        maxMarks: 500,
+        obtainedMarks: 462,
+        resultStatus: 'Pass',
+        publicationDate: 'Jan 2024',
+        subjects: [
+          { code: 'CS201', name: 'Data Structures and Algorithms', credits: 4, maxMarks: 100, obtainedMarks: 96, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS202', name: 'Object Oriented Programming with Java', credits: 4, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS203', name: 'Discrete Mathematics', credits: 4, maxMarks: 100, obtainedMarks: 88, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS204', name: 'Digital Logic and Computer Architecture', credits: 3, maxMarks: 100, obtainedMarks: 86, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS205', name: 'Data Structures Laboratory', credits: 2, maxMarks: 100, obtainedMarks: 98, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 4,
+        academicYear: '2023-2024',
+        status: 'Completed',
+        sgpa: 9.20,
+        cgpa: 9.18,
+        maxMarks: 500,
+        obtainedMarks: 460,
+        resultStatus: 'Pass',
+        publicationDate: 'Jun 2024',
+        subjects: [
+          { code: 'CS206', name: 'Design and Analysis of Algorithms', credits: 4, maxMarks: 100, obtainedMarks: 95, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS207', name: 'Database Management Systems', credits: 4, maxMarks: 100, obtainedMarks: 96, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS208', name: 'Operating Systems & System Programming', credits: 4, maxMarks: 100, obtainedMarks: 90, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS209', name: 'Theory of Computation & Automata', credits: 3, maxMarks: 100, obtainedMarks: 85, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS210', name: 'DBMS & SQL Laboratory', credits: 2, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 5,
+        academicYear: '2024-2025',
+        status: 'Completed',
+        sgpa: 9.25,
+        cgpa: 9.19,
+        maxMarks: 500,
+        obtainedMarks: 464,
+        resultStatus: 'Pass',
+        publicationDate: 'Jan 2025',
+        subjects: [
+          { code: 'CS301', name: 'Computer Networks and Protocols', credits: 4, maxMarks: 100, obtainedMarks: 92, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS302', name: 'Software Engineering & Agile Methodologies', credits: 4, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS303', name: 'Web Technologies & REST APIs', credits: 4, maxMarks: 100, obtainedMarks: 98, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false },
+          { code: 'CS304', name: 'Compiler Design', credits: 3, maxMarks: 100, obtainedMarks: 86, grade: 'A+', gradePoints: 9, result: 'Pass', isBacklog: false },
+          { code: 'CS305', name: 'Networking and Web Tech Lab', credits: 2, maxMarks: 100, obtainedMarks: 94, grade: 'O', gradePoints: 10, result: 'Pass', isBacklog: false }
+        ]
+      },
+      {
+        semester: 6,
+        academicYear: '2024-2025',
+        status: 'In Progress',
+        sgpa: 9.25,
+        cgpa: 9.20,
+        maxMarks: 500,
+        obtainedMarks: null,
+        resultStatus: 'Pending',
+        publicationDate: 'Jun 2025',
+        subjects: [
+          { code: 'CS306', name: 'Machine Learning & Pattern Recognition', credits: 4, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS307', name: 'Information Security & Cryptography', credits: 4, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS308', name: 'Cloud Computing & Microservices', credits: 4, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS309', name: 'Professional Elective I (Big Data / NLP)', credits: 3, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false },
+          { code: 'CS310', name: 'AI & Machine Learning Lab', credits: 2, maxMarks: 100, obtainedMarks: null, grade: '-', gradePoints: null, result: 'Pending', isBacklog: false }
+        ]
+      }
+    ]
   }
 ];
 

@@ -1,168 +1,165 @@
 import React from 'react';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import artDrives from '../assets/images/module-illustrations/drives-v1.png';
-import artQuestionBank from '../assets/images/module-illustrations/question-bank-v1.png';
-import artDsaStudio from '../assets/images/module-illustrations/dsa-studio-v1.png';
-import artCrtAttendance from '../assets/images/module-illustrations/crt-attendance-v1.png';
-import artClassAttendance from '../assets/images/module-illustrations/class-attendance-v1.png';
-import artResumeAts from '../assets/images/module-illustrations/resume-ats-v1.png';
-import artReportsExporter from '../assets/images/module-illustrations/reports-exporter-v1.png';
-import artEligibilityCriteria from '../assets/images/module-illustrations/eligibility-criteria-v1.png';
-import artLiveSessions from '../assets/images/module-illustrations/live-sessions-v1.png';
-import artShortlisted from '../assets/images/module-illustrations/shortlisted-v1.png';
-import artInternships from '../assets/images/module-illustrations/internships-v1.png';
-import artFeedbackLoop from '../assets/images/module-illustrations/feedback-loop-v1.png';
-import artOffCampus from '../assets/images/module-illustrations/off-campus-v1.png';
-import artPushNotifications from '../assets/images/module-illustrations/push-notifications-v1.png';
-import artStudentData from '../assets/images/module-illustrations/student-data-v1.png';
-import artCurriculumGovernance from '../assets/images/module-illustrations/curriculum-governance-v1.png';
-import artRoundDetails from '../assets/images/module-illustrations/round-details-v1.png';
-import artHackathons from '../assets/images/module-illustrations/hackathons-v1.png';
-import artFacultyMonitoring from '../assets/images/module-illustrations/faculty-monitoring-v1.png';
+import cardDrivesOrange from '../assets/images/card_drives_orange.jpg';
+import cardReportsOrange from '../assets/images/card_reports_orange.jpg';
+import cardEligibilityOrange from '../assets/images/card_eligibility_orange.jpg';
+import cardLiveOrange from '../assets/images/card_live_orange.jpg';
+import cardShortlistsOrange from '../assets/images/card_shortlists_orange.jpg';
+import cardInternshipsOrange from '../assets/images/card_internships_orange.jpg';
+import cardFeedbackOrange from '../assets/images/card_feedback_orange.jpg';
+import cardOffcampusOrange from '../assets/images/card_offcampus_orange.jpg';
+import cardNotificationsOrange from '../assets/images/card_notifications_orange.jpg';
+import cardDsaOrange from '../assets/images/card_dsa_orange.jpg';
+import cardQuestionBankOrange from '../assets/images/card_questionbank_orange.jpg';
+import cardCrtOrange from '../assets/images/card_crt_orange.jpg';
 
 const CARD_IMAGE_MAP = {
-  'drives': artDrives,
-  'question-bank': artQuestionBank,
-  'dsa-studio': artDsaStudio,
-  'crt-attendance': artCrtAttendance,
-  'class-attendance': artClassAttendance,
-  'resume-ats': artResumeAts,
-  'reports-exporter': artReportsExporter,
-  'eligibility-criteria': artEligibilityCriteria,
-  'live-sessions': artLiveSessions,
-  'shortlisted': artShortlisted,
-  'internships': artInternships,
-  'feedback-loop': artFeedbackLoop,
-  'off-campus': artOffCampus,
-  'push-notifications': artPushNotifications,
-  'student-data': artStudentData,
-  'curriculum-governance': artCurriculumGovernance,
-  'round-details': artRoundDetails,
-  'hackathons': artHackathons,
-  'faculty-monitoring': artFacultyMonitoring,
-  'upcoming-drives': artDrives,
+  // Placement Portal mappings (Light Orange Matched 3D Dioramas)
+  'drives': cardDrivesOrange,
+  'reports-exporter': cardReportsOrange,
+  'eligibility-criteria': cardEligibilityOrange,
+  'live-sessions': cardLiveOrange,
+  'shortlisted': cardShortlistsOrange,
+  'internships': cardInternshipsOrange,
+  'feedback-loop': cardFeedbackOrange,
+  'off-campus': cardOffcampusOrange,
+  'push-notifications': cardNotificationsOrange,
+  'faculty-monitoring': cardReportsOrange,
+
+  // Institute Portal mappings (Light Orange Matched 3D Dioramas)
+  'student-data': cardEligibilityOrange,
+  'curriculum-governance': cardReportsOrange,
+  'upcoming-drives': cardDrivesOrange,
+  'question-bank': cardQuestionBankOrange,
+  'dsa-studio': cardDsaOrange,
+  'crt-attendance': cardCrtOrange,
+  'class-attendance': cardLiveOrange,
+  'resume-ats': cardReportsOrange,
+  'round-details': cardShortlistsOrange,
+  'hackathons': cardDsaOrange
 };
 
-const CARD_TONES = {
-  drives: { accent: '#2563eb', rgb: '37, 99, 235', soft: '#eff6ff' },
-  'reports-exporter': { accent: '#7c3aed', rgb: '124, 58, 237', soft: '#f5f3ff' },
-  'eligibility-criteria': { accent: '#059669', rgb: '5, 150, 105', soft: '#ecfdf5' },
-  'live-sessions': { accent: '#ea580c', rgb: '234, 88, 12', soft: '#fff7ed' },
-  shortlisted: { accent: '#db2777', rgb: '219, 39, 119', soft: '#fdf2f8' },
-  internships: { accent: '#0f766e', rgb: '15, 118, 110', soft: '#f0fdfa' },
-  'feedback-loop': { accent: '#e11d48', rgb: '225, 29, 72', soft: '#fff1f2' },
-  'off-campus': { accent: '#4f46e5', rgb: '79, 70, 229', soft: '#eef2ff' },
-  'push-notifications': { accent: '#ca8a04', rgb: '202, 138, 4', soft: '#fefce8' },
-  'student-data': { accent: '#4f46e5', rgb: '79, 70, 229', soft: '#eef2ff' },
-  'curriculum-governance': { accent: '#7c3aed', rgb: '124, 58, 237', soft: '#f5f3ff' },
-  'upcoming-drives': { accent: '#2563eb', rgb: '37, 99, 235', soft: '#eff6ff' },
-  'question-bank': { accent: '#0891b2', rgb: '8, 145, 178', soft: '#ecfeff' },
-  'dsa-studio': { accent: '#9333ea', rgb: '147, 51, 234', soft: '#faf5ff' },
-  'crt-attendance': { accent: '#ea580c', rgb: '234, 88, 12', soft: '#fff7ed' },
-  'class-attendance': { accent: '#059669', rgb: '5, 150, 105', soft: '#ecfdf5' },
-  'resume-ats': { accent: '#0f766e', rgb: '15, 118, 110', soft: '#f0fdfa' },
-  'round-details': { accent: '#db2777', rgb: '219, 39, 119', soft: '#fdf2f8' },
-  hackathons: { accent: '#c2410c', rgb: '194, 65, 12', soft: '#fff7ed' },
+// Unified Light Orange Theme Palette matching both cards and 3D illustrations
+const LIGHT_ORANGE_THEME = {
+  accent: 'orange',
+  cardHoverBg: 'hover:bg-orange-50/25',
+  activeRing: 'ring-2 ring-orange-500 border-orange-500 shadow-lg shadow-orange-500/15',
+  borderHover: 'hover:border-orange-300',
+  iconBox: 'bg-orange-50 text-orange-600 border border-orange-200/80 group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500',
+  iconActive: 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/25',
+  titleHover: 'group-hover:text-orange-600',
+  arrowBtn: 'bg-slate-100 text-slate-600 group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500',
+  arrowActive: 'bg-orange-500 text-white shadow-md shadow-orange-500/20',
+  badgeTone: 'border-orange-200 text-orange-800 bg-orange-50/95 shadow-2xs font-bold',
+  glowGradient: 'from-orange-400/20 via-amber-300/10 to-transparent'
 };
 
-const PORTAL_DEFAULTS = {
-  emerald: { accent: '#059669', rgb: '5, 150, 105', soft: '#ecfdf5' },
-  indigo: { accent: '#4f46e5', rgb: '79, 70, 229', soft: '#eef2ff' },
-  teal: { accent: '#0f766e', rgb: '15, 118, 110', soft: '#f0fdfa' },
-};
-
-export default function PortalModuleCards({ items, activeId, onSelect, tone = 'indigo' }) {
+export default function PortalModuleCards({ items, activeId, onSelect }) {
   const handleClick = (itemId) => {
     if (onSelect) {
       onSelect(itemId);
     }
   };
 
+  const theme = LIGHT_ORANGE_THEME;
+
   return (
-    <section className="portal-module-section">
-      <div className="portal-module-section__lead">
-        <div>
-          <p className="portal-module-section__eyebrow">Workspace shortcuts</p>
-          <p className="portal-module-section__copy">Your most relevant actions, each with a distinct visual status.</p>
-        </div>
+    <section className="portal-module-section w-full">
+      <div className="mb-4">
+        <p className="text-[11px] font-extrabold tracking-[0.16em] uppercase text-orange-600">Workspace Shortcuts</p>
+        <p className="text-xs text-slate-500 font-medium mt-0.5">Your most relevant actions, each with a distinct visual status.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full">
-      {items.map((item) => {
-        const Icon = item.icon;
-        const isActive = activeId === item.id;
-        const cardImg = CARD_IMAGE_MAP[item.id] || item.image || artDrives;
-        const cardTone = CARD_TONES[item.id] || PORTAL_DEFAULTS[tone] || PORTAL_DEFAULTS.indigo;
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeId === item.id;
+          const cardImg = item.image || CARD_IMAGE_MAP[item.id] || cardDrivesOrange;
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => handleClick(item.id)}
-            aria-current={isActive ? 'page' : undefined}
-            className={`portal-workspace-card group ${isActive ? 'is-active' : ''}`}
-            style={{
-              '--portal-accent': cardTone.accent,
-              '--portal-accent-rgb': cardTone.rgb,
-              '--portal-soft': cardTone.soft,
-            }}
-          >
-            <img
-              src={cardImg}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              width={1536}
-              height={1024}
-              className="portal-workspace-card__image"
-            />
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleClick(item.id)}
+              className={`group relative text-left w-full h-52 sm:h-56 rounded-3xl overflow-hidden border transition-all duration-300 transform hover:-translate-y-1.5 focus:outline-none cursor-pointer shadow-sm hover:shadow-xl bg-white ${
+                isActive
+                  ? `${theme.activeRing}`
+                  : `border-slate-200/90 ${theme.borderHover} ${theme.cardHoverBg}`
+              }`}
+            >
+              {/* Background 3D Graphic (Light Orange Matched, Crisp & Balanced) */}
+              <img
+                src={cardImg}
+                alt={item.label}
+                className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 group-hover:opacity-100"
+              />
 
-            <span className="portal-workspace-card__veil" />
-            <span className="portal-workspace-card__orb" />
+              {/* Subtle Gradient Floor for Peak Bottom Typography Legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-white via-white/45 to-transparent transition-opacity duration-300" />
+              
+              {/* Soft Ambient Light Orange Glow from Bottom Right */}
+              <div className={`absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-gradient-to-br ${theme.glowGradient} blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
 
-            <span className="portal-workspace-card__content">
-              <span className="portal-workspace-card__topline">
-                <span className="portal-workspace-card__icon">
-                  <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-                </span>
+              {/* Active Subtle Orange Accent Border */}
+              {isActive && (
+                <div className="absolute inset-0 border-2 border-orange-500/30 rounded-3xl pointer-events-none" />
+              )}
 
-                <span className="portal-workspace-card__badges">
-                  {isActive && (
-                    <span className="portal-workspace-card__active-badge">
-                      <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Active</span>
-                    </span>
-                  )}
-                  {item.badge !== undefined && item.badge !== null && item.badge !== '' && (
-                    <span className={`portal-workspace-card__badge ${
-                      String(item.badge).includes('Restricted') || String(item.badge).includes('❌')
-                        ? 'is-restricted'
-                        : ''
+              {/* Content Container (Razor-Sharp High-Contrast Typography & Light Orange Accents) */}
+              <div className="relative z-10 h-full p-5 flex flex-col justify-between text-slate-900">
+                {/* Top Row: Icon Box and Status Pill */}
+                <div className="flex items-center justify-between">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs ${
+                    isActive
+                      ? theme.iconActive
+                      : theme.iconBox
+                  }`}>
+                    <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isActive && (
+                      <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-500 text-slate-950 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 stroke-[3]" />
+                        <span>Active</span>
+                      </span>
+                    )}
+                    {item.badge !== undefined && item.badge !== null && item.badge !== '' && (
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide backdrop-blur-md border ${
+                        String(item.badge).includes('Restricted') || String(item.badge).includes('❌')
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : theme.badgeTone
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Row: Title, Description & Arrow Button */}
+                <div>
+                  <div className="flex items-end justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h4 className={`text-base sm:text-lg font-black tracking-tight text-slate-900 transition-colors duration-200 truncate ${theme.titleHover}`}>
+                        {item.label}
+                      </h4>
+                      <p className="text-xs text-slate-500 line-clamp-1 mt-1 font-semibold">
+                        {item.description || (item.badge ? `Status: ${item.badge}` : 'Click to jump to section')}
+                      </p>
+                    </div>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-slate-200/80 transition-all duration-300 shadow-xs ${
+                      isActive
+                        ? `${theme.arrowActive} scale-110`
+                        : `${theme.arrowBtn} group-hover:scale-110 group-hover:translate-x-0.5 group-hover:-translate-y-0.5`
                     }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </span>
-              </span>
-
-              <span className="portal-workspace-card__bottom">
-                <span className="portal-workspace-card__copy">
-                    <span className="portal-workspace-card__eyebrow">Workspace module</span>
-                    <h4 className="portal-workspace-card__title">
-                      {item.label}
-                    </h4>
-                    <span className="portal-workspace-card__description">
-                      {item.description || (item.badge ? `Status: ${item.badge}` : 'Click to jump to section')}
-                    </span>
-                </span>
-                <span className="portal-workspace-card__arrow">
-                    <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-                </span>
-              </span>
-            </span>
-          </button>
-        );
-      })}
+                      <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </section>
   );

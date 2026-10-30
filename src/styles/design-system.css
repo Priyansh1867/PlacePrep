@@ -56,23 +56,7 @@
 .pp-workspace .pp-main :where(tbody tr:hover) { background: #f8faff; }
 .pp-workspace .dashboard-hero { border-radius: 24px; box-shadow: 0 20px 45px -28px #10204e80; }
 .pp-workspace .dashboard-hero__art { opacity: .38; }
-/* Module cards retain existing images, statuses, and onSelect behavior. */
-.pp-workspace .portal-module-section__lead { background: transparent; border: 0; box-shadow: none; padding: 8px 0 16px; min-height: auto; }
-.pp-workspace .portal-module-section__eyebrow { color: var(--pp-primary); font-size: .65rem; }
-.pp-workspace .portal-module-section__copy { font-size: .9rem; color: var(--pp-muted); font-weight: 500; margin-top: 6px; }
-.pp-workspace .portal-module-section__art { display: none; }
-.pp-workspace .portal-workspace-card { border-radius: 19px; border-color: var(--pp-border); background: white; box-shadow: var(--pp-shadow); min-height: 216px; }
-.pp-workspace .portal-workspace-card__content { min-height: 216px; padding: 22px; gap: 25px; }
-.pp-workspace .portal-workspace-card__image { opacity: .13; width: 52%; left: auto; right: 0; object-fit: cover; mask-image: linear-gradient(90deg,transparent,#000); }
-.pp-workspace .portal-workspace-card:hover .portal-workspace-card__image { opacity: .23; transform: scale(1.03); filter: none; }
-.pp-workspace .portal-workspace-card__veil { background: linear-gradient(0deg,#fff 0%,#ffffffea 48%,#ffffff22); }
-.pp-workspace .portal-workspace-card__orb { opacity: .25; }
-.pp-workspace .portal-workspace-card__icon { background: var(--portal-soft); border: 1px solid rgba(var(--portal-accent-rgb),.12); box-shadow: none; backdrop-filter: none; }
-.pp-workspace .portal-workspace-card__title { font-size: 1.05rem; line-height: 1.35; }
-.pp-workspace .portal-workspace-card__description { color: var(--pp-muted); font-size: .78rem; line-height: 1.5; -webkit-line-clamp: 3; }
-.pp-workspace .portal-workspace-card__eyebrow { letter-spacing: .09em; }
-.pp-workspace .portal-workspace-card.is-active { border-color: var(--portal-accent); box-shadow: 0 0 0 3px rgba(var(--portal-accent-rgb),.09),var(--pp-shadow); }
-.pp-workspace .portal-workspace-card__arrow { border-radius: 12px; backdrop-filter: none; }
+
 /* Authentication: calm neutral surfaces and clear form hierarchy. */
 /* Gateway: editorial typography, purposeful cards, and a quiet product canvas. */
 .pp-workspace .pp-gateway { min-height: 100vh; color: var(--pp-ink); background: radial-gradient(ellipse at 50% 0%,#e9edff 0%,transparent 48%),#f7f9fc; display: flex; flex-direction: column; }
@@ -131,7 +115,6 @@
  .pp-workspace .pp-journey { flex-wrap: wrap; gap: 15px; padding: 27px 0; }
  .pp-workspace .pp-journey i { display: none; }
  .pp-workspace .pp-gateway-footer { padding: 18px 20px; flex-wrap: wrap; justify-content: center; text-align: center; }
- .pp-workspace .portal-workspace-card,.pp-workspace .portal-workspace-card__content { min-height: 205px; }
  .pp-workspace .pp-main .pp-page-header { padding-bottom: 18px; }
  .pp-workspace .pp-navbar { top: 8px; }
  .pp-workspace .pp-main :where(.flex) { min-width: 0; }
@@ -168,20 +151,3 @@
 .pp-workspace .pp-hero-stats > div > span:nth-child(2) { display: block; color: #fff; margin-top: 7px; font-size: clamp(15px,1.5vw,20px); line-height: 1.4; }
 .pp-workspace .pp-hero-stats > div > span:nth-child(3) { color: #b5c6df; font-size: 11px; line-height: 1.5; }
 @media (max-width:640px) { .pp-workspace .pp-hero-stats { gap: 10px; } .pp-workspace .pp-hero-stats > div { padding: 13px; } }
-
-/* Generated, feature-specific artwork: visible illustrations above a clean text area. */
-.pp-workspace .portal-workspace-card { min-height: 300px; background: linear-gradient(145deg,#fff 65%,var(--portal-soft)); }
-.pp-workspace .portal-workspace-card__content { min-height: 300px; gap: 120px; padding: 22px; }
-.pp-workspace .portal-workspace-card__image { inset: 0 0 auto auto; width: 100%; height: 210px; object-fit: contain; object-position: right center; opacity: 1; mask-image: linear-gradient(to bottom,#000 0%,#000 85%,transparent 100%); transition: transform 450ms var(--pp-ease); }
-.pp-workspace .portal-workspace-card:hover .portal-workspace-card__image { opacity: 1; transform: scale(1.035); filter: none; }
-.pp-workspace .portal-workspace-card__veil { background: linear-gradient(to bottom,transparent 0%,transparent 58%,#fff 72%,#fff 100%); }
-.pp-workspace .portal-workspace-card__orb { display: none; }
-.pp-workspace .portal-workspace-card__icon { background: var(--portal-soft); }
-.pp-workspace .portal-workspace-card__badge { background: #fffffff5; }
-.pp-workspace .portal-workspace-card__bottom { align-items: flex-end; }
-@media (max-width:640px) {
- .pp-workspace .portal-workspace-card,.pp-workspace .portal-workspace-card__content { min-height: 282px; }
- .pp-workspace .portal-workspace-card__content { gap: 105px; padding: 20px; }
- .pp-workspace .portal-workspace-card__image { height: 195px; }
-}
-@media (prefers-reduced-motion:reduce) { .pp-workspace .portal-workspace-card:hover .portal-workspace-card__image { transform: none; } }

@@ -275,22 +275,34 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
             <Button
               size="sm"
               variant="primary"
-              icon={ArrowRight}
-              iconPosition="right"
-              onClick={() => onNavigate('prep')}
-              className="w-full"
+              icon={Bot}
+              onClick={() => onNavigate('mock-interview')}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold border-0 shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              Practice Next Question
+              <span>AI Mock Interview</span>
+              <span className="px-1.5 py-0.2 bg-black/20 rounded-sm text-[9px] font-black uppercase tracking-wider">LIVE</span>
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              icon={Sparkles}
-              onClick={() => onNavigate('resume-ats')}
-              className="w-full text-white border-white/20 hover:bg-white/10"
-            >
-              ATS Resume Checker
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                icon={ArrowRight}
+                iconPosition="right"
+                onClick={() => onNavigate('prep')}
+                className="w-full text-white border-white/20 hover:bg-white/10 text-xs"
+              >
+                Questions
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                icon={Sparkles}
+                onClick={() => onNavigate('resume-ats')}
+                className="w-full text-white border-white/20 hover:bg-white/10 text-xs"
+              >
+                Resume ATS
+              </Button>
+            </div>
           </div>
         </div>
       </div>

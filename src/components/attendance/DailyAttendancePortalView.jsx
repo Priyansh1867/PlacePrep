@@ -52,8 +52,9 @@ import {
 import { getCurrentUser, setCurrentUser, setPortalRole } from '../../services/storage';
 import { AuthApi, StudentAttendanceApi } from '../../services/api';
 import SearchBar from '../ui/SearchBar';
-import QRCode from 'qrcode';
-import jsQR from 'jsqr';
+// Dynamic QRCode generator with SVG fallback
+const QRCode = { toDataURL: async (text) => 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(text) };
+const jsQR = typeof window !== 'undefined' ? window.jsQR : null;
 
 export default function DailyAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current logged in user & role

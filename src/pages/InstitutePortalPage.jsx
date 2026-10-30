@@ -71,6 +71,7 @@ import UserProfileModal from '../components/profile/UserProfileModal';
 import MockInterviewPage from './MockInterviewPage';
 import { calculateProfileCompletion } from '../utils/profileCompletion';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
+import TimetableManagementView from '../components/timetable/TimetableManagementView';
 import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
@@ -330,6 +331,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   const navTabs = [
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
+    { id: 'timetable', label: 'Master Timetable', icon: Calendar, badge: 'Schedule' },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
     { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
     { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
@@ -1071,6 +1073,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             </div>
           </div>
         )}
+        {activeTab === 'timetable' && (
+          <div id="institute-tab-timetable" className="space-y-6 scroll-mt-24">
+            <TimetableManagementView currentUser={currentUser} />
+          </div>
+        )}
+
         {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
           <div id="institute-tab-crt-attendance" className="space-y-6 scroll-mt-24">

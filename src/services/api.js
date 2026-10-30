@@ -3,7 +3,18 @@ import { getSavedInstituteLocation, saveInstituteLocation } from './storage.js';
 // API requests are routed through the Vite proxy to the Spring Boot backend.
 // Attaches auth tokens and provides clean, explicit error handling.
 
-const API_BASE = '/api';
+const getApiBase = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    return '/api';
+  }
+  return 'http://localhost:8082/api';
+};
+
+const API_BASE = getApiBase();
 
 export function getAuthToken() {
   try {
@@ -35,7 +46,8 @@ export async function request(endpoint, options = {}) {
   };
   let response;
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), 1200) : null;
+  const timeoutMs = options.timeout || 8000;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
@@ -113,12 +125,59 @@ export const AuthApi = {
     return await request('/auth/me');
   },
 
-  async getAllUsers() {
-    return await request('/auth/users');
+  async registerStudent(data) {
+    // When faculty or HOD registers a student, do NOT overwrite the faculty's auth token
+    return await request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        role: 'student',
+        ...data
+      })
+    });
+  },
+
+  async bulkRegisterStudents(students) {
+    return await request('/auth/bulk-register', {
+      method: 'POST',
+      body: JSON.stringify(students)
+    });
+  },
+
+  async getAllUsers(role, search) {
+    const params = new URLSearchParams();
+    if (role) params.set('role', role);
+    if (search) params.set('search', search);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return await request(`/auth/users${queryString}`);
   },
 
   logout() {
     setAuthToken(null);
+  }
+};
+
+// 2. Academics & Student Marksheet Records API
+export const AcademicsApi = {
+  async getAllStudents() {
+    return await request('/academics/students');
+  },
+
+  async getStudent(emailOrId) {
+    return await request(`/academics/students/${encodeURIComponent(emailOrId)}`);
+  },
+
+  async saveStudent(studentData) {
+    return await request('/academics/students', {
+      method: 'POST',
+      body: JSON.stringify(studentData)
+    });
+  },
+
+  async syncStudents(academicStudentsList) {
+    return await request('/academics/sync', {
+      method: 'POST',
+      body: JSON.stringify(academicStudentsList)
+    });
   }
 };
 

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
-import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
+import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
 import { AuthApi } from '../services/api';
 import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 

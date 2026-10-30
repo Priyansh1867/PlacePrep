@@ -23,7 +23,7 @@ import { getCompanies, getAiInsights } from '../services/storage';
 import { InsightsApi, CompanyApi } from '../services/api';
 import Badge from '../components/ui/Badge';
 
-export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onLaunchMock }) {
+export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onLaunchMock, onNavigate, onBack }) {
   const [companies, setCompanies] = useState(() => getCompanies());
   const [selectedCompanyId, setSelectedCompanyId] = useState(initialCompanyId || 'hcltech');
   const [overviewStats, setOverviewStats] = useState(null);
@@ -152,6 +152,12 @@ export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onL
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
+      {/* Top Back Navigation */}
+      <div className="flex items-center justify-between">
+        <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="dashboard" />
+        <span className="text-xs font-semibold text-slate-400">Historical Intelligence • Season 2026-2027</span>
+      </div>
+
       {/* Top Banner */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-8 sm:p-10 shadow-xl overflow-hidden relative">
         <div className="max-w-3xl relative z-10">

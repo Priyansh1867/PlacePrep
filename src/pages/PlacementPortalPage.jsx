@@ -513,20 +513,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 1. TOP HEADER BANNER WITH RIGHT-HAND PROFILE CARD (Dark + Light + Enhanced Triad Palette) */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="dashboard-hero dashboard-hero--placement bg-gradient-to-br from-[#070B19] via-[#0F172A] to-[#0A1828] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative backdrop-blur-xl">
-          <img
-            src={placementWorkflowHero}
-            alt=""
-            className="dashboard-hero__art"
-          />
-          <span className="dashboard-hero__wash" />
-          {/* Tri-Color Ambient Lighting Orbs */}
-          <div className="absolute -right-16 -top-16 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute right-1/4 -bottom-16 w-72 h-72 bg-amber-500/12 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-gradient-to-r from-[#111439] via-[#0E2829] to-[#162740] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative z-30">
+          <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+            <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+          </div>
 
           {/* Top Row: Workspace Heading & Right-side User Profile */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-40">
             <div>
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3 shadow-xs backdrop-blur-md">
                 <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
@@ -565,7 +558,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               )}
 
               {/* Dedicated Top-Right Profile Pill & Dropdown */}
-              <div className="relative">
+              <div className="relative z-50">
                 <button
                   type="button"
                   ref={profileTriggerRef}
@@ -592,7 +585,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 {isProfileDropdownOpen && (
                   <ProfilePopover anchorRef={profileTriggerRef} onClose={() => setIsProfileDropdownOpen(false)}>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-slate-900 text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
                       <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-emerald-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
@@ -677,8 +670,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
             </div>
           </div>
 
-          {/* Quick Metrics Bar Adapting to Active User Role (Triad Bento Mini-Cards) */}
-          <div className="pp-hero-stats relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-6 pt-5 border-t border-white/10 text-xs">
+          {/* Quick Metrics Bar Adapting to Active User Role */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-emerald-800/60 text-xs relative z-0">
             {isStudent ? (
               <>
                 <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">

@@ -259,4 +259,83 @@ describe('User Authentication, Profile and Navigation Suite', () => {
     assert.strictEqual(activeFaculty.role, 'teacher');
     assert.notStrictEqual(activeFaculty.id, studentUser.id);
   });
+
+  // TEST CASE 7: Role-Aware Back Navigation Destinations
+  it('Test Case 7: Role-aware fallback destinations return correct dashboards for all roles', async () => {
+    const { getRoleDefaultDashboard, getRoleDefaultDashboardLabel } = await import('../utils/navigation.js');
+
+    // Student fallback
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'student' }), 'dashboard');
+    assert.strictEqual(getRoleDefaultDashboardLabel({ role: 'student' }), 'Dashboard');
+
+    // Faculty fallback
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'teacher' }), 'institute-portal');
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'faculty' }), 'institute-portal');
+    assert.strictEqual(getRoleDefaultDashboardLabel({ role: 'teacher' }), 'Faculty Portal');
+
+    // HOD fallback
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'hod' }), 'institute-portal');
+    assert.strictEqual(getRoleDefaultDashboardLabel({ role: 'hod' }), 'HOD Portal');
+
+    // Management fallback
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'management' }), 'management-portal');
+    assert.strictEqual(getRoleDefaultDashboardLabel({ role: 'management' }), 'Management Portal');
+
+    // Placement fallback
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'placement' }), 'placement-portal');
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'tpo' }), 'placement-portal');
+    assert.strictEqual(getRoleDefaultDashboardLabel({ role: 'placement' }), 'Placement Portal');
+
+    // Admin fallback
+    assert.strictEqual(getRoleDefaultDashboard({ role: 'admin' }), 'admin');
+    assert.strictEqual(getRoleDefaultDashboardLabel({ role: 'admin' }), 'Admin Portal');
+
+    // Default / guest fallback
+    assert.strictEqual(getRoleDefaultDashboard(null), 'dashboard');
+  });
+
+  // TEST CASE 8: Stacking context and z-index elevation in InstitutePortal and PlacementPortal
+  it('Test Case 8: Dropdown containers have correct z-index hierarchy and no clipping overflow', () => {
+    const institutePortalPath = 'src/pages/InstitutePortalPage.jsx';
+    const instituteContent = fs.readFileSync(institutePortalPath, 'utf8');
+
+    // Header container must be relative z-40, profile container relative z-50
+    assert.ok(instituteContent.includes('relative z-40'), 'Institute portal top banner row must have elevated z-index (z-40)');
+    assert.ok(instituteContent.includes('relative z-50'), 'Institute portal profile wrapper must have z-50');
+    // Metrics bar must be z-0 so it never overlaps the dropdown
+    assert.ok(instituteContent.includes('relative z-0'), 'Quick metrics bar must have z-0');
+    // Dropdown popup must have solid background and overflow-y-auto
+    assert.ok(instituteContent.includes('bg-white'), 'Dropdown popup must have solid white background');
+    assert.ok(instituteContent.includes('overflow-y-auto'), 'Dropdown popup must have overflow-y-auto');
+
+    const placementPortalPath = 'src/pages/PlacementPortalPage.jsx';
+    const placementContent = fs.readFileSync(placementPortalPath, 'utf8');
+    assert.ok(placementContent.includes('relative z-40'), 'Placement portal top banner row must have elevated z-index (z-40)');
+    assert.ok(placementContent.includes('relative z-50'), 'Placement portal profile wrapper must have z-50');
+    assert.ok(placementContent.includes('relative z-0'), 'Placement portal quick metrics bar must have z-0');
+  });
+
+  // TEST CASE 9: Back navigation presence on all secondary pages
+  it('Test Case 9: All secondary pages include BackNavButton or onBack navigation', () => {
+    const pagesToCheck = [
+      'src/pages/PlacementDrivesPage.jsx',
+      'src/pages/CompaniesPage.jsx',
+      'src/pages/ExperiencesPage.jsx',
+      'src/pages/AiInsightsPage.jsx',
+      'src/pages/AcademicRecordsPage.jsx',
+      'src/pages/AdminPage.jsx',
+      'src/pages/ResumeAtsCheckerPage.jsx',
+      'src/pages/SelectionWorkflowPage.jsx',
+      'src/pages/ReportsExporterPage.jsx'
+    ];
+
+    for (const pageRelPath of pagesToCheck) {
+      const content = fs.readFileSync(pageRelPath, 'utf8');
+      assert.ok(
+        content.includes('BackNavButton') || content.includes('onBack'),
+        pageRelPath + ' must include BackNavButton or onBack integration'
+      );
+    }
+  });
+
 });

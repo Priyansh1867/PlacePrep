@@ -68,7 +68,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
       setTimeout(() => {
         onAuthSuccess?.(res.user);
         onClose();
-      }, 500);
+      }, 250);
     } catch (err) {
       setErrorMsg(err.message || 'Invalid email or password.');
     } finally {
@@ -113,7 +113,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
       setTimeout(() => {
         onAuthSuccess?.(res.user);
         onClose();
-      }, 600);
+      }, 250);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to register account.');
     } finally {

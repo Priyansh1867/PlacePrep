@@ -51,8 +51,9 @@ import SearchBar from '../components/ui/SearchBar';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
+import BackNavButton from '../components/ui/BackNavButton';
 
-export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpenAuthModal }) {
+export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBack, onOpenAuthModal }) {
   const currentUser = getCurrentUser();
   const currentBatch = getGraduationBatch();
 
@@ -102,6 +103,23 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
     twelfthPercentage: getProfileMetrics(currentUser || {}).twelfthPercentage ?? '',
     activeBacklogs: getProfileMetrics(currentUser || {}).backlogs ?? ''
   });
+
+  useEffect(() => {
+    if (currentUser) {
+      setApplyStudentProfile(prev => ({
+        ...prev,
+        studentName: currentUser.name || currentUser.fullName || prev.studentName,
+        studentEmail: currentUser.email || prev.studentEmail,
+        college: currentUser.college || prev.college,
+        branch: currentUser.branch || prev.branch,
+        graduationBatch: currentUser.graduationBatch || prev.graduationBatch,
+        cgpa: currentUser.cgpa || prev.cgpa,
+        tenthPercentage: currentUser.tenthPercentage || prev.tenthPercentage,
+        twelfthPercentage: currentUser.twelfthPercentage || prev.twelfthPercentage,
+        activeBacklogs: currentUser.activeBacklogs ?? prev.activeBacklogs
+      }));
+    }
+  }, [currentUser]);
   const [applyFeedbackMsg, setApplyFeedbackMsg] = useState(null);
 
   // Eligibility Engine Live Checker Form State
@@ -426,6 +444,16 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
+
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="dashboard" />
+        <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+          <span className="cursor-pointer hover:text-slate-800" onClick={() => onBack ? onBack('dashboard') : (onNavigate && onNavigate('dashboard'))}>Dashboard</span>
+          <span>/</span>
+          <span className="text-indigo-600 font-bold">Placement Drives</span>
+        </div>
+      </div>
 
       {/* Header Banner */}
       <div className="surface-card p-6 sm:p-8 border-slate-200">

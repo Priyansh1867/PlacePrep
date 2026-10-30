@@ -50,10 +50,28 @@ import { CardSkeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
+import UserProfileModal from '../components/profile/UserProfileModal';
+import { calculateProfileCompletion } from '../utils/profileCompletion';
 
 export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [user, setUser] = useState(getCurrentUser());
   const currentBatch = getGraduationBatch();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Dynamic Profile Completion calculation strictly from genuine saved data
+  const completion = calculateProfileCompletion(user);
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setUser(getCurrentUser());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    window.addEventListener('user-changed', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile-updated', handleProfileUpdate);
+      window.removeEventListener('user-changed', handleProfileUpdate);
+    };
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -216,7 +234,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
         <div className="relative z-10 flex items-center gap-4 sm:gap-5">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-600/90 text-white font-black text-2xl flex items-center justify-center shadow-lg border border-white/20 shrink-0">
-            {user?.name ? user.name[0].toUpperCase() : 'P'}
+            {user?.name ? user.name[0].toUpperCase() : (user?.fullName ? user.fullName[0].toUpperCase() : 'S')}
           </div>
 
           <div>
@@ -230,7 +248,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
             </div>
 
             <p className="text-xs sm:text-sm text-indigo-200 mt-1 font-mono">
-              {user?.college || 'SRM Institute of Science & Tech'} • {user?.branch || 'Computer Science & Engineering'}
+              {(user?.college || user?.branch) ? `${user?.college || 'College Pending'}${user?.branch ? ` • ${user.branch}` : ''}` : 'Candidate Profile Details Pending'}
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-mono">
@@ -303,6 +321,126 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
                 Resume ATS
               </Button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Profile Incomplete Alert Matching Genuine Saved Data */}
+      {!completion.isComplete ? (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 text-amber-950 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-extrabold text-sm sm:text-base text-amber-950">Dynamic Profile Incomplete Alert</h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-200 text-amber-900">
+                    {completion.percentage}% Completed
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800/90 mt-1 leading-relaxed">
+                  Your profile currently displays only verified registration details ({completion.completedRequiredCount} of {completion.totalRequiredCount} required fields completed). Please complete your contact and academic records to qualify for verified campus placement drives.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Complete My Profile</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="space-y-1.5 pt-2 border-t border-amber-200/70">
+            <div className="w-full bg-amber-200/70 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-amber-500 to-amber-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${completion.percentage}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[11px] text-amber-800 font-semibold font-mono">
+              <span>{completion.completedRequiredCount} of {completion.totalRequiredCount} required profile fields completed</span>
+              <span>{completion.percentage}%</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-sm text-emerald-950">Profile Complete (100%)</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-800 uppercase">
+                  Verified
+                </span>
+              </div>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                All required placement profile records are filled and verified for campus drives.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsProfileModalOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 font-bold text-xs hover:bg-emerald-100/50 transition cursor-pointer"
+          >
+            Edit Profile
+          </button>
+        </div>
+      )}
+
+      {/* AI Mock Interview Simulator (LIVE Workspace) */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-500/20 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                LIVE WORKSPACE
+              </span>
+              <span className="text-xs font-mono text-indigo-300">Simulated Campus Round</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+              <Bot className="w-8 h-8 text-indigo-400" />
+              AI Mock Interview Simulator
+            </h2>
+            <p className="text-xs sm:text-sm text-indigo-200 leading-relaxed">
+              Experience realistic interview rounds with speech-to-text input, real-time AI evaluation, instant scoring, and company-specific feedback directly in your student workspace.
+            </p>
+          </div>
+
+          <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-2xl flex flex-col gap-3 min-w-[280px] shrink-0">
+            <div>
+              <span className="text-[11px] font-bold text-indigo-200 block mb-1">Select Interview Round</span>
+              <select
+                id="dashboard-mock-round"
+                defaultValue="technical"
+                className="w-full bg-slate-900/90 border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="technical">Technical Round (DSA & Core CS)</option>
+                <option value="hr">HR Behavioral Round (STAR Format)</option>
+                <option value="managerial">Managerial & Conflict Round</option>
+              </select>
+            </div>
+
+            <Button
+              size="md"
+              variant="primary"
+              icon={Bot}
+              onClick={() => onNavigate('mock-interview')}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-2 cursor-pointer py-3"
+            >
+              <span>Launch Live AI Mock Interview</span>
+              <span className="px-1.5 py-0.5 bg-black/20 rounded text-[9px] font-black uppercase tracking-wider">LIVE</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -450,27 +588,40 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
           {/* Strong vs Weak Topics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
-            <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
-              <span className="font-extrabold text-emerald-900 block mb-2 flex items-center gap-1.5 font-mono">
-                <TrendingUp className="w-4 h-4 text-emerald-700" /> Strong Topics (Verified Clear):
-              </span>
-              <ul className="space-y-1.5 text-slate-700 font-mono text-[11px]">
-                <li>• DBMS Normalization & SQL Queries (88% Accuracy)</li>
-                <li>• Floyd Cycle Detection & Linked Lists (85% Accuracy)</li>
-                <li>• Self Introduction Present-Past-Future Structure</li>
-              </ul>
-            </div>
+            {practicedQuestions.length > 0 ? (
+              <>
+                <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                  <span className="font-extrabold text-emerald-900 block mb-2 flex items-center gap-1.5 font-mono">
+                    <TrendingUp className="w-4 h-4 text-emerald-700" /> Solved Practice Categories:
+                  </span>
+                  <ul className="space-y-1.5 text-slate-700 font-mono text-[11px]">
+                    <li>• Technical Questions: {technicalCount} solved</li>
+                    <li>• HR Behavioral Questions: {hrCount} solved</li>
+                    <li>• Managerial Scenarios: {managerialCount} solved</li>
+                  </ul>
+                </div>
 
-            <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200">
-              <span className="font-extrabold text-amber-900 block mb-2 flex items-center gap-1.5 font-mono">
-                <Flame className="w-4 h-4 text-amber-700" /> Priority Focus (High-Yield):
-              </span>
-              <ul className="space-y-1.5 text-slate-700 font-mono text-[11px]">
-                <li>• Deadlock Coffman Conditions in OS</li>
-                <li>• Quantifying results in STAR behavioral responses</li>
-                <li>• Dynamic Programming & Sliding Window optimizations</li>
-              </ul>
-            </div>
+                <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200">
+                  <span className="font-extrabold text-amber-900 block mb-2 flex items-center gap-1.5 font-mono">
+                    <Flame className="w-4 h-4 text-amber-700" /> Priority Focus Areas:
+                  </span>
+                  <ul className="space-y-1.5 text-slate-700 font-mono text-[11px]">
+                    <li>• Complete remaining technical question bank</li>
+                    <li>• Practice mock interview simulator for instant AI score</li>
+                    <li>• Save and target key campus recruitment drives</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <div className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-2">
+                <p className="font-bold text-slate-800 text-xs">No Practice History Recorded</p>
+                <p className="text-slate-500 text-[11px]">Solve verified questions or launch a mock interview to establish your authentic topic strengths.</p>
+                <div className="pt-1 flex justify-center gap-2">
+                  <Button size="sm" onClick={() => onNavigate('prep')}>Question Bank</Button>
+                  <Button size="sm" variant="outline" onClick={() => onNavigate('mock-interview')}>Launch Mock</Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -738,6 +889,11 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         </div>
       )}
 
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdated={(updated) => setUser(updated)}
+      />
     </div>
   );
 }

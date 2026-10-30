@@ -24,10 +24,11 @@ import { getCompanies, updateResumeStatus, getResumeStatus } from '../services/s
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import BackNavButton from '../components/ui/BackNavButton';
 
 const PRESET_SAMPLE_JDS = [];
 
-export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany }) {
+export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBack }) {
   // Existing data options
   const existingCompanies = getCompanies();
 
@@ -193,6 +194,12 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
+      {/* Top Back Navigation */}
+      <div className="flex items-center justify-between">
+        <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="dashboard" />
+        <span className="text-xs font-semibold text-slate-400">Placement Preparation Suite • ATS Audit</span>
+      </div>
+
       {/* Top Header Banner */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />

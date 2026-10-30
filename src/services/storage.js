@@ -223,6 +223,14 @@ export function getFullStudentProfile(currentUser = null) {
       if (current.name && saved.basicDetails.fullName !== current.name && !saved.basicDetails.fullName) {
         saved.basicDetails.fullName = current.name;
       }
+      if (current.rollNumber && !saved.educationDetails?.rollNumber) {
+        if (!saved.educationDetails) saved.educationDetails = {};
+        saved.educationDetails.rollNumber = current.rollNumber;
+      }
+      if (current.graduationBatch && !saved.educationDetails?.graduationBatch) {
+        if (!saved.educationDetails) saved.educationDetails = {};
+        saved.educationDetails.graduationBatch = current.graduationBatch;
+      }
       return saved;
     }
   }
@@ -247,14 +255,27 @@ export function saveFullStudentProfile(profile, currentUser = null) {
   setStorageItem(storageKey, profile);
   if (profile?.basicDetails) {
     current.name = profile.basicDetails.fullName || current.name;
+    current.fullName = profile.basicDetails.fullName || current.fullName;
     current.email = profile.basicDetails.email || current.email;
     current.phone = profile.basicDetails.phone || current.phone;
+    current.dateOfBirth = profile.basicDetails.dateOfBirth || current.dateOfBirth;
+    current.gender = profile.basicDetails.gender || current.gender;
+    current.currentAddress = profile.basicDetails.currentAddress || current.currentAddress;
+    current.bloodGroup = profile.basicDetails.bloodGroup || current.bloodGroup;
+    current.category = profile.basicDetails.category || current.category;
+    current.differentlyAbled = profile.basicDetails.differentlyAbled || current.differentlyAbled;
+    current.nationality = profile.basicDetails.nationality || current.nationality;
+    current.linkedin = profile.basicDetails.linkedIn || current.linkedin;
+    current.github = profile.basicDetails.github || current.github;
+    current.portfolio = profile.basicDetails.portfolio || current.portfolio;
   }
   if (profile?.educationDetails) {
     current.college = profile.educationDetails.college || current.college;
     current.branch = profile.educationDetails.branch || current.branch;
     current.graduationBatch = profile.educationDetails.graduationBatch || current.graduationBatch;
     current.rollNumber = profile.educationDetails.rollNumber || current.rollNumber;
+    current.tenthPercentage = profile.educationDetails.tenthPercentage || current.tenthPercentage;
+    current.twelfthPercentage = profile.educationDetails.twelfthPercentage || current.twelfthPercentage;
     current.cgpa = profile.educationDetails.cgpa ?? current.cgpa;
     current.activeBacklogs = profile.educationDetails.activeBacklogs ?? current.activeBacklogs;
   }
@@ -262,7 +283,9 @@ export function saveFullStudentProfile(profile, currentUser = null) {
     current.uniqueStudentId = profile.uniqueStudentId;
   }
   setCurrentUser(current);
-  window.dispatchEvent(new CustomEvent('profile-updated', { detail: profile }));
+  saveRegisteredUser(current);
+  dispatchSafeCustomEvent('user-changed', current);
+  dispatchSafeCustomEvent('profile-updated', profile);
 }
 
 // Batch Management

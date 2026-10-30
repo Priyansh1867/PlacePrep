@@ -79,19 +79,19 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   }, [isOpen,onClose]);
   // Dynamic Profile Completion calculation based strictly on genuine persisted data
   const completionUser = {
-    fullName: profile.basicDetails?.fullName,
-    name: profile.basicDetails?.fullName,
-    email: profile.basicDetails?.email,
-    rollNumber: profile.educationDetails?.rollNumber,
-    graduationBatch: profile.educationDetails?.graduationBatch,
-    phone: profile.basicDetails?.phone,
-    dateOfBirth: profile.basicDetails?.dateOfBirth,
-    gender: profile.basicDetails?.gender,
-    college: profile.educationDetails?.college,
-    branch: profile.educationDetails?.branch,
-    currentAddress: profile.basicDetails?.currentAddress,
-    tenthPercentage: profile.educationDetails?.tenthPercentage,
-    twelfthPercentage: profile.educationDetails?.twelfthPercentage
+    fullName: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
+    name: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
+    email: profile.basicDetails?.email || '',
+    rollNumber: profile.educationDetails?.rollNumber || profile.basicDetails?.rollNumber || '',
+    graduationBatch: profile.educationDetails?.graduationBatch || '',
+    phone: profile.basicDetails?.phone || '',
+    dateOfBirth: profile.basicDetails?.dateOfBirth || '',
+    gender: profile.basicDetails?.gender || '',
+    college: profile.educationDetails?.college || '',
+    branch: profile.educationDetails?.branch || '',
+    currentAddress: profile.basicDetails?.currentAddress || '',
+    tenthPercentage: profile.educationDetails?.tenthPercentage || '',
+    twelfthPercentage: profile.educationDetails?.twelfthPercentage || ''
   };
   const completionInfo = calculateProfileCompletion(completionUser);
 
@@ -511,22 +511,22 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
           {/* ========================================================= */}
-          {/* LEFT SIDEBAR (Matching the screenshot provided by user)    */}
+          {/* DESKTOP LEFT SIDEBAR (Matching Placement & Student Profile) */}
           {/* ========================================================= */}
           <div className="w-full md:w-72 lg:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0">
 
             {/* User Avatar & Identity Card */}
             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 bg-gradient-to-b from-indigo-50/30 to-white">
-              {/* Generated Tech Avatar (No Superset ID and No Private Photo as instructed) */}
+              {/* Generated Tech Avatar */}
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 via-violet-500 to-emerald-400 shadow-md">
                   <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white text-3xl font-black uppercase overflow-hidden border-2 border-white">
                     {profile.basicDetails?.profilePhoto ? (
                       <img src={profile.basicDetails.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                     ) : profile.basicDetails?.fullName ? (
-                      profile.basicDetails.fullName.split(' ').map(n => n[0]).slice(0, 2).join('')
+                      profile.basicDetails.fullName.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('')
                     ) : (
-                      'PJ'
+                      'ST'
                     )}
                   </div>
                 </div>
@@ -546,7 +546,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 )}
               </div>
 
-              {/* Unique ID Generator Display (Replacing Superset ID as instructed) */}
+              {/* Unique ID Generator Display */}
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                 <span className="font-medium">PlacePrep ID:</span>
                 <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">

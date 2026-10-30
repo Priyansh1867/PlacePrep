@@ -20,6 +20,7 @@ import BacklogManagementView from '../components/academic/BacklogManagementView'
 import ImportExportCenterView from '../components/academic/ImportExportCenterView';
 import StudentFormModal from '../components/academic/StudentFormModal';
 import StudentProfileModal from '../components/academic/StudentProfileModal';
+import BackNavButton from '../components/ui/BackNavButton';
 
 import { 
   getAllStudents, 
@@ -27,7 +28,7 @@ import {
   resetAcademicRecordsToDefault 
 } from '../services/academicRecordsService';
 
-export default function AcademicRecordsPage() {
+export default function AcademicRecordsPage({ onNavigate, onBack }) {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'directory' | 'marksheets' | 'backlogs' | 'import-export'
   const [students, setStudents] = useState([]);
   const [backlogs, setBacklogs] = useState([]);

@@ -37,11 +37,30 @@ const ResumeAtsCheckerPage = lazy(() => import('./pages/ResumeAtsCheckerPage'));
 const AcademicProfilePage = lazy(() => import('./pages/AcademicProfilePage'));
 const MyApplicationsPage = lazy(() => import('./pages/MyApplicationsPage'));
 
-import { getCompanies } from './services/storage';
+import { getCompanies, getCurrentUser } from './services/storage';
+import { getRoleDefaultDashboard } from './components/ui/BackNavButton';
+
+const VALID_ROUTES = new Set([
+  'gateway', 'home', 'classic-home', 'auth-portal', 'institute-portal', 'placement-portal',
+  'management-portal', 'landing', 'workflow', 'drives', 'companies', 'company-hub',
+  'prep', 'experiences', 'ai-insights', 'mock-interview', 'dashboard', 'academic-records',
+  'admin', 'attendance', 'daily-attendance', 'class-attendance', 'crt-attendance',
+  'crt-training-attendance', 'reports', 'reports-exporter', 'curriculum-governance',
+  'syllabus-governance', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker', 'ats-checker'
+]);
+
+function getInitialRoute() {
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const raw = window.location.hash.replace(/^#\/?/, '').toLowerCase().trim();
+    if (VALID_ROUTES.has(raw)) return raw;
+  }
+  return 'gateway';
+}
 
 export default function App() {
   // Default to gateway (the Master Home Page with Institute & Placement options)
-  const [currentRoute, setCurrentRoute] = useState('gateway');
+  const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
+  const [routeHistory, setRouteHistory] = useState([]);
   const [selectedAuthPortal, setSelectedAuthPortal] = useState('institute');
   const [authorizedPortal, setAuthorizedPortal] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -82,13 +101,54 @@ export default function App() {
 
   const handleNavigate = (route) => {
     scrollToTop();
+    setRouteHistory(prev => (prev[prev.length - 1] === currentRoute ? prev : [...prev, currentRoute]));
     setCurrentRoute(route);
   };
 
-  // Automatically snap viewport to top on route change to keep search bars in direct view
+  const handleBack = (fallbackRoute) => {
+    scrollToTop();
+    if (routeHistory.length > 0) {
+      const prev = routeHistory[routeHistory.length - 1];
+      setRouteHistory(h => h.slice(0, -1));
+      setCurrentRoute(prev);
+    } else if (fallbackRoute && VALID_ROUTES.has(fallbackRoute)) {
+      setCurrentRoute(fallbackRoute);
+    } else {
+      const user = getCurrentUser();
+      const defaultDashboard = getRoleDefaultDashboard(user);
+      setCurrentRoute(defaultDashboard);
+    }
+  };
+
+  // Automatically snap viewport to top and sync hash on route change
   useEffect(() => {
     scrollToTop();
+    if (typeof window !== 'undefined' && window.location) {
+      if (window.location.hash !== `#${currentRoute}`) {
+        try {
+          window.history.pushState({ route: currentRoute }, '', `#${currentRoute}`);
+        } catch {}
+      }
+    }
   }, [currentRoute]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (e.state && e.state.route && VALID_ROUTES.has(e.state.route)) {
+        setCurrentRoute(e.state.route);
+        return;
+      }
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const raw = window.location.hash.replace(/^#\/?/, '').toLowerCase().trim();
+        if (VALID_ROUTES.has(raw)) {
+          setCurrentRoute(raw);
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Navigation handlers
   const handleSelectPortal = (portal) => {
@@ -260,6 +320,7 @@ export default function App() {
         {currentRoute === 'workflow' && (
           <SelectionWorkflowPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
@@ -269,6 +330,8 @@ export default function App() {
         {currentRoute === 'drives' && (
           <PlacementDrivesPage
             onSelectCompany={handleSelectCompany}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 
@@ -277,6 +340,8 @@ export default function App() {
         {currentRoute === 'companies' && (
           <CompaniesPage
             onSelectCompany={handleSelectCompany}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
             onOpenBatchModal={() => setIsBatchModalOpen(true)}
           />
         )}
@@ -313,7 +378,10 @@ export default function App() {
         
         {/* 11. INTERVIEW EXPERIENCES */}
         {currentRoute === 'experiences' && (
-          <ExperiencesPage />
+          <ExperiencesPage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+          />
         )}
 
         
@@ -323,6 +391,8 @@ export default function App() {
             initialCompanyId={selectedCompany?.id || 'hcltech'}
             onSelectQuestion={handleSelectQuestion}
             onLaunchMock={handleStartMockInterview}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 
@@ -349,7 +419,10 @@ export default function App() {
         
         {/* 15. ACADEMIC RECORDS */}
         {currentRoute === 'academic-records' && (
-          <AcademicRecordsPage />
+          <AcademicRecordsPage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+          />
         )}
 
         {/* 16. ACADEMIC PROFILE & TRANSCRIPT */}
@@ -371,7 +444,10 @@ export default function App() {
         
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
-          <AdminPage />
+          <AdminPage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+          />
         )}
 
         

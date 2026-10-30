@@ -35,7 +35,7 @@ export async function request(endpoint, options = {}) {
   };
   let response;
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), 2000) : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 1200) : null;
   try {
     response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
@@ -49,6 +49,12 @@ export async function request(endpoint, options = {}) {
     throw fetchErr;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+  }
+
+  // Guard against non-JSON responses (e.g. Vercel SPA index.html fallback rewrites)
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Backend returned non-JSON response (offline fallback)');
   }
 
   if (!response.ok) {

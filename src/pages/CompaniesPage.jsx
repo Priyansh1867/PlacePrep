@@ -21,8 +21,9 @@ import SearchBar from '../components/ui/SearchBar';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
+import BackNavButton from '../components/ui/BackNavButton';
 
-export default function CompaniesPage({ onSelectCompany, onOpenBatchModal }) {
+export default function CompaniesPage({ onSelectCompany, onOpenBatchModal, onNavigate, onBack }) {
   const currentBatch = getGraduationBatch();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);

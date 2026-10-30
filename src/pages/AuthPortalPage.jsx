@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
-import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
+import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
 import { AuthApi } from '../services/api';
 
 const portalOptions = [
@@ -67,8 +67,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const [successMsg, setSuccessMsg] = useState('');
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', rollNumber: '',
-    college: 'Delhi Technological University (DTU)', branch: 'Computer Science and Engineering', batch: '2028',
-    department: 'Computer Science and Engineering', designation: 'Class Incharge', companyName: 'HCLTech', adminKey: '',
+    college: '', branch: '', batch: '2028',
+    department: '', designation: '', companyName: '', adminKey: '',
   });
 
   const activePortal = useMemo(() => portalOptions.find((item) => item.id === portalBranch), [portalBranch]);
@@ -130,22 +130,69 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       }
 
       const roleMeta = roleOptions.find((item) => item.id === selectedRole);
-      let userObj = {
-        id: 'user-' + Date.now(),
-        name: formData.fullName || (formData.email.split('@')[0]),
-        email: formData.email.trim().toLowerCase(),
-        role: selectedRole,
-        roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
-        portal: portalBranch,
-        college: formData.college || 'Delhi Technological University (DTU)',
-        branch: formData.branch || 'Computer Science and Engineering',
-        graduationBatch: formData.batch || '2028',
-        department: formData.department || 'Computer Science and Engineering',
-        designation: formData.designation,
-        company: formData.companyName || 'HCLTech',
-        rollNumber: formData.rollNumber || '2024/CSE/084',
-        authenticatedAt: new Date().toISOString(),
-      };
+      const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
+      const emailTrim = formData.email.trim().toLowerCase();
+
+      let userObj;
+      if (authMode === 'login') {
+        // Look up genuine registered details first
+        const existingStudent = findRegisteredUser(emailTrim);
+        if (existingStudent) {
+          userObj = {
+            ...existingStudent,
+            role: existingStudent.role || selectedRole,
+            roleLabel: roleMeta?.label || existingStudent.roleLabel || selectedRole.toUpperCase(),
+            portal: destinationPortal,
+            authenticatedAt: new Date().toISOString()
+          };
+        } else {
+          const derivedName = (formData.fullName || formData.email.split('@')[0]).trim();
+          userObj = {
+            id: 'user-' + Date.now(),
+            name: derivedName,
+            fullName: derivedName,
+            email: emailTrim,
+            role: selectedRole,
+            roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
+            portal: destinationPortal,
+            college: (formData.college || '').trim(),
+            branch: (formData.branch || '').trim(),
+            graduationBatch: formData.batch || '2028',
+            department: (formData.department || '').trim(),
+            designation: (formData.designation || '').trim(),
+            company: (formData.companyName || '').trim(),
+            rollNumber: (formData.rollNumber || '').trim(),
+            authenticatedAt: new Date().toISOString()
+          };
+        }
+      } else {
+        // Register genuine user - only genuine entered details, strictly no fake demo data
+        const fullNameTrim = formData.fullName.trim();
+        userObj = {
+          id: 'user-' + Date.now(),
+          name: fullNameTrim,
+          fullName: fullNameTrim,
+          email: emailTrim,
+          role: selectedRole,
+          roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
+          portal: destinationPortal,
+          college: (formData.college || '').trim(),
+          branch: (formData.branch || '').trim(),
+          graduationBatch: formData.batch || '2028',
+          rollNumber: (formData.rollNumber || '').trim(),
+          phone: '',
+          dateOfBirth: '',
+          gender: '',
+          currentAddress: '',
+          tenthPercentage: '',
+          twelfthPercentage: '',
+          department: (formData.department || '').trim(),
+          designation: (formData.designation || '').trim(),
+          company: (formData.companyName || '').trim(),
+          authenticatedAt: new Date().toISOString()
+        };
+        saveRegisteredUser(userObj);
+      }
 
       // Synchronize directly with Spring Boot MySQL Database with instant non-blocking fallback
       try {
@@ -177,7 +224,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           // Mode is login: attempt live database login
           try {
             const loginRes = await AuthApi.login({
-              email: formData.email.trim().toLowerCase(),
+              email: emailTrim,
               password: formData.password
             });
             if (loginRes && loginRes.user) {
@@ -192,23 +239,24 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
         console.warn('Backend note:', err);
       }
 
-      const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
-
       // Persist session to local storage
       setCurrentUser(userObj);
+      saveRegisteredUser(userObj);
       setPortalMode(destinationPortal);
       setPortalRole(selectedRole);
       if (selectedRole === 'student' && userObj.graduationBatch) {
         setGraduationBatch(userObj.graduationBatch);
       }
 
-      setSuccessMsg(`Welcome, ${userObj.name}! Redirecting to ${destinationPortal.toUpperCase()} workspace...`);
+      // Fast, smooth, responsive redirect without freezing
+      setSuccessMsg(`Welcome, ${userObj.name}! Redirecting...`);
       setTimeout(() => {
         onAuthSuccess(userObj, destinationPortal);
-      }, 550);
+      }, 250);
     } catch (generalErr) {
       console.error('Unhandled error during authentication submission:', generalErr);
       setErrorMsg('An unexpected error occurred. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };

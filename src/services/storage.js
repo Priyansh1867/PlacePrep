@@ -73,6 +73,13 @@ function setStorageItem(key, value) {
     console.error(`Error saving ${key} to localStorage:`, err);
   }
 }
+function removeStorageItem(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    console.error(`Error removing ${key} from localStorage:`, err);
+  }
+}
 
 function dispatchSafeCustomEvent(eventName, detail) {
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -88,9 +95,16 @@ function dispatchSafeCustomEvent(eventName, detail) {
 export function getCurrentUser() { return getStorageItem(STORAGE_KEYS.CURRENT_USER, null); }
 
 export function setCurrentUser(user) {
-  setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
-  if (user && user.graduationBatch) {
-    setGraduationBatch(user.graduationBatch);
+  try {
+    setStorageItem(STORAGE_KEYS.CURRENT_USER, user);
+    if (user && user.email) {
+      saveRegisteredUser(user);
+    }
+    if (user && user.graduationBatch) {
+      setGraduationBatch(user.graduationBatch);
+    }
+  } catch (e) {
+    console.error('Error setting current user:', e);
   }
 }
 
@@ -951,4 +965,53 @@ export function saveInstituteLocation(loc) {
   };
   setStorageItem('placeprep_institute_location', updated);
   return updated;
+}
+
+// Registered Users Storage Helpers for Authentication & Student Persistence
+export function getRegisteredUsers() {
+  try {
+    const data = getStorageItem('placeprep_registered_users', []);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('Error reading registered users:', e);
+    return [];
+  }
+}
+
+export function saveRegisteredUser(user) {
+  if (!user || !user.email) return null;
+  try {
+    let users = getRegisteredUsers();
+    if (!Array.isArray(users)) users = [];
+    const normalizedEmail = user.email.toLowerCase().trim();
+    const existingIndex = users.findIndex(u => (u?.email || '').toLowerCase().trim() === normalizedEmail);
+    if (existingIndex >= 0) {
+      users[existingIndex] = { ...users[existingIndex], ...user };
+    } else {
+      users.push(user);
+    }
+    setStorageItem('placeprep_registered_users', users);
+    return user;
+  } catch (err) {
+    console.error('Error saving registered user:', err);
+    return user;
+  }
+}
+
+export function findRegisteredUser(email) {
+  if (!email) return null;
+  try {
+    const users = getRegisteredUsers();
+    if (!Array.isArray(users)) return null;
+    const normalizedEmail = email.toLowerCase().trim();
+    return users.find(u => (u?.email || '').toLowerCase().trim() === normalizedEmail) || null;
+  } catch (err) {
+    console.error('Error finding registered user:', err);
+    return null;
+  }
+}
+
+export function logoutUser() {
+  removeStorageItem(STORAGE_KEYS.CURRENT_USER);
+  removeStorageItem(STORAGE_KEYS.PORTAL_ROLE);
 }

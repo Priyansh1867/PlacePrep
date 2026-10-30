@@ -26,6 +26,8 @@ import {
   Copy,
   AlertCircle
 } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import { calculateProfileCompletion } from '../../utils/profileCompletion';
 import { UserApi } from '../../services/api';
 import {
   getCurrentUser,
@@ -75,6 +77,23 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
     document.addEventListener('keydown', handleKey);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown',handleKey); previousFocus?.focus?.(); };
   }, [isOpen,onClose]);
+  // Dynamic Profile Completion calculation based strictly on genuine persisted data
+  const completionUser = {
+    fullName: profile.basicDetails?.fullName,
+    name: profile.basicDetails?.fullName,
+    email: profile.basicDetails?.email,
+    rollNumber: profile.educationDetails?.rollNumber,
+    graduationBatch: profile.educationDetails?.graduationBatch,
+    phone: profile.basicDetails?.phone,
+    dateOfBirth: profile.basicDetails?.dateOfBirth,
+    gender: profile.basicDetails?.gender,
+    college: profile.educationDetails?.college,
+    branch: profile.educationDetails?.branch,
+    currentAddress: profile.basicDetails?.currentAddress,
+    tenthPercentage: profile.educationDetails?.tenthPercentage,
+    twelfthPercentage: profile.educationDetails?.twelfthPercentage
+  };
+  const completionInfo = calculateProfileCompletion(completionUser);
 
   // Temporary inputs for skills
   const [newTechSkill, setNewTechSkill] = useState('');
@@ -427,14 +446,14 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   };
 
   const completionFields = [profile.basicDetails?.fullName, profile.basicDetails?.email, profile.basicDetails?.phone, profile.basicDetails?.dateOfBirth, profile.educationDetails?.college, profile.educationDetails?.branch, profile.educationDetails?.graduationBatch, profile.educationDetails?.rollNumber];
-  const profileCompletion = Math.round(completionFields.filter(value => value != null && String(value).trim() !== '').length / completionFields.length * 100);
+  const profileCompletion = completionInfo.percentage;
 
   if (!isOpen) return null;
 
   return createPortal(
     <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Your profile" tabIndex={-1} className="fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white rounded-3xl max-w-6xl w-full h-[94vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col text-slate-900 animate-scale-in">
-        
+
         {/* Top Header Bar */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -490,12 +509,12 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
 
         {/* Main Body: Left Sidebar + Right Content Pane */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          
+
           {/* ========================================================= */}
           {/* LEFT SIDEBAR (Matching the screenshot provided by user)    */}
           {/* ========================================================= */}
           <div className="w-full md:w-72 lg:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0">
-            
+
             {/* User Avatar & Identity Card */}
             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 bg-gradient-to-b from-indigo-50/30 to-white">
               {/* Generated Tech Avatar (No Superset ID and No Private Photo as instructed) */}
@@ -522,7 +541,9 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
                   {profile.basicDetails?.fullName || getCurrentUser()?.name || 'Student'}
                 </h3>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
+                {completionInfo.isComplete && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
+                )}
               </div>
 
               {/* Unique ID Generator Display (Replacing Superset ID as instructed) */}
@@ -584,7 +605,59 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
           {/* RIGHT PANE: SELECTED SECTION CONTENT & INTERACTIVE FORM   */}
           {/* ========================================================= */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-slate-50/30">
-            
+
+            {/* Top Incomplete Profile Notification / Complete Status Banner */}
+            {!completionInfo.isComplete ? (
+              <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-300 shadow-xs">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-black text-amber-950 text-sm tracking-tight">Profile Incomplete ({completionInfo.percentage}% Completed)</h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/80 text-amber-900 uppercase">
+                        Action Required
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                      You have registered with basic details. Please complete all remaining mandatory fields to verify your candidate profile for campus drives.
+                    </p>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-amber-900 font-semibold">
+                      <span>Completed: <strong className="text-amber-950">{completionInfo.completedRequiredCount}</strong> / {completionInfo.totalRequiredCount} required fields</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 sm:self-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sec = completionInfo.firstMissingSection === 'education-details' ? 'education' : 'basic';
+                      setActiveTab(sec);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Complete My Profile</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between gap-3 shadow-xs animate-fade-in">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="block text-sm font-extrabold text-emerald-950">Profile Complete (100%)</span>
+                    <span className="font-normal text-emerald-800">All required placement verification fields have been saved and validated.</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-900 uppercase">
+                  Verified
+                </span>
+              </div>
+            )}
+
             {/* 1. BASIC DETAILS */}
             {activeTab === 'basic' && (
               <div className="space-y-6 max-w-4xl">
@@ -607,7 +680,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Personal Demographics</h4>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Full Name</label>
@@ -1162,7 +1235,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 {/* Technical Skills */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Technical Skills & Frameworks</h4>
-                  
+
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -1204,7 +1277,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 {/* Core Coursework */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Core CS Subjects & Coursework</h4>
-                  
+
                   <div className="flex gap-2">
                     <input
                       type="text"

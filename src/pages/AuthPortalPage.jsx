@@ -292,7 +292,6 @@ const [isSubmitting, setIsSubmitting] = useState(false);
                     ) : null}
                   </div>
                 )}
-                
 
                 {authMode === 'register' && selectedRole === 'student' && (
                   <InputField label="Branch / specialization" icon={GraduationCap}>

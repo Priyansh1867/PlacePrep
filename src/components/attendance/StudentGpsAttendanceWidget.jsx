@@ -33,7 +33,8 @@ import {
   Zap
 } from 'lucide-react';
 import { StudentAttendanceApi } from '../../services/api';
-import jsQR from 'jsqr';
+// Safe QR parser
+const jsQR = typeof window !== 'undefined' ? window.jsQR : null;
 import { getCurrentUser, getFullStudentProfile } from '../../services/storage';
 
 export default function StudentGpsAttendanceWidget({
@@ -1198,3 +1199,4 @@ export default function StudentGpsAttendanceWidget({
     </div>
   );
 }
+

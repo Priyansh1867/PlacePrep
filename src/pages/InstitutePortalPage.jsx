@@ -2,6 +2,7 @@ import ProfilePopover from '../components/profile/ProfilePopover';
 import { getProfileMetrics, attendancePercentage, displayValue } from '../services/profileMetrics';
 import React, { useRef, useState, useEffect } from 'react';
 import {
+  Bot,
   School,
   GraduationCap,
   Users,
@@ -278,6 +279,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
     { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: studentCrt?.percentage == null ? 'No records' : `${studentCrt.percentage}%` },
+    { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, badge: 'LIVE', roles: ['student'] },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: resumeStatus?.atsScore == null ? 'Not assessed' : `${resumeStatus.atsScore}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
@@ -880,6 +882,28 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
+        {/* TAB: AI MOCK INTERVIEW (STUDENT ONLY) */}
+        {activeTab === 'mock-interview' && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center mx-auto">
+              <Bot className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-extrabold text-slate-900">AI Mock Interview Simulator (LIVE)</h3>
+            <p className="text-sm text-slate-600 max-w-lg mx-auto">
+              Launch a live technical, HR, or company-specific mock interview round with real-time feedback and evaluation metrics.
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => onNavigate('mock-interview')}
+                className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Bot className="w-4 h-4" />
+                <span>Launch Mock Interview Round</span>
+              </button>
+            </div>
+          </div>
+        )}
         {/* TAB 4: CRT ATTENDANCE (Campus Recruitment Training Attendance Portal) */}
         {activeTab === 'crt-attendance' && (
           <div id="institute-tab-crt-attendance" className="space-y-6 scroll-mt-24">

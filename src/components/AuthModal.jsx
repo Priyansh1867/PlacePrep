@@ -14,7 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
-import { setCurrentUser, setGraduationBatch, findRegisteredUser } from '../services/storage';
+import { setCurrentUser, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
 import { isCollegeEmail } from '../pages/AuthPortalPage';
 import PlacePrepLogo from './PlacePrepLogo';
 import Button from './ui/Button';
@@ -57,38 +57,40 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setLoading(true);
     setErrorMsg('');
     try {
-      let userObj = {
+      const emailTrim = formData.email.trim().toLowerCase();
+      const localUser = findRegisteredUser(emailTrim);
+      let userObj = localUser ? { ...localUser, authenticatedAt: new Date().toISOString() } : {
         id: `user-${Date.now()}`,
         name: formData.email.split('@')[0],
-        email: formData.email.trim().toLowerCase(),
+        fullName: formData.email.split('@')[0],
+        email: emailTrim,
         role: 'student',
         graduationBatch: '2028',
+        college: '',
+        branch: '',
+        rollNumber: '',
         authenticatedAt: new Date().toISOString()
       };
 
       try {
         const res = await AuthApi.login({
-          email: formData.email.trim(),
+          email: emailTrim,
           password: formData.password
         });
         if (res && res.user) {
           userObj = { ...userObj, ...res.user, id: res.user.id || userObj.id };
         }
       } catch (authErr) {
-        const localUser = findRegisteredUser(formData.email.trim());
-        if (localUser) {
-          userObj = { ...localUser };
-        } else {
-          console.warn('Backend unavailable, proceeding with session:', authErr);
-        }
+        console.warn('Backend unavailable, proceeding with local verified session:', authErr);
       }
 
       setCurrentUser(userObj);
+      saveRegisteredUser(userObj);
       setSuccessMsg(`Welcome back, ${userObj.name}!`);
       setTimeout(() => {
         onAuthSuccess?.(userObj);
         onClose();
-      }, 500);
+      }, 250);
     } catch (err) {
       setErrorMsg(err.message || 'Invalid email or password.');
     } finally {
@@ -114,14 +116,23 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setLoading(true);
     setErrorMsg('');
     try {
+      const nameTrim = formData.name.trim();
       let userObj = {
         id: `user-${Date.now()}`,
-        name: formData.name.trim(),
+        name: nameTrim,
+        fullName: nameTrim,
         email: formData.email.trim().toLowerCase(),
         role: 'student',
-        college: formData.college.trim() || 'Engineering College',
-        branch: formData.branch.trim() || 'Computer Science',
+        college: formData.college.trim() || '',
+        branch: formData.branch.trim() || '',
         graduationBatch: formData.graduationBatch,
+        rollNumber: '',
+        phone: '',
+        dateOfBirth: '',
+        gender: '',
+        currentAddress: '',
+        tenthPercentage: '',
+        twelfthPercentage: '',
         authenticatedAt: new Date().toISOString()
       };
 
@@ -147,12 +158,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
       }
 
       setCurrentUser(userObj);
+      saveRegisteredUser(userObj);
       setGraduationBatch(formData.graduationBatch);
       setSuccessMsg('Account created successfully! Welcome to PlacePrep.');
       setTimeout(() => {
         onAuthSuccess?.(userObj);
         onClose();
-      }, 600);
+      }, 250);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to register account.');
     } finally {
@@ -299,7 +311,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Priyansh Jain"
+                placeholder="e.g. Rahul Sharma"
                 icon={UserIcon}
                 required
               />

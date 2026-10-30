@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bot,
   School,
@@ -67,6 +67,8 @@ import FacultyOperationsMonitoringView from '../components/monitoring/FacultyOpe
 import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
 import UserProfileModal from '../components/profile/UserProfileModal';
+import MockInterviewPage from './MockInterviewPage';
+import { calculateProfileCompletion } from '../utils/profileCompletion';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
@@ -102,6 +104,10 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [questions, setQuestions] = useState(() => getInterviewQuestions() || []);
 
   // Search & Filter state
+  const profileCompletion = useMemo(() => {
+    return calculateProfileCompletion(currentUser);
+  }, [currentUser]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [hackathonSearchQuery, setHackathonSearchQuery] = useState('');
   const [internshipSearchQuery, setInternshipSearchQuery] = useState('');
@@ -349,12 +355,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 2. TOP BANNER & RIGHT-SIDE PROFILE DROPDOWN */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
+        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative z-30">
           <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
             <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-40">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-3">
                 <School className="w-3.5 h-3.5" />
@@ -389,7 +395,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               )}
 
               {/* Dedicated Top-Right Profile Pill & Dropdown */}
-              <div className="relative">
+              <div className="relative z-50">
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
@@ -414,7 +420,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 {isProfileDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-slate-900 text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
                       <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
@@ -430,24 +436,24 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
 
                       {/* Profile details */}
-                      <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
-                        <div className="flex justify-between text-slate-500">
-                          <span>Institute:</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || 'Delhi Technological University'}</span>
+                      <div className="py-3 space-y-2.5 text-[11px] border-b border-slate-100">
+                        <div className="flex items-center justify-between gap-2 text-slate-500">
+                          <span className="shrink-0 font-medium">Institute:</span>
+                          <span className="font-semibold text-slate-800 truncate text-right max-w-[180px]">{currentUser.college || 'Not specified'}</span>
                         </div>
                         {currentUser.role === 'student' ? (
                           <>
-                            <div className="flex justify-between text-slate-500">
-                              <span>Roll Number:</span>
-                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || '2024/CSE/084'}</span>
+                            <div className="flex items-center justify-between gap-2 text-slate-500">
+                              <span className="shrink-0 font-medium">Roll Number:</span>
+                              <span className="font-bold text-slate-800 font-mono text-right truncate max-w-[180px]">{currentUser.rollNumber || 'Not specified'}</span>
                             </div>
-                            <div className="flex justify-between text-slate-500">
-                              <span>Branch & Batch:</span>
-                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
+                            <div className="flex items-center justify-between gap-2 text-slate-500">
+                              <span className="shrink-0 font-medium">Branch & Batch:</span>
+                              <span className="font-semibold text-slate-800 text-right truncate max-w-[180px]">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
                             </div>
-                            <div className="flex justify-between text-slate-500">
-                              <span>Academic Standing:</span>
-                              <span className="font-bold text-emerald-600">Active • 0 Backlogs</span>
+                            <div className="flex items-center justify-between gap-2 text-slate-500">
+                              <span className="shrink-0 font-medium">Academic Standing:</span>
+                              <span className="font-bold text-emerald-600 text-right">Active • 0 Backlogs</span>
                             </div>
                           </>
                         ) : (
@@ -466,6 +472,14 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
                       {/* Quick Actions */}
                       <div className="pt-2 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => { setIsProfileDropdownOpen(false); onNavigate('dashboard'); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-indigo-700 hover:bg-indigo-50/50 font-bold transition text-left cursor-pointer"
+                        >
+                          <Bot className="w-4 h-4 text-indigo-600" />
+                          <span>Student Dashboard & Prep</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => { setIsProfileDropdownOpen(false); setIsFullProfileModalOpen(true); }}
@@ -499,7 +513,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs relative z-0">
             <div>
               <span className="text-indigo-300 block">CRT Attendance:</span>
               <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -536,6 +550,70 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 4. TAB CONTENTS WITH SCROLL TARGET ANCHOR */}
       <div id="institute-module-content" className="max-w-7xl mx-auto scroll-mt-24">
+        {/* Dynamic Profile Alert for Student Workspace */}
+        {currentUser?.role === 'student' && !profileCompletion.isComplete && (
+          <div className="mb-8 p-5 rounded-3xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 text-amber-950 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-sm sm:text-base text-amber-950">Dynamic Profile Incomplete Alert</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-200 text-amber-900">
+                      {profileCompletion.percentage}% Completed
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800/90 mt-1 leading-relaxed">
+                    Your profile contains verified registration details. Complete all contact, demographic, and educational records to unlock full placement drive eligibility.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFullProfileModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>Complete My Profile</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="space-y-1.5 pt-2 border-t border-amber-200/70">
+              <div className="w-full bg-amber-200/70 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${profileCompletion.percentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-amber-800 font-semibold font-mono">
+                <span>{profileCompletion.completedRequiredCount} of {profileCompletion.totalRequiredCount} required profile fields completed</span>
+                <span>{profileCompletion.percentage}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentUser?.role === 'student' && profileCompletion.isComplete && (
+          <div className="mb-8 p-4 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-sm text-emerald-950">Profile Complete (100%)</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-800 uppercase">
+                    Verified
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  All required placement profile records are filled and verified for campus drives.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* TAB 1: STUDENT DATA */}
         {activeTab === 'student-data' && (
@@ -882,25 +960,37 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB: AI MOCK INTERVIEW (STUDENT ONLY) */}
+        {/* TAB: AI MOCK INTERVIEW (STUDENT ONLY) - EMBEDDED LIVE WORKSPACE */}
         {activeTab === 'mock-interview' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center mx-auto">
-              <Bot className="w-8 h-8" />
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-800/50 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg border border-white/20">
+                  <Bot className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-xl font-extrabold text-white">AI Mock Interview Simulator</h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="text-xs text-indigo-200 mt-1">
+                    Conduct real-time technical, HR, or company rounds with AI voice/text evaluation, instant scoring, and comprehensive feedback.
+                  </p>
+                </div>
+              </div>
             </div>
-            <h3 className="text-xl font-extrabold text-slate-900">AI Mock Interview Simulator (LIVE)</h3>
-            <p className="text-sm text-slate-600 max-w-lg mx-auto">
-              Launch a live technical, HR, or company-specific mock interview round with real-time feedback and evaluation metrics.
-            </p>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => onNavigate('mock-interview')}
-                className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition inline-flex items-center gap-2 cursor-pointer"
-              >
-                <Bot className="w-4 h-4" />
-                <span>Launch Mock Interview Round</span>
-              </button>
+
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              <MockInterviewPage
+                initialRound="technical"
+                onFinish={() => {
+                  setActiveTab('upcoming-drives');
+                  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
+                }}
+              />
             </div>
           </div>
         )}

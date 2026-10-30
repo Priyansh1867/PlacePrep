@@ -134,9 +134,9 @@ export default function ManagementPortalPage({ onNavigate }) {
 
       {/* Header Banner */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#0f2027] via-[#203a43] to-[#2c5364] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0f2027] via-[#203a43] to-[#2c5364] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative z-30 overflow-visible">
           <div className="absolute right-0 top-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-40">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-bold uppercase tracking-wider mb-3">
                 <Building2 className="w-3.5 h-3.5" />
@@ -154,7 +154,7 @@ export default function ManagementPortalPage({ onNavigate }) {
             </div>
 
             {/* Profile Dropdown */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 z-50">
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                 className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md transition shadow-md cursor-pointer"
@@ -172,7 +172,7 @@ export default function ManagementPortalPage({ onNavigate }) {
               {isProfileDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-64 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-xs">
+                  <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                     <div className="pb-3 border-b border-slate-100 mb-3">
                       <p className="font-bold text-slate-900">{currentUser.name}</p>
                       <p className="text-slate-500 font-mono text-[10px]">{currentUser.email}</p>
@@ -191,7 +191,7 @@ export default function ManagementPortalPage({ onNavigate }) {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-teal-800/60 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-teal-800/60 text-xs relative z-0">
             <div>
               <span className="text-teal-300 block">Location Status:</span>
               <span className={`font-black text-base ${instituteLocation?.exists ? 'text-emerald-400' : 'text-amber-300'}`}>

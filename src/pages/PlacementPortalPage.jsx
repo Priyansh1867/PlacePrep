@@ -166,8 +166,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   // Student self-eligibility tester state
   const [studentProfile] = useState({
-    name: currentUser?.name || 'Priyansh Jain',
-    rollNumber: currentUser?.rollNumber || '2024/CSE/084',
+    name: currentUser?.name || 'Student',
+    rollNumber: currentUser?.rollNumber || 'Not specified',
     branch: currentUser?.branch || 'Computer Science and Engineering',
     batch: currentUser?.graduationBatch || '2028',
     cgpa: 8.4,
@@ -526,13 +526,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 1. TOP HEADER BANNER WITH RIGHT-HAND PROFILE CARD */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#111439] via-[#0E2829] to-[#162740] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
+        <div className="bg-gradient-to-r from-[#111439] via-[#0E2829] to-[#162740] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative z-30">
           <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
             <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
           </div>
 
           {/* Top Row: Workspace Heading & Right-side User Profile */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-40">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
                 <Briefcase className="w-3.5 h-3.5" />
@@ -569,7 +569,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               )}
 
               {/* Dedicated Top-Right Profile Pill & Dropdown */}
-              <div className="relative">
+              <div className="relative z-50">
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
@@ -594,7 +594,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 {isProfileDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-slate-900 text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
                       <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
@@ -613,13 +613,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                       <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
                         <div className="flex justify-between text-slate-500">
                           <span>Institute:</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || 'Delhi Technological University'}</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || 'Not specified'}</span>
                         </div>
                         {isStudent && (
                           <>
                             <div className="flex justify-between text-slate-500">
                               <span>Roll Number:</span>
-                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || '2024/CSE/084'}</span>
+                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || 'Not specified'}</span>
                             </div>
                             <div className="flex justify-between text-slate-500">
                               <span>Branch & Batch:</span>
@@ -680,7 +680,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
           </div>
 
           {/* Quick Metrics Bar Adapting to Active User Role */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-emerald-800/60 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-emerald-800/60 text-xs relative z-0">
             {isStudent ? (
               <>
                 <div>

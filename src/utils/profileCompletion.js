@@ -38,11 +38,28 @@ export const OPTIONAL_PROFILE_FIELDS = [
  */
 export function isFieldFilled(user, fieldDef) {
   if (!user) return false;
-  const primaryVal = user[fieldDef.key];
-  const fallbackVal = fieldDef.fallbackKey ? user[fieldDef.fallbackKey] : undefined;
-  const val = (primaryVal !== undefined && primaryVal !== null && primaryVal !== '') 
-    ? primaryVal 
-    : fallbackVal;
+
+  // 1. Check direct / top-level property
+  let val = user[fieldDef.key];
+  if ((val === undefined || val === null || val === '') && fieldDef.fallbackKey) {
+    val = user[fieldDef.fallbackKey];
+  }
+
+  // 2. Check nested basicDetails if present
+  if ((val === undefined || val === null || val === '') && user.basicDetails) {
+    val = user.basicDetails[fieldDef.key];
+    if ((val === undefined || val === null || val === '') && fieldDef.fallbackKey) {
+      val = user.basicDetails[fieldDef.fallbackKey];
+    }
+  }
+
+  // 3. Check nested educationDetails if present
+  if ((val === undefined || val === null || val === '') && user.educationDetails) {
+    val = user.educationDetails[fieldDef.key];
+    if ((val === undefined || val === null || val === '') && fieldDef.fallbackKey) {
+      val = user.educationDetails[fieldDef.fallbackKey];
+    }
+  }
 
   if (val === undefined || val === null) return false;
   const str = String(val).trim();

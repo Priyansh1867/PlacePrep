@@ -60,19 +60,19 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
 
   // Dynamic Profile Completion calculation based strictly on genuine persisted data
   const completionUser = {
-    fullName: profile.basicDetails?.fullName,
-    name: profile.basicDetails?.fullName,
-    email: profile.basicDetails?.email,
-    rollNumber: profile.educationDetails?.rollNumber,
-    graduationBatch: profile.educationDetails?.graduationBatch,
-    phone: profile.basicDetails?.phone,
-    dateOfBirth: profile.basicDetails?.dateOfBirth,
-    gender: profile.basicDetails?.gender,
-    college: profile.educationDetails?.college,
-    branch: profile.educationDetails?.branch,
-    currentAddress: profile.basicDetails?.currentAddress,
-    tenthPercentage: profile.educationDetails?.tenthPercentage,
-    twelfthPercentage: profile.educationDetails?.twelfthPercentage
+    fullName: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
+    name: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
+    email: profile.basicDetails?.email || '',
+    rollNumber: profile.educationDetails?.rollNumber || profile.basicDetails?.rollNumber || '',
+    graduationBatch: profile.educationDetails?.graduationBatch || '',
+    phone: profile.basicDetails?.phone || '',
+    dateOfBirth: profile.basicDetails?.dateOfBirth || '',
+    gender: profile.basicDetails?.gender || '',
+    college: profile.educationDetails?.college || '',
+    branch: profile.educationDetails?.branch || '',
+    currentAddress: profile.basicDetails?.currentAddress || '',
+    tenthPercentage: profile.educationDetails?.tenthPercentage || '',
+    twelfthPercentage: profile.educationDetails?.twelfthPercentage || ''
   };
   const completionInfo = calculateProfileCompletion(completionUser);
 
@@ -242,14 +242,14 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addWorkEx = () => {
     const newItem = {
       id: `work-${Date.now()}`,
-      company: 'New Organization',
-      role: 'Associate Intern',
-      location: 'Hybrid / Remote',
-      startDate: 'Jan 2026',
-      endDate: 'Present',
-      currentlyWorking: true,
-      stipend: '₹25,000 / month',
-      description: 'Describe your core responsibilities, key features delivered, and architectural contributions.'
+      company: '',
+      role: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      currentlyWorking: false,
+      stipend: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -276,12 +276,12 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addProject = () => {
     const newItem = {
       id: `proj-${Date.now()}`,
-      title: 'New Technical Project',
-      techStack: 'React, Node.js, PostgreSQL',
-      liveUrl: 'https://example.com',
-      githubUrl: 'https://github.com',
-      duration: '3 Months',
-      description: 'Built scalable backend microservices and modern responsive frontends.'
+      title: '',
+      techStack: '',
+      liveUrl: '',
+      githubUrl: '',
+      duration: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -308,10 +308,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addResponsibility = () => {
     const newItem = {
       id: `por-${Date.now()}`,
-      title: 'Student Coordinator',
-      organization: 'University Cell',
-      duration: '2025 - 2026',
-      description: 'Coordinated student cohorts and managed logistics for events.'
+      title: '',
+      organization: '',
+      duration: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -338,11 +338,11 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addAccomplishment = () => {
     const newItem = {
       id: `acc-${Date.now()}`,
-      title: 'Achievement Title',
-      category: 'Hackathon / Certification',
-      issuedBy: 'Issuing Organization',
-      year: '2025',
-      description: 'Detail about this award or milestone.'
+      title: '',
+      category: '',
+      issuedBy: '',
+      year: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -369,10 +369,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addVolunteering = () => {
     const newItem = {
       id: `vol-${Date.now()}`,
-      organization: 'Community Service Organization',
-      role: 'Student Volunteer',
-      duration: '2024 - 2025',
-      description: 'Contributed to social welfare and educational initiatives.'
+      organization: '',
+      role: '',
+      duration: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -399,10 +399,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addExtraCurricular = () => {
     const newItem = {
       id: `ec-${Date.now()}`,
-      activity: 'Activity / Sports / Club Name',
-      role: 'Participant / Lead',
-      year: '2025',
-      description: 'Key highlights and achievements in this domain.'
+      activity: '',
+      role: '',
+      year: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -426,7 +426,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white rounded-3xl max-w-6xl w-full h-[94vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col text-slate-900 animate-scale-in">
         
         {/* Top Header Bar */}
@@ -482,26 +482,85 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
           </div>
         )}
 
-        {/* Main Body: Left Sidebar + Right Content Pane */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Main Body: Responsive Navigation + Content Pane (Zero Overlap) */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           
+          {/* Mobile Tab Strip & Summary (< md) prevents vertical overflow/overlap */}
+          <div className="md:hidden flex flex-col border-b border-slate-200 bg-white shrink-0">
+            <div className="px-4 py-2.5 flex items-center justify-between bg-slate-50 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-slate-200 shrink-0">
+                  {profile.basicDetails?.profilePhoto ? (
+                    <img src={profile.basicDetails.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                  ) : profile.basicDetails?.fullName ? (
+                    profile.basicDetails.fullName.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('')
+                  ) : (
+                    'ST'
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1 truncate">
+                    {profile.basicDetails?.fullName || getCurrentUser()?.name || 'Student'}
+                    {completionInfo.isComplete && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-500 text-white shrink-0" />}
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-mono truncate block">
+                    ID: {profile.uniqueStudentId || (getCurrentUser()?.email ? generateUniqueStudentId(getCurrentUser().email) : 'PP-1000000')}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right shrink-0 pl-2">
+                <span className={`text-[10px] font-bold ${completionInfo.isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {completionInfo.percentage}% Complete
+                </span>
+                <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-0.5">
+                  <div
+                    className={`h-full rounded-full ${completionInfo.isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    style={{ width: `${completionInfo.percentage}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Scrollable Mobile Tabs Strip */}
+            <div className="flex overflow-x-auto gap-1.5 p-2 bg-white scrollbar-none">
+              {SECTIONS.map((sec) => {
+                const Icon = sec.icon;
+                const isActive = activeTab === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => setActiveTab(sec.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{sec.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ========================================================= */}
-          {/* LEFT SIDEBAR (Matching the screenshot provided by user)    */}
+          {/* DESKTOP LEFT SIDEBAR (Matching Placement & Student Profile) */}
           {/* ========================================================= */}
-          <div className="w-full md:w-72 lg:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0">
+          <div className="hidden md:flex md:w-72 lg:w-80 bg-white border-r border-slate-200 flex-col shrink-0">
             
             {/* User Avatar & Identity Card */}
             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 bg-gradient-to-b from-indigo-50/30 to-white">
-              {/* Generated Tech Avatar (No Superset ID and No Private Photo as instructed) */}
+              {/* Generated Tech Avatar */}
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 via-violet-500 to-emerald-400 shadow-md">
                   <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white text-3xl font-black uppercase overflow-hidden border-2 border-white">
                     {profile.basicDetails?.profilePhoto ? (
                       <img src={profile.basicDetails.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                     ) : profile.basicDetails?.fullName ? (
-                      profile.basicDetails.fullName.split(' ').map(n => n[0]).slice(0, 2).join('')
+                      profile.basicDetails.fullName.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('')
                     ) : (
-                      'PJ'
+                      'ST'
                     )}
                   </div>
                 </div>
@@ -521,11 +580,11 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 )}
               </div>
 
-              {/* Unique ID Generator Display (Replacing Superset ID as instructed) */}
+              {/* Unique ID Generator Display */}
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                 <span className="font-medium">PlacePrep ID:</span>
                 <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                  {profile.uniqueStudentId || 'PP-8034402'}
+                  {profile.uniqueStudentId || (getCurrentUser()?.email ? generateUniqueStudentId(getCurrentUser().email) : 'PP-1000000')}
                 </span>
                 <button
                   type="button"

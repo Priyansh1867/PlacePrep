@@ -26,7 +26,8 @@ import {
   Award,
   FileSpreadsheet,
   Code2,
-  FileCheck
+  FileCheck,
+  BarChart3
 } from 'lucide-react';
 import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../services/storage';
 import PlacePrepLogo from './PlacePrepLogo';
@@ -277,25 +278,34 @@ export default function Navbar({
               className="flex items-center gap-1.5 p-1 pl-1.5 pr-2.5 rounded-full border border-black/[0.08] bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition cursor-pointer"
             >
               <div className="w-6 h-6 rounded-full bg-[#111439] text-white flex items-center justify-center font-bold text-[11px]">
-                {user?.name ? user.name[0].toUpperCase() : 'P'}
+                {user?.name ? user.name[0].toUpperCase() : (user?.fullName ? user.fullName[0].toUpperCase() : 'U')}
               </div>
               <span className="hidden sm:inline font-semibold text-[#111439] text-xs">
-                {user?.name?.split(' ')[0] || 'User'}
+                {user?.name?.split(' ')[0] || user?.fullName?.split(' ')[0] || 'User'}
               </span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
             {userDropdownOpen && (
-              <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-white/95 backdrop-blur-xl border border-black/[0.08] shadow-[0_16px_40px_rgba(17,20,57,0.12)] py-2 z-50 animate-in fade-in-50 zoom-in-95 text-xs">
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
+                <div className="absolute right-0 mt-3 w-72 sm:w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-[0_16px_40px_rgba(17,20,57,0.12)] py-2 z-50 animate-in fade-in-50 zoom-in-95 text-xs max-h-[calc(100vh-100px)] overflow-y-auto">
                 <div className="px-4 py-3 border-b border-black/[0.05]">
-                  <p className="font-semibold text-[#111439]">{user?.name || 'Priyansh Jain'}</p>
-                  <p className="text-[11px] text-slate-500 truncate">{user?.email || 'priyansh.jain@example.edu'}</p>
+                  <p className="font-semibold text-[#111439]">{user?.name || user?.fullName || 'Student'}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{user?.email || 'Active Account'}</p>
                   <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold uppercase">
                     Role: {user?.role || 'STUDENT'} • {batch}
                   </div>
                 </div>
 
                 <div className="py-1">
+                  <button
+                    onClick={() => handleNavigate('dashboard')}
+                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                    Student Dashboard
+                  </button>
                   <button
                     onClick={() => handleNavigate('institute-portal')}
                     className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
@@ -349,6 +359,7 @@ export default function Navbar({
                   </button>
                 </div>
               </div>
+              </>
             )}
           </div>
 

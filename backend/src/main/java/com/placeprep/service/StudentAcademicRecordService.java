@@ -31,6 +31,10 @@ public class StudentAcademicRecordService {
     @Autowired
     private UserRepository userRepository;
 
+    public List<StudentAcademicRecord> findAllRecords() {
+        return recordRepository.findAll();
+    }
+
     public Optional<StudentAcademicRecord> findForStudent(String studentEmailOrId) {
         Optional<StudentAcademicRecord> byEmail = recordRepository.findByEmail(studentEmailOrId);
         if (byEmail.isPresent()) {
@@ -47,6 +51,142 @@ public class StudentAcademicRecordService {
             record.setStudentId(record.getEmail());
         }
         return recordRepository.save(record);
+    }
+
+    @Transactional
+    public Map<String, Object> syncRawRecords(List<Map<String, Object>> rawRecords) {
+        if (rawRecords == null || rawRecords.isEmpty()) {
+            Map<String, Object> res = new HashMap<>();
+            res.put("success", true);
+            res.put("synced", 0);
+            res.put("message", "No records provided");
+            return res;
+        }
+
+        List<StudentAcademicRecord> parsedList = new ArrayList<>();
+        for (Map<String, Object> map : rawRecords) {
+            if (map == null) continue;
+            String email = map.get("email") != null ? String.valueOf(map.get("email")).trim() : null;
+            if (email == null || email.isEmpty()) continue;
+
+            StudentAcademicRecord r = new StudentAcademicRecord();
+            r.setEmail(email);
+
+            Object sid = map.get("studentId");
+            if (sid == null) sid = map.get("id");
+            if (sid == null) sid = map.get("registrationNumber");
+            if (sid == null) sid = map.get("rollNumber");
+            r.setStudentId(sid != null ? String.valueOf(sid).trim() : email);
+
+            Object name = map.get("name");
+            if (name == null) name = map.get("fullName");
+            r.setName(name != null ? String.valueOf(name).trim() : null);
+
+            r.setBranch(map.get("branch") != null ? String.valueOf(map.get("branch")).trim() : null);
+            r.setGraduationBatch(map.get("graduationBatch") != null ? String.valueOf(map.get("graduationBatch")).trim() : null);
+
+            r.setTenthPercentage(toDouble(map.get("tenthPercentage")));
+            r.setTwelfthPercentage(toDouble(map.get("twelfthPercentage")));
+            r.setDiplomaPercentage(toDouble(map.get("diplomaPercentage")));
+            r.setCgpa(toDouble(map.get("cgpa")));
+
+            r.setSem1Sgpa(toDouble(map.get("sem1Sgpa")));
+            r.setSem2Sgpa(toDouble(map.get("sem2Sgpa")));
+            r.setSem3Sgpa(toDouble(map.get("sem3Sgpa")));
+            r.setSem4Sgpa(toDouble(map.get("sem4Sgpa")));
+            r.setSem5Sgpa(toDouble(map.get("sem5Sgpa")));
+            r.setSem6Sgpa(toDouble(map.get("sem6Sgpa")));
+            r.setSem7Sgpa(toDouble(map.get("sem7Sgpa")));
+            r.setSem8Sgpa(toDouble(map.get("sem8Sgpa")));
+
+            r.setActiveBacklogs(toInteger(map.get("activeBacklogs")));
+
+            if (r.getCgpa() == null) {
+                r.setCgpa(computeCgpaFromSemesters(r));
+            }
+
+            parsedList.add(r);
+        }
+
+        return syncRecords(parsedList);
+    }
+
+    private Double toDouble(Object val) {
+        if (val == null) return null;
+        if (val instanceof Number) return ((Number) val).doubleValue();
+        try {
+            String s = String.valueOf(val).trim();
+            return s.isEmpty() ? null : Double.parseDouble(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Integer toInteger(Object val) {
+        if (val == null) return null;
+        if (val instanceof Number) return ((Number) val).intValue();
+        try {
+            String s = String.valueOf(val).trim();
+            return s.isEmpty() ? null : Integer.parseInt(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Transactional
+    public Map<String, Object> syncRecords(List<StudentAcademicRecord> records) {
+        if (records == null || records.isEmpty()) {
+            Map<String, Object> res = new HashMap<>();
+            res.put("success", true);
+            res.put("synced", 0);
+            res.put("message", "No records provided");
+            return res;
+        }
+
+        int imported = 0;
+        int updated = 0;
+
+        for (StudentAcademicRecord record : records) {
+            if (record.getEmail() == null || record.getEmail().trim().isEmpty()) {
+                continue;
+            }
+            if (record.getStudentId() == null || record.getStudentId().trim().isEmpty()) {
+                record.setStudentId(record.getEmail());
+            }
+
+            Optional<StudentAcademicRecord> existing = recordRepository.findByEmail(record.getEmail());
+            if (existing.isEmpty() && record.getStudentId() != null) {
+                existing = recordRepository.findByStudentId(record.getStudentId());
+            }
+
+            if (existing.isPresent()) {
+                StudentAcademicRecord target = existing.get();
+                merge(target, record);
+                recordRepository.save(target);
+                syncUserFromRecord(target);
+                updated++;
+            } else {
+                record.setVerified(true);
+                if (record.getVerifiedBy() == null || record.getVerifiedBy().trim().isEmpty()) {
+                    record.setVerifiedBy("SYSTEM_SYNC");
+                }
+                if (record.getVerifiedAt() == null || record.getVerifiedAt().trim().isEmpty()) {
+                    record.setVerifiedAt(LocalDateTime.now().format(TS));
+                }
+                recordRepository.save(record);
+                syncUserFromRecord(record);
+                imported++;
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("synced", imported + updated);
+        result.put("imported", imported);
+        result.put("updated", updated);
+        result.put("message", String.format("Successfully synced %d records (imported %d, updated %d)",
+                imported + updated, imported, updated));
+        return result;
     }
 
     @Transactional

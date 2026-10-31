@@ -16,7 +16,7 @@
     <description>PlacePrep Smart Placement Preparation Platform API</description>
     <properties>
         <java.version>23</java.version>
-        <spring-ai.version>2.0.1</spring-ai.version>
+        <spring-ai.version>1.1.8</spring-ai.version>
     </properties>
     <dependencies>
         <dependency>

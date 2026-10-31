@@ -433,7 +433,8 @@ export const QuestionApi = {
     formData.append('file', file);
     return await request('/questions/import-file', {
       method: 'POST',
-      body: formData
+      body: formData,
+      timeout: 60000
     });
   }
 };
@@ -804,7 +805,8 @@ export const ResumeAtsApi = {
   async analyze(formData) {
     return await request('/resume-ats/analyze', {
       method: 'POST',
-      body: formData
+      body: formData,
+      timeout: 60000
     });
   },
 

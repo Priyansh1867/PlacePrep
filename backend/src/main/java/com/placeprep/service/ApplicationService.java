@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -148,6 +149,13 @@ public class ApplicationService {
         }
 
         return saved;
+    }
+
+    public List<StudentApplication> getMyApplications(String userEmailOrId) {
+        if (userEmailOrId == null || userEmailOrId.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return applicationRepository.findByStudentIdOrStudentEmail(userEmailOrId, userEmailOrId);
     }
 
     public List<StudentApplication> getStudentApplications(String studentId) {

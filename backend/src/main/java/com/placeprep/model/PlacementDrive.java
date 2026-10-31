@@ -131,6 +131,16 @@ public class PlacementDrive {
         this.id = id;
     }
 
+    @com.fasterxml.jackson.annotation.JsonProperty("id")
+    public void setJsonId(Object idVal) {
+        if (idVal != null) {
+            String str = String.valueOf(idVal).trim();
+            if (this.driveId == null || this.driveId.trim().isEmpty()) {
+                this.driveId = str;
+            }
+        }
+    }
+
     public String getDriveId() {
         return driveId;
     }

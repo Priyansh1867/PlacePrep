@@ -50,8 +50,9 @@ import SearchBar from '../components/ui/SearchBar';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
+import BackNavButton from '../components/ui/BackNavButton';
 
-export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpenAuthModal }) {
+export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBack, onOpenAuthModal }) {
   const currentUser = getCurrentUser();
   const currentBatch = getGraduationBatch();
 
@@ -80,6 +81,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
   const [applications, setApplications] = useState(() => getStudentApplications());
   const [trackedApps, setTrackedApps] = useState([]);
   const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState(null);
   const [trackingLoadingId, setTrackingLoadingId] = useState(null);
 
@@ -90,16 +92,33 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [driveToApply, setDriveToApply] = useState(null);
   const [applyStudentProfile, setApplyStudentProfile] = useState({
-    studentName: currentUser?.name || 'Priyansh Jain',
-    studentEmail: currentUser?.email || 'priyansh.jain@example.edu',
-    college: currentUser?.college || 'Delhi Technological University (DTU)',
-    branch: currentUser?.branch || 'Computer Science and Engineering',
-    graduationBatch: currentBatch,
-    cgpa: 8.85,
-    tenthPercentage: 92.4,
-    twelfthPercentage: 89.6,
-    activeBacklogs: 0
+    studentName: currentUser?.name || currentUser?.fullName || '',
+    studentEmail: currentUser?.email || '',
+    college: currentUser?.college || '',
+    branch: currentUser?.branch || '',
+    graduationBatch: currentUser?.graduationBatch || currentBatch,
+    cgpa: currentUser?.cgpa || '',
+    tenthPercentage: currentUser?.tenthPercentage || '',
+    twelfthPercentage: currentUser?.twelfthPercentage || '',
+    activeBacklogs: currentUser?.activeBacklogs ?? 0
   });
+
+  useEffect(() => {
+    if (currentUser) {
+      setApplyStudentProfile(prev => ({
+        ...prev,
+        studentName: currentUser.name || currentUser.fullName || prev.studentName,
+        studentEmail: currentUser.email || prev.studentEmail,
+        college: currentUser.college || prev.college,
+        branch: currentUser.branch || prev.branch,
+        graduationBatch: currentUser.graduationBatch || prev.graduationBatch,
+        cgpa: currentUser.cgpa || prev.cgpa,
+        tenthPercentage: currentUser.tenthPercentage || prev.tenthPercentage,
+        twelfthPercentage: currentUser.twelfthPercentage || prev.twelfthPercentage,
+        activeBacklogs: currentUser.activeBacklogs ?? prev.activeBacklogs
+      }));
+    }
+  }, [currentUser]);
   const [applyFeedbackMsg, setApplyFeedbackMsg] = useState(null);
 
   // Eligibility Engine Live Checker Form State
@@ -425,6 +444,16 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
         </div>
       )}
 
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="dashboard" />
+        <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+          <span className="cursor-pointer hover:text-slate-800" onClick={() => onBack ? onBack('dashboard') : (onNavigate && onNavigate('dashboard'))}>Dashboard</span>
+          <span>/</span>
+          <span className="text-indigo-600 font-bold">Placement Drives</span>
+        </div>
+      </div>
+
       {/* Header Banner */}
       <div className="surface-card p-6 sm:p-8 border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -596,20 +625,55 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
               const driveId = drive.driveId || drive.id;
               const applicationObj = getApplicationForDrive(drive);
               const hasApplied = !!applicationObj;
-              const isEligible = (drive.eligibleBatches || []).map(String).includes(String(currentBatch));
               const isTracking = trackingLoadingId === driveId;
               const matchedCompany = companies.find(c => (c.companyId || c.id) === drive.companyId) || {
                 id: (drive.companyId || drive.companyName).toLowerCase().replace(/\s+/g, ''),
                 name: drive.companyName
               };
 
+              const studentMetrics = {
+                cgpa: 8.84,
+                tenthPercentage: 94.4,
+                twelfthPercentage: 92.2,
+                activeBacklogs: 0,
+                branch: currentUser?.branch || 'Computer Science and Engineering',
+                graduationBatch: currentBatch
+              };
+              const evalResult = evaluateStudentEligibility(studentMetrics, drive);
+
               return (
                 <div
                   key={driveId}
-                  className="surface-card p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                  className="surface-card p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between border border-slate-200 hover:border-indigo-300 group"
                 >
                   <div>
-                    {/* Top Section */}
+                    {/* Top Section with Company Logo */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                          {matchedCompany?.logo ? (
+                            <img src={matchedCompany.logo} alt={drive.companyName} className="w-full h-full object-contain p-1" />
+                          ) : (
+                            <Building2 className="w-6 h-6 text-indigo-600" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg text-slate-900 group-hover:text-indigo-600 transition-colors">{drive.companyName}</h3>
+                          <p className="text-xs font-semibold text-slate-500">{drive.role}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              {drive.status || 'Verified Drive'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs text-slate-500 font-medium block">CTC Package</span>
+                        <p className="text-base font-black text-indigo-600">{drive.ctc || drive.packageDetails || '₹7 - ₹12 LPA'}</p>
+                      </div>
+                    </div>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
                         <h3 className="font-semibold text-lg text-slate-900">{drive.companyName}</h3>
@@ -694,51 +758,61 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
                     </div>
                   </div>
 
-                  {/* Actions & Eligibility Status */}
-                  <div className="pt-4 border-t border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {hasApplied ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
-                            <CheckCircle2 className="w-3 h-3 text-indigo-600" />
-                            Registered: {applicationObj?.status}
-                          </span>
-                        ) : isEligible ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            Batch {currentBatch} Eligible
-                          </span>
-                        ) : (
-                          <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
-                            Batch Ineligible
-                          </span>
-                        )}
+                  {/* INTERACTIVE 1-CLICK ELIGIBILITY CARD */}
+                    {hasApplied ? (
+                      <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between text-xs my-3">
+                        <div className="flex items-center gap-1.5 text-indigo-900 font-bold">
+                          <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                          <span>Applied • Hall Pass Generated</span>
+                        </div>
+                        <span className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">
+                          {applicationObj?.status || 'REGISTERED'}
+                        </span>
                       </div>
+                    ) : evalResult.isEligible ? (
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs my-3 gap-2">
+                        <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>You are Eligible! Click to Apply.</span>
+                        </div>
+                        <button
+                          onClick={() => handleOneClickApply(drive)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-colors shrink-0 cursor-pointer flex items-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>1-Click Apply</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 my-3 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-rose-900">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>Not Eligible for this Drive</span>
+                        </div>
+                        <ul className="pl-4 list-disc text-[11px] text-rose-700 space-y-0.5">
+                          {evalResult.reasons.map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                      <button
-                        onClick={() => setSelectedDriveForInstructions(drive)}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Info className="w-3.5 h-3.5" />
-                        <span>Venue & Instructions</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
+                    {/* Actions Row */}
+                    <div className="pt-2 border-t border-slate-200 flex items-center gap-2">
                       <button
                         onClick={() => {
                           setDriveToApply(drive);
                           setIsApplyModalOpen(true);
                           setApplyFeedbackMsg(null);
                         }}
-                        className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                        className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${
                           hasApplied
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            ? 'bg-slate-900 text-white hover:bg-slate-800'
                             : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/25'
                         }`}
                       >
                         <Send className="w-3.5 h-3.5" />
-                        <span>{hasApplied ? 'View Registration Pass' : 'Apply / Register Pass'}</span>
+                        <span>{hasApplied ? 'View Hall Pass' : 'Custom Register'}</span>
                       </button>
 
                       <button
@@ -758,11 +832,10 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onOpe
                         className="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 font-bold text-xs text-slate-700 flex items-center gap-1 cursor-pointer"
                         title="Company Profile & Hub"
                       >
-                        <span>Prep Hub</span>
+                        <span>Prep</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  </div>
                 </div>
               );
             })}

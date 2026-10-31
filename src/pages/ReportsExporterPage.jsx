@@ -3,7 +3,7 @@
 // Supports Drive Eligibility List, Final Placed Students Report, and Monthly Attendance Summary Report
 // with Excel (.xlsx) and CSV exports, formula injection protection, and live previews.
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileSpreadsheet,
   Download,
@@ -29,7 +29,7 @@ import { getUpcomingDrives, getCurrentUser } from '../services/storage';
 import { getAllStudents } from '../services/academicRecordsService';
 import SearchBar from '../components/ui/SearchBar';
 
-export default function ReportsExporterPage({ onNavigate }) {
+export default function ReportsExporterPage({ onNavigate, onBack }) {
   const currentUser = getCurrentUser();
   const isAuthorized = isUserAuthorizedForReports(currentUser);
 
@@ -177,6 +177,12 @@ export default function ReportsExporterPage({ onNavigate }) {
   return (
     <div className="min-h-screen bg-[#F8F8F9] text-[#111439] py-8 px-4 sm:px-6 lg:px-8">
       
+      {/* Top Back Navigation */}
+      <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
+        <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="institute-portal" label="Back to Institute Portal" />
+        <span className="text-xs font-semibold text-slate-500">Institutional Audit & Export Suite</span>
+      </div>
+
       {/* Top Banner & Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-gradient-to-r from-[#111439] via-[#1E2659] to-[#253275] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">

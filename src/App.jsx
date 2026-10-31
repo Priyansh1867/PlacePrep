@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BatchSelectionModal from './components/BatchSelectionModal';
@@ -9,37 +9,58 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Unified Portal Pages
 import PortalGatewayPage from './pages/PortalGatewayPage';
-import AuthPortalPage from './pages/AuthPortalPage';
-import InstitutePortalPage from './pages/InstitutePortalPage';
-import PlacementPortalPage from './pages/PlacementPortalPage';
-import ManagementPortalPage from './pages/ManagementPortalPage';
-import RemiiLandingPage from './pages/RemiiLandingPage';
+const AuthPortalPage = lazy(() => import('./pages/AuthPortalPage'));
+const InstitutePortalPage = lazy(() => import('./pages/InstitutePortalPage'));
+const PlacementPortalPage = lazy(() => import('./pages/PlacementPortalPage'));
+const ManagementPortalPage = lazy(() => import('./pages/ManagementPortalPage'));
+const RemiiLandingPage = lazy(() => import('./pages/RemiiLandingPage'));
 
 // Specialized Placement Prep Pages
-import HomePage from './pages/HomePage';
-import PlacementDrivesPage from './pages/PlacementDrivesPage';
-import CompaniesPage from './pages/CompaniesPage';
-import CompanyHubPage from './pages/CompanyHubPage';
-import QuestionPrepPage from './pages/QuestionPrepPage';
-import ExperiencesPage from './pages/ExperiencesPage';
-import AiInsightsPage from './pages/AiInsightsPage';
-import MockInterviewPage from './pages/MockInterviewPage';
-import StudentDashboardPage from './pages/StudentDashboardPage';
-import AdminPage from './pages/AdminPage';
-import SelectionWorkflowPage from './pages/SelectionWorkflowPage';
-import AcademicRecordsPage from './pages/AcademicRecordsPage';
-import DailyAttendancePage from './pages/DailyAttendancePage';
-import CrtAttendancePage from './pages/CrtAttendancePage';
-import ReportsExporterPage from './pages/ReportsExporterPage';
-import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
-import DsaPracticePage from './pages/DsaPracticePage';
-import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
+const HomePage = lazy(() => import('./pages/HomePage'));
+const PlacementDrivesPage = lazy(() => import('./pages/PlacementDrivesPage'));
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
+const CompanyHubPage = lazy(() => import('./pages/CompanyHubPage'));
+const QuestionPrepPage = lazy(() => import('./pages/QuestionPrepPage'));
+const ExperiencesPage = lazy(() => import('./pages/ExperiencesPage'));
+const AiInsightsPage = lazy(() => import('./pages/AiInsightsPage'));
+const MockInterviewPage = lazy(() => import('./pages/MockInterviewPage'));
+const StudentDashboardPage = lazy(() => import('./pages/StudentDashboardPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const SelectionWorkflowPage = lazy(() => import('./pages/SelectionWorkflowPage'));
+const AcademicRecordsPage = lazy(() => import('./pages/AcademicRecordsPage'));
+const DailyAttendancePage = lazy(() => import('./pages/DailyAttendancePage'));
+const CrtAttendancePage = lazy(() => import('./pages/CrtAttendancePage'));
+const ReportsExporterPage = lazy(() => import('./pages/ReportsExporterPage'));
+const CurriculumGovernancePage = lazy(() => import('./pages/CurriculumGovernancePage'));
+const DsaPracticePage = lazy(() => import('./pages/DsaPracticePage'));
+const ResumeAtsCheckerPage = lazy(() => import('./pages/ResumeAtsCheckerPage'));
+const AcademicProfilePage = lazy(() => import('./pages/AcademicProfilePage'));
+const MyApplicationsPage = lazy(() => import('./pages/MyApplicationsPage'));
 
-import { getCompanies } from './services/storage';
+import { getCompanies, getCurrentUser } from './services/storage';
+import { getRoleDefaultDashboard } from './components/ui/BackNavButton';
+
+const VALID_ROUTES = new Set([
+  'gateway', 'home', 'classic-home', 'auth-portal', 'institute-portal', 'placement-portal',
+  'management-portal', 'landing', 'workflow', 'drives', 'companies', 'company-hub',
+  'prep', 'experiences', 'ai-insights', 'mock-interview', 'dashboard', 'academic-records',
+  'admin', 'attendance', 'daily-attendance', 'class-attendance', 'crt-attendance',
+  'crt-training-attendance', 'reports', 'reports-exporter', 'curriculum-governance',
+  'syllabus-governance', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker', 'ats-checker'
+]);
+
+function getInitialRoute() {
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const raw = window.location.hash.replace(/^#\/?/, '').toLowerCase().trim();
+    if (VALID_ROUTES.has(raw)) return raw;
+  }
+  return 'gateway';
+}
 
 export default function App() {
   // Default to gateway (the Master Home Page with Institute & Placement options)
-  const [currentRoute, setCurrentRoute] = useState('gateway');
+  const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
+  const [routeHistory, setRouteHistory] = useState([]);
   const [selectedAuthPortal, setSelectedAuthPortal] = useState('institute');
   const [authorizedPortal, setAuthorizedPortal] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -80,13 +101,54 @@ export default function App() {
 
   const handleNavigate = (route) => {
     scrollToTop();
+    setRouteHistory(prev => (prev[prev.length - 1] === currentRoute ? prev : [...prev, currentRoute]));
     setCurrentRoute(route);
   };
 
-  // Automatically snap viewport to top on route change to keep search bars in direct view
+  const handleBack = (fallbackRoute) => {
+    scrollToTop();
+    if (routeHistory.length > 0) {
+      const prev = routeHistory[routeHistory.length - 1];
+      setRouteHistory(h => h.slice(0, -1));
+      setCurrentRoute(prev);
+    } else if (fallbackRoute && VALID_ROUTES.has(fallbackRoute)) {
+      setCurrentRoute(fallbackRoute);
+    } else {
+      const user = getCurrentUser();
+      const defaultDashboard = getRoleDefaultDashboard(user);
+      setCurrentRoute(defaultDashboard);
+    }
+  };
+
+  // Automatically snap viewport to top and sync hash on route change
   useEffect(() => {
     scrollToTop();
+    if (typeof window !== 'undefined' && window.location) {
+      if (window.location.hash !== `#${currentRoute}`) {
+        try {
+          window.history.pushState({ route: currentRoute }, '', `#${currentRoute}`);
+        } catch {}
+      }
+    }
   }, [currentRoute]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (e.state && e.state.route && VALID_ROUTES.has(e.state.route)) {
+        setCurrentRoute(e.state.route);
+        return;
+      }
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const raw = window.location.hash.replace(/^#\/?/, '').toLowerCase().trim();
+        if (VALID_ROUTES.has(raw)) {
+          setCurrentRoute(raw);
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Navigation handlers
   const handleSelectPortal = (portal) => {
@@ -177,14 +239,14 @@ export default function App() {
   // If route is 'landing', render standalone Remii-style Landing Page
   if (currentRoute === 'landing') {
     return (
-      <RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} />
+      <Suspense fallback={<div className="pp-route-loading" role="status">Opening PlacePrep…</div>}><RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} /></Suspense>
     );
   }
 
   const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
   return (
-    <div className={`min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
+    <div className={`pp-app ${['gateway', 'home', 'auth-portal', 'landing'].includes(currentRoute) ? '' : 'pp-workspace'} min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
       
       {!isGuidedFlowRoute && (
         <Navbar
@@ -199,8 +261,11 @@ export default function App() {
       )}
 
       {/* Main Content Router */}
-      <main className="flex-1">
+      <a className="pp-skip-link" href="#main-content">Skip to content</a>
+      <main id="main-content" className="pp-main flex-1" data-route={currentRoute}>
         <ErrorBoundary resetKey={currentRoute}>
+        <Suspense fallback={<div className="pp-route-loading" role="status" aria-live="polite"><span className="pp-loading-mark" aria-hidden="true" /><h2>Opening your workspace</h2><p>Getting your tools ready…</p><div className="pp-loading-grid" aria-hidden="true"><span /><span /><span /></div></div>}>
+        <div key={currentRoute} className="pp-route">
                 
         {/* 1. MASTER HOME PAGE: Portal Gateway (Institute & Placement Options) */}
         {(currentRoute === 'gateway' || currentRoute === 'home') && (
@@ -255,6 +320,7 @@ export default function App() {
         {currentRoute === 'workflow' && (
           <SelectionWorkflowPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectQuestion={handleSelectQuestion}
           />
         )}
@@ -264,6 +330,8 @@ export default function App() {
         {currentRoute === 'drives' && (
           <PlacementDrivesPage
             onSelectCompany={handleSelectCompany}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 
@@ -272,6 +340,8 @@ export default function App() {
         {currentRoute === 'companies' && (
           <CompaniesPage
             onSelectCompany={handleSelectCompany}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
             onOpenBatchModal={() => setIsBatchModalOpen(true)}
           />
         )}
@@ -308,7 +378,10 @@ export default function App() {
         
         {/* 11. INTERVIEW EXPERIENCES */}
         {currentRoute === 'experiences' && (
-          <ExperiencesPage />
+          <ExperiencesPage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+          />
         )}
 
         
@@ -318,6 +391,8 @@ export default function App() {
             initialCompanyId={selectedCompany?.id || 'hcltech'}
             onSelectQuestion={handleSelectQuestion}
             onLaunchMock={handleStartMockInterview}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 
@@ -344,13 +419,35 @@ export default function App() {
         
         {/* 15. ACADEMIC RECORDS */}
         {currentRoute === 'academic-records' && (
-          <AcademicRecordsPage />
+          <AcademicRecordsPage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+          />
+        )}
+
+        {/* 16. ACADEMIC PROFILE & TRANSCRIPT */}
+        {currentRoute === 'academic-profile' && (
+          <AcademicProfilePage
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* 17. SELECTION ROUND TRACKER & MY APPLICATIONS */}
+        {(currentRoute === 'applications' || currentRoute === 'selection-tracker') && (
+          <MyApplicationsPage
+            onNavigate={handleNavigate}
+            onSelectCompany={handleSelectCompany}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          />
         )}
 
         
         {/* 16. SUPER ADMIN (Full CRUD) */}
         {currentRoute === 'admin' && (
-          <AdminPage />
+          <AdminPage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+          />
         )}
 
         
@@ -404,6 +501,8 @@ export default function App() {
         )}
 
         
+        </div>
+        </Suspense>
               </ErrorBoundary>
       </main>
 

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
+  Bot,
   School,
   GraduationCap,
   Users,
@@ -65,8 +66,13 @@ import CurriculumGovernanceView from '../components/curriculum/CurriculumGoverna
 import FacultyOperationsMonitoringView from '../components/monitoring/FacultyOperationsMonitoringView';
 import DsaPracticePage from './DsaPracticePage';
 import { registerSingleStudent } from '../services/studentRegistrationService';
+import { getAllStudents, syncAcademicRecordsWithDatabase } from '../services/academicRecordsService';
 import UserProfileModal from '../components/profile/UserProfileModal';
+import MockInterviewPage from './MockInterviewPage';
+import { calculateProfileCompletion } from '../utils/profileCompletion';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
+import TimetableManagementView from '../components/timetable/TimetableManagementView';
+import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
 export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
@@ -101,6 +107,10 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [questions, setQuestions] = useState(() => getInterviewQuestions() || []);
 
   // Search & Filter state
+  const profileCompletion = useMemo(() => {
+    return calculateProfileCompletion(currentUser);
+  }, [currentUser]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [hackathonSearchQuery, setHackathonSearchQuery] = useState('');
   const [internshipSearchQuery, setInternshipSearchQuery] = useState('');
@@ -128,18 +138,59 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       if (document.body) document.body.scrollTop = 0;
     }
   }, [activeTab]);
-  const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [databaseUsers, setDatabaseUsers] = useState([]);
+  const getFallbackStudents = () => {
+    try {
+      const records = getAllStudents();
+      if (Array.isArray(records) && records.length > 0) {
+        return records.map((s, idx) => ({
+          id: s.id || `rec-${idx}`,
+          name: s.fullName || s.name || 'Candidate',
+          email: s.email,
+          rollNumber: s.rollNumber || s.registrationNumber || 'N/A',
+          branch: s.branch || 'CSE',
+          graduationBatch: s.graduationBatch || '2026',
+          status: s.status || 'ACTIVE',
+          isOfflineFallback: true
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed to get fallback students:', e);
+    }
+    return [];
+  };
 
-  const refreshDatabaseUsers = () => {
-    if (AuthApi?.getAllUsers) {
-      AuthApi.getAllUsers()
-        .then((users) => {
-          if (Array.isArray(users)) {
-            setDatabaseUsers(users);
-          }
-        })
-        .catch((err) => console.log('Backend users fetch note:', err?.message));
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [databaseUsers, setDatabaseUsers] = useState(() => getFallbackStudents());
+  const [isLoadingDatabaseUsers, setIsLoadingDatabaseUsers] = useState(false);
+  const [databaseUsersError, setDatabaseUsersError] = useState(null);
+
+  const refreshDatabaseUsers = async () => {
+    setIsLoadingDatabaseUsers(true);
+    setDatabaseUsersError(null);
+    try {
+      // 1. Sync academic records to database duplicate-safely
+      await syncAcademicRecordsWithDatabase().catch((syncErr) => {
+        console.warn('Academic records sync warning:', syncErr);
+      });
+
+      // 2. Fetch registered student users from database
+      if (AuthApi?.getAllUsers) {
+        const users = await AuthApi.getAllUsers('student');
+        if (Array.isArray(users) && users.length > 0) {
+          setDatabaseUsers(users);
+          setIsBackendConnected(true);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Backend users fetch error:', err);
+      setDatabaseUsersError(err?.message || 'Failed to fetch registered candidates from database');
+      const fallbackList = getFallbackStudents();
+      if (fallbackList.length > 0) {
+        setDatabaseUsers(fallbackList);
+      }
+    } finally {
+      setIsLoadingDatabaseUsers(false);
     }
   };
 
@@ -220,9 +271,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     e.preventDefault();
     setRegistrationErrorMsg('');
 
-    // 1. Sync directly to Spring Boot backend database
+    // 1. Sync directly to Spring Boot backend database using registerStudent
     try {
-      await AuthApi.register({
+      await AuthApi.registerStudent({
         name: newStudentForm.name,
         email: newStudentForm.email.trim().toLowerCase(),
         password: 'password123',
@@ -230,13 +281,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         branch: newStudentForm.branch,
         graduationBatch: newStudentForm.batch,
         role: 'student',
-        rollNumber: newStudentForm.rollNumber
+        rollNumber: newStudentForm.rollNumber,
+        cgpa: newStudentForm.cgpa ? parseFloat(newStudentForm.cgpa) : null
       });
     } catch (backendErr) {
-      console.log('Spring Boot backend user sync note:', backendErr.message);
+      console.warn('Spring Boot backend user sync note:', backendErr.message);
     }
-
-    refreshDatabaseUsers();
 
     // 2. Also register in local storage / academic records
     const res = registerSingleStudent(newStudentForm, currentUser);
@@ -252,6 +302,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         cgpa: '8.5'
       });
       setTimeout(() => setRegistrationSuccessMsg(''), 5000);
+      // 3. Immediately refresh registered candidate records from database
+      await refreshDatabaseUsers();
     } else {
       setRegistrationErrorMsg(res.errors ? res.errors.join('. ') : 'Failed to register student.');
     }
@@ -279,6 +331,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
   const navTabs = [
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
+    { id: 'timetable', label: 'Master Timetable', icon: Calendar, badge: 'Schedule' },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
     { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
     { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
@@ -286,6 +339,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
     { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage ?? 80}%` },
+    { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, badge: 'LIVE', roles: ['student'] },
     { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
     { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus?.atsScore || 85}/100`, roles: ['student'] },
     { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
@@ -347,12 +401,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 2. TOP BANNER & RIGHT-SIDE PROFILE DROPDOWN */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative">
+        <div className="bg-gradient-to-r from-[#111439] via-[#1A1E4F] to-[#282F74] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative z-30">
           <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
             <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-40">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-3">
                 <School className="w-3.5 h-3.5" />
@@ -387,7 +441,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               )}
 
               {/* Dedicated Top-Right Profile Pill & Dropdown */}
-              <div className="relative">
+              <div className="relative z-50">
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
@@ -412,7 +466,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 {isProfileDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 text-slate-900 text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
                       <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
@@ -428,24 +482,24 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
 
                       {/* Profile details */}
-                      <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
-                        <div className="flex justify-between text-slate-500">
-                          <span>Institute:</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || 'Delhi Technological University'}</span>
+                      <div className="py-3 space-y-2.5 text-[11px] border-b border-slate-100">
+                        <div className="flex items-center justify-between gap-2 text-slate-500">
+                          <span className="shrink-0 font-medium">Institute:</span>
+                          <span className="font-semibold text-slate-800 truncate text-right max-w-[180px]">{currentUser.college || 'Not specified'}</span>
                         </div>
                         {currentUser.role === 'student' ? (
                           <>
-                            <div className="flex justify-between text-slate-500">
-                              <span>Roll Number:</span>
-                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || '2024/CSE/084'}</span>
+                            <div className="flex items-center justify-between gap-2 text-slate-500">
+                              <span className="shrink-0 font-medium">Roll Number:</span>
+                              <span className="font-bold text-slate-800 font-mono text-right truncate max-w-[180px]">{currentUser.rollNumber || 'Not specified'}</span>
                             </div>
-                            <div className="flex justify-between text-slate-500">
-                              <span>Branch & Batch:</span>
-                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
+                            <div className="flex items-center justify-between gap-2 text-slate-500">
+                              <span className="shrink-0 font-medium">Branch & Batch:</span>
+                              <span className="font-semibold text-slate-800 text-right truncate max-w-[180px]">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
                             </div>
-                            <div className="flex justify-between text-slate-500">
-                              <span>Academic Standing:</span>
-                              <span className="font-bold text-emerald-600">Active • 0 Backlogs</span>
+                            <div className="flex items-center justify-between gap-2 text-slate-500">
+                              <span className="shrink-0 font-medium">Academic Standing:</span>
+                              <span className="font-bold text-emerald-600 text-right">Active • 0 Backlogs</span>
                             </div>
                           </>
                         ) : (
@@ -464,6 +518,14 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
                       {/* Quick Actions */}
                       <div className="pt-2 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => { setIsProfileDropdownOpen(false); onNavigate('dashboard'); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-indigo-700 hover:bg-indigo-50/50 font-bold transition text-left cursor-pointer"
+                        >
+                          <Bot className="w-4 h-4 text-indigo-600" />
+                          <span>Student Dashboard & Prep</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => { setIsProfileDropdownOpen(false); setIsFullProfileModalOpen(true); }}
@@ -497,7 +559,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs relative z-0">
             <div>
               <span className="text-indigo-300 block">CRT Attendance:</span>
               <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -534,6 +596,70 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
       {/* 4. TAB CONTENTS WITH SCROLL TARGET ANCHOR */}
       <div id="institute-module-content" className="max-w-7xl mx-auto scroll-mt-24">
+        {/* Dynamic Profile Alert for Student Workspace */}
+        {currentUser?.role === 'student' && !profileCompletion.isComplete && (
+          <div className="mb-8 p-5 rounded-3xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 text-amber-950 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-sm sm:text-base text-amber-950">Dynamic Profile Incomplete Alert</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-200 text-amber-900">
+                      {profileCompletion.percentage}% Completed
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800/90 mt-1 leading-relaxed">
+                    Your profile contains verified registration details. Complete all contact, demographic, and educational records to unlock full placement drive eligibility.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFullProfileModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>Complete My Profile</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="space-y-1.5 pt-2 border-t border-amber-200/70">
+              <div className="w-full bg-amber-200/70 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${profileCompletion.percentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-amber-800 font-semibold font-mono">
+                <span>{profileCompletion.completedRequiredCount} of {profileCompletion.totalRequiredCount} required profile fields completed</span>
+                <span>{profileCompletion.percentage}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentUser?.role === 'student' && profileCompletion.isComplete && (
+          <div className="mb-8 p-4 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-sm text-emerald-950">Profile Complete (100%)</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-800 uppercase">
+                    Verified
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  All required placement profile records are filled and verified for campus drives.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* TAB 1: STUDENT DATA */}
         {activeTab === 'student-data' && (
@@ -669,14 +795,34 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     <h4 className="font-bold text-slate-900 text-sm">Registered Candidates in Database ({databaseUsers.length})</h4>
                     <p className="text-xs text-slate-500">Live records synced with Spring Boot MySQL database.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={refreshDatabaseUsers}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
-                  >
-                    Refresh List
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={refreshDatabaseUsers}
+                      disabled={isLoadingDatabaseUsers}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDatabaseUsers ? 'animate-spin text-indigo-600' : ''}`} />
+                      <span>{isLoadingDatabaseUsers ? 'Syncing...' : 'Refresh List'}</span>
+                    </button>
+                  </div>
                 </div>
+
+                {databaseUsersError && (
+                  <div className="mb-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-between gap-3 animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="text-xs font-medium">{databaseUsersError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={refreshDatabaseUsers}
+                      className="px-2.5 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold text-xs cursor-pointer transition shrink-0"
+                    >
+                      Retry Sync
+                    </button>
+                  </div>
+                )}
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
@@ -690,31 +836,44 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {databaseUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-slate-50 transition">
-                          <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">
-                              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                            </div>
-                            <span>{user.name}</span>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
-                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{user.rollNumber || 'N/A'}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || '2028'})</td>
-                          <td className="py-2.5 px-3">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              Synced in DB
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                      {databaseUsers.length === 0 && (
+                      {isLoadingDatabaseUsers && databaseUsers.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="py-6 text-center text-slate-400">
-                            No students registered yet. Click 'Register Form' to add candidates.
+                          <td colSpan="5" className="py-8 text-center text-slate-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                              <span>Syncing candidates with database...</span>
+                            </div>
                           </td>
                         </tr>
+                      ) : (
+                        <>
+                          {databaseUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-slate-50 transition">
+                              <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">
+                                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <span>{user.name}</span>
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
+                              <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{user.rollNumber || user.studentId || 'N/A'}</td>
+                              <td className="py-2.5 px-3 text-slate-600">{user.branch || 'CSE'} ({user.graduationBatch || '2026'})</td>
+                              <td className="py-2.5 px-3">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Synced in DB
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                          {databaseUsers.length === 0 && (
+                            <tr>
+                              <td colSpan="5" className="py-6 text-center text-slate-400">
+                                No students registered yet. Click 'Register Form' or 'Bulk Import' to add candidates.
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       )}
                     </tbody>
                   </table>
@@ -877,6 +1036,46 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               onNavigate={onNavigate}
               onSelectGlobalQuestion={onSelectQuestion}
             />
+          </div>
+        )}
+
+        {/* TAB: AI MOCK INTERVIEW (STUDENT ONLY) - EMBEDDED LIVE WORKSPACE */}
+        {activeTab === 'mock-interview' && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-800/50 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg border border-white/20">
+                  <Bot className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-xl font-extrabold text-white">AI Mock Interview Simulator</h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="text-xs text-indigo-200 mt-1">
+                    Conduct real-time technical, HR, or company rounds with AI voice/text evaluation, instant scoring, and comprehensive feedback.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              <MockInterviewPage
+                initialRound="technical"
+                onFinish={() => {
+                  setActiveTab('upcoming-drives');
+                  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {activeTab === 'timetable' && (
+          <div id="institute-tab-timetable" className="space-y-6 scroll-mt-24">
+            <TimetableManagementView currentUser={currentUser} />
           </div>
         )}
 

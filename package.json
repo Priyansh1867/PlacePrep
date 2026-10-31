@@ -9,13 +9,15 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test src/tests/attendance.test.js src/tests/crtAttendance.test.js src/tests/bulkImportAndExport.test.js src/tests/curriculumGovernance.test.js src/tests/dsaStudio.test.js src/tests/facultyMonitoring.test.js"
+    "test": "node --test src/tests/attendance.test.js src/tests/crtAttendance.test.js src/tests/bulkImportAndExport.test.js src/tests/curriculumGovernance.test.js src/tests/dsaStudio.test.js src/tests/facultyMonitoring.test.js src/tests/profileAndNavigation.test.js"
   },
   "dependencies": {
     "autoprefixer": "^10.6.1",
+    "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.56.0",
     "postcss": "^8.5.30",
+    "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^3.4.17",

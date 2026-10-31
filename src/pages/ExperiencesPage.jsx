@@ -33,7 +33,7 @@ import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import SearchBar from '../components/ui/SearchBar';
 
-export default function ExperiencesPage() {
+export default function ExperiencesPage({ onNavigate, onBack }) {
   const currentBatch = getGraduationBatch();
   const currentUser = getCurrentUser();
 
@@ -315,6 +315,12 @@ export default function ExperiencesPage() {
           <span className="text-xs font-semibold">{actionToast.message}</span>
         </div>
       )}
+
+      {/* Top Back Navigation */}
+      <div className="flex items-center justify-between">
+        <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="dashboard" />
+        <span className="text-xs font-semibold text-slate-400">Community Feedback • Season 2026-2027</span>
+      </div>
 
       {/* Header Banner */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-8 sm:p-10 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">

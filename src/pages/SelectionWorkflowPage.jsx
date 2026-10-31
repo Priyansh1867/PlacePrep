@@ -39,7 +39,7 @@ import { WorkflowApi } from '../services/api';
 import PortalModuleCards from '../components/PortalModuleCards';
 import SearchBar from '../components/ui/SearchBar';
 
-export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) {
+export default function SelectionWorkflowPage({ onNavigate, onBack, onSelectQuestion }) {
   const [activeTab, setActiveTab] = useState('pipeline');
 
   // Reset scroll to top on tab change so SearchBar is directly visible
@@ -443,6 +443,12 @@ export default function SelectionWorkflowPage({ onNavigate, onSelectQuestion }) 
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
+        {/* Top Back Navigation */}
+        <div className="flex items-center justify-between">
+          <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="placement-portal" label="Back to Placement Portal" />
+          <span className="text-xs font-semibold text-slate-500">Corporate Selection Pipeline</span>
+        </div>
+
         {/* Header Hero */}
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-lg p-6 sm:p-10 text-white shadow-xs relative overflow-hidden border border-slate-800">
           <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none flex items-center pr-10">

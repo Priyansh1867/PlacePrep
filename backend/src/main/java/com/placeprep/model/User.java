@@ -34,6 +34,7 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private String college;
@@ -78,11 +79,14 @@ public class User {
 
     private boolean onboardingCompleted;
 
-    private Double cgpa = 8.5;
+    private Double cgpa;
 
-    private Double tenthPercentage = 88.0;
+    private Double tenthPercentage;
 
-    private Double twelfthPercentage = 86.0;
+    private Double twelfthPercentage;
 
     private Integer activeBacklogs = 0;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String fullProfileJson;
 }

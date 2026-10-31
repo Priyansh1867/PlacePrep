@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export default function Input({
   label,
@@ -14,7 +14,9 @@ export default function Input({
   ...props
 }) {
   const Icon = icon || leftIcon;
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const inputId = id || generatedId;
+  const feedbackId = `${inputId}-feedback`;
 
   return (
     <div className="w-full space-y-1.5 text-left">
@@ -31,10 +33,12 @@ export default function Input({
         )}
         <input
           id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || helperText ? feedbackId : undefined}
           type={type}
           disabled={disabled}
           required={required}
-          className={`w-full rounded-xl border bg-white px-3.5 py-2 text-xs sm:text-sm text-[#0F172A] placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+          className={`pp-field w-full rounded-xl border bg-white px-3.5 py-2 text-xs sm:text-sm text-[#0F172A] placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:bg-slate-50 disabled:cursor-not-allowed ${
             Icon ? 'pl-10' : ''
           } ${
             error
@@ -44,8 +48,8 @@ export default function Input({
           {...props}
         />
       </div>
-      {error && <p className="text-[11px] font-medium text-[#DC2626]">{error}</p>}
-      {!error && helperText && <p className="text-[11px] text-[#64748B]">{helperText}</p>}
+      {error && <p id={feedbackId} role="alert" className="text-[11px] font-medium text-[#DC2626]">{error}</p>}
+      {!error && helperText && <p id={feedbackId} className="text-[11px] text-[#64748B]">{helperText}</p>}
     </div>
   );
 }

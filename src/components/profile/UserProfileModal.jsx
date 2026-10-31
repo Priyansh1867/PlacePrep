@@ -25,7 +25,11 @@ import {
   Copy,
   AlertCircle
 } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import { calculateProfileCompletion } from '../../utils/profileCompletion';
+import { UserApi } from '../../services/api';
 import {
+  getCurrentUser,
   getFullStudentProfile,
   saveFullStudentProfile,
   generateUniqueStudentId
@@ -49,19 +53,77 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   if (!isOpen) return null;
 
   const [activeTab, setActiveTab] = useState('basic');
-  const [profile, setProfile] = useState(() => getFullStudentProfile());
+  const [profile, setProfile] = useState(() => getFullStudentProfile(getCurrentUser()));
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+
+  // Dynamic Profile Completion calculation based strictly on genuine persisted data
+  const completionUser = {
+    fullName: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
+    name: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
+    email: profile.basicDetails?.email || '',
+    rollNumber: profile.educationDetails?.rollNumber || profile.basicDetails?.rollNumber || '',
+    graduationBatch: profile.educationDetails?.graduationBatch || '',
+    phone: profile.basicDetails?.phone || '',
+    dateOfBirth: profile.basicDetails?.dateOfBirth || '',
+    gender: profile.basicDetails?.gender || '',
+    college: profile.educationDetails?.college || '',
+    branch: profile.educationDetails?.branch || '',
+    currentAddress: profile.basicDetails?.currentAddress || '',
+    tenthPercentage: profile.educationDetails?.tenthPercentage || '',
+    twelfthPercentage: profile.educationDetails?.twelfthPercentage || ''
+  };
+  const completionInfo = calculateProfileCompletion(completionUser);
 
   // Temporary inputs for skills
   const [newTechSkill, setNewTechSkill] = useState('');
   const [newSubject, setNewSubject] = useState('');
 
-  // Re-sync with storage on mount
+  // Re-sync with backend database and storage on mount
   useEffect(() => {
-    const fresh = getFullStudentProfile();
-    setProfile(fresh);
-  }, []);
+    const user = getCurrentUser();
+    if (!user) return;
+    const local = getFullStudentProfile(user);
+    setProfile(local);
+
+    if (user.email) {
+      UserApi.getStudentFullProfile(user.email).then((remoteData) => {
+        if (!remoteData) return;
+        let parsed = null;
+        if (typeof remoteData === 'string') {
+          try { parsed = JSON.parse(remoteData); } catch {}
+        } else if (remoteData && typeof remoteData === 'object') {
+          if (remoteData.basicDetails) {
+            parsed = remoteData;
+          } else if (remoteData.user) {
+            parsed = {
+              ...local,
+              basicDetails: {
+                ...local.basicDetails,
+                fullName: remoteData.user.name || local.basicDetails.fullName,
+                email: remoteData.user.email || local.basicDetails.email,
+                phone: remoteData.user.phone || local.basicDetails.phone,
+              },
+              educationDetails: {
+                ...local.educationDetails,
+                rollNumber: remoteData.user.rollNumber || local.educationDetails.rollNumber,
+                college: remoteData.user.college || local.educationDetails.college,
+                branch: remoteData.user.branch || local.educationDetails.branch,
+                graduationBatch: remoteData.user.graduationBatch || local.educationDetails.graduationBatch,
+              }
+            };
+          }
+        }
+        if (parsed && parsed.basicDetails) {
+          setProfile(parsed);
+          saveFullStudentProfile(parsed, user);
+        }
+      }).catch((err) => {
+        console.warn('Failed to fetch remote profile from DB:', err);
+      });
+    }
+  }, [isOpen]);
 
   const handleCopyId = () => {
     if (profile?.uniqueStudentId) {
@@ -71,11 +133,24 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
     }
   };
 
-  const handleSave = () => {
-    saveFullStudentProfile(profile);
-    setSaveSuccessMsg('Profile details updated and saved successfully!');
-    if (onProfileUpdated) onProfileUpdated(profile);
-    setTimeout(() => setSaveSuccessMsg(''), 4000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    const user = getCurrentUser();
+    saveFullStudentProfile(profile, user);
+
+    try {
+      if (user?.email) {
+        await UserApi.saveStudentFullProfile(profile, user.email);
+      }
+      setSaveSuccessMsg('Profile details synchronized with database successfully!');
+    } catch (err) {
+      console.warn('Backend profile save warning:', err);
+      setSaveSuccessMsg('Profile details saved successfully!');
+    } finally {
+      setIsSaving(false);
+      if (onProfileUpdated) onProfileUpdated(profile);
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+    }
   };
 
   const handleProfilePhotoUpload = (e) => {
@@ -167,14 +242,14 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addWorkEx = () => {
     const newItem = {
       id: `work-${Date.now()}`,
-      company: 'New Organization',
-      role: 'Associate Intern',
-      location: 'Hybrid / Remote',
-      startDate: 'Jan 2026',
-      endDate: 'Present',
-      currentlyWorking: true,
-      stipend: '₹25,000 / month',
-      description: 'Describe your core responsibilities, key features delivered, and architectural contributions.'
+      company: '',
+      role: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      currentlyWorking: false,
+      stipend: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -201,12 +276,12 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addProject = () => {
     const newItem = {
       id: `proj-${Date.now()}`,
-      title: 'New Technical Project',
-      techStack: 'React, Node.js, PostgreSQL',
-      liveUrl: 'https://example.com',
-      githubUrl: 'https://github.com',
-      duration: '3 Months',
-      description: 'Built scalable backend microservices and modern responsive frontends.'
+      title: '',
+      techStack: '',
+      liveUrl: '',
+      githubUrl: '',
+      duration: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -233,10 +308,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addResponsibility = () => {
     const newItem = {
       id: `por-${Date.now()}`,
-      title: 'Student Coordinator',
-      organization: 'University Cell',
-      duration: '2025 - 2026',
-      description: 'Coordinated student cohorts and managed logistics for events.'
+      title: '',
+      organization: '',
+      duration: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -263,11 +338,11 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addAccomplishment = () => {
     const newItem = {
       id: `acc-${Date.now()}`,
-      title: 'Achievement Title',
-      category: 'Hackathon / Certification',
-      issuedBy: 'Issuing Organization',
-      year: '2025',
-      description: 'Detail about this award or milestone.'
+      title: '',
+      category: '',
+      issuedBy: '',
+      year: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -294,10 +369,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addVolunteering = () => {
     const newItem = {
       id: `vol-${Date.now()}`,
-      organization: 'Community Service Organization',
-      role: 'Student Volunteer',
-      duration: '2024 - 2025',
-      description: 'Contributed to social welfare and educational initiatives.'
+      organization: '',
+      role: '',
+      duration: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -324,10 +399,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   const addExtraCurricular = () => {
     const newItem = {
       id: `ec-${Date.now()}`,
-      activity: 'Activity / Sports / Club Name',
-      role: 'Participant / Lead',
-      year: '2025',
-      description: 'Key highlights and achievements in this domain.'
+      activity: '',
+      role: '',
+      year: '',
+      description: ''
     };
     setProfile(prev => ({
       ...prev,
@@ -351,7 +426,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white rounded-3xl max-w-6xl w-full h-[94vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col text-slate-900 animate-scale-in">
         
         {/* Top Header Bar */}
@@ -407,26 +482,85 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
           </div>
         )}
 
-        {/* Main Body: Left Sidebar + Right Content Pane */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Main Body: Responsive Navigation + Content Pane (Zero Overlap) */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           
+          {/* Mobile Tab Strip & Summary (< md) prevents vertical overflow/overlap */}
+          <div className="md:hidden flex flex-col border-b border-slate-200 bg-white shrink-0">
+            <div className="px-4 py-2.5 flex items-center justify-between bg-slate-50 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-slate-200 shrink-0">
+                  {profile.basicDetails?.profilePhoto ? (
+                    <img src={profile.basicDetails.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                  ) : profile.basicDetails?.fullName ? (
+                    profile.basicDetails.fullName.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('')
+                  ) : (
+                    'ST'
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1 truncate">
+                    {profile.basicDetails?.fullName || getCurrentUser()?.name || 'Student'}
+                    {completionInfo.isComplete && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-500 text-white shrink-0" />}
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-mono truncate block">
+                    ID: {profile.uniqueStudentId || (getCurrentUser()?.email ? generateUniqueStudentId(getCurrentUser().email) : 'PP-1000000')}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right shrink-0 pl-2">
+                <span className={`text-[10px] font-bold ${completionInfo.isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {completionInfo.percentage}% Complete
+                </span>
+                <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-0.5">
+                  <div
+                    className={`h-full rounded-full ${completionInfo.isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    style={{ width: `${completionInfo.percentage}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Scrollable Mobile Tabs Strip */}
+            <div className="flex overflow-x-auto gap-1.5 p-2 bg-white scrollbar-none">
+              {SECTIONS.map((sec) => {
+                const Icon = sec.icon;
+                const isActive = activeTab === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => setActiveTab(sec.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{sec.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ========================================================= */}
-          {/* LEFT SIDEBAR (Matching the screenshot provided by user)    */}
+          {/* DESKTOP LEFT SIDEBAR (Matching Placement & Student Profile) */}
           {/* ========================================================= */}
-          <div className="w-full md:w-72 lg:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0">
+          <div className="hidden md:flex md:w-72 lg:w-80 bg-white border-r border-slate-200 flex-col shrink-0">
             
             {/* User Avatar & Identity Card */}
             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 bg-gradient-to-b from-indigo-50/30 to-white">
-              {/* Generated Tech Avatar (No Superset ID and No Private Photo as instructed) */}
+              {/* Generated Tech Avatar */}
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 via-violet-500 to-emerald-400 shadow-md">
                   <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white text-3xl font-black uppercase overflow-hidden border-2 border-white">
                     {profile.basicDetails?.profilePhoto ? (
                       <img src={profile.basicDetails.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                     ) : profile.basicDetails?.fullName ? (
-                      profile.basicDetails.fullName.split(' ').map(n => n[0]).slice(0, 2).join('')
+                      profile.basicDetails.fullName.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('')
                     ) : (
-                      'PJ'
+                      'ST'
                     )}
                   </div>
                 </div>
@@ -439,16 +573,18 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
               {/* User Name with Green Verified Badge */}
               <div className="mt-3 flex items-center justify-center gap-1.5">
                 <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
-                  {profile.basicDetails?.fullName || 'Priyansh Jain'}
+                  {profile.basicDetails?.fullName || getCurrentUser()?.name || 'Student'}
                 </h3>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
+                {completionInfo.isComplete && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-500 text-white shrink-0" />
+                )}
               </div>
 
-              {/* Unique ID Generator Display (Replacing Superset ID as instructed) */}
+              {/* Unique ID Generator Display */}
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                 <span className="font-medium">PlacePrep ID:</span>
                 <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                  {profile.uniqueStudentId || 'PP-8034402'}
+                  {profile.uniqueStudentId || (getCurrentUser()?.email ? generateUniqueStudentId(getCurrentUser().email) : 'PP-1000000')}
                 </span>
                 <button
                   type="button"
@@ -491,10 +627,15 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
             <div className="p-3 border-t border-slate-100 bg-slate-50/50">
               <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-1">
                 <span>Profile Readiness</span>
-                <span className="text-emerald-600 font-bold">96%</span>
+                <span className={completionInfo.isComplete ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                  {completionInfo.percentage}%
+                </span>
               </div>
               <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full w-[96%]" />
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${completionInfo.isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${completionInfo.percentage}%` }}
+                />
               </div>
             </div>
           </div>
@@ -503,6 +644,58 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
           {/* RIGHT PANE: SELECTED SECTION CONTENT & INTERACTIVE FORM   */}
           {/* ========================================================= */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-slate-50/30">
+            
+            {/* Top Incomplete Profile Notification / Complete Status Banner */}
+            {!completionInfo.isComplete ? (
+              <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-300 shadow-xs">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-black text-amber-950 text-sm tracking-tight">Profile Incomplete ({completionInfo.percentage}% Completed)</h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/80 text-amber-900 uppercase">
+                        Action Required
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                      You have registered with basic details. Please complete all remaining mandatory fields to verify your candidate profile for campus drives.
+                    </p>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-amber-900 font-semibold">
+                      <span>Completed: <strong className="text-amber-950">{completionInfo.completedRequiredCount}</strong> / {completionInfo.totalRequiredCount} required fields</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 sm:self-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sec = completionInfo.firstMissingSection === 'education-details' ? 'education' : 'basic';
+                      setActiveTab(sec);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Complete My Profile</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between gap-3 shadow-xs animate-fade-in">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="block text-sm font-extrabold text-emerald-950">Profile Complete (100%)</span>
+                    <span className="font-normal text-emerald-800">All required placement verification fields have been saved and validated.</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-900 uppercase">
+                  Verified
+                </span>
+              </div>
+            )}
             
             {/* 1. BASIC DETAILS */}
             {activeTab === 'basic' && (
@@ -568,7 +761,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Gender</label>
                       <select
-                        value={profile.basicDetails?.gender || 'Male'}
+                        value={profile.basicDetails?.gender || ''}
                         onChange={(e) => updateBasic('gender', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
                       >
@@ -582,7 +775,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Blood Group</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.bloodGroup || 'B+'}
+                        value={profile.basicDetails?.bloodGroup || ''}
                         onChange={(e) => updateBasic('bloodGroup', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -591,7 +784,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Category / Quota</label>
                       <select
-                        value={profile.basicDetails?.category || 'General'}
+                        value={profile.basicDetails?.category || ''}
                         onChange={(e) => updateBasic('category', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
                       >
@@ -605,7 +798,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Differently Abled (PwD)</label>
                       <select
-                        value={profile.basicDetails?.differentlyAbled || 'No'}
+                        value={profile.basicDetails?.differentlyAbled || ''}
                         onChange={(e) => updateBasic('differentlyAbled', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
                       >
@@ -617,7 +810,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Nationality</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.nationality || 'Indian'}
+                        value={profile.basicDetails?.nationality || ''}
                         onChange={(e) => updateBasic('nationality', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -650,7 +843,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Hometown & State</label>
                       <input
                         type="text"
-                        value={`${profile.basicDetails?.hometown || 'New Delhi'}, ${profile.basicDetails?.state || 'Delhi'}`}
+                        value={profile.basicDetails?.hometown || profile.basicDetails?.state ? `${profile.basicDetails?.hometown || ''}${profile.basicDetails?.state ? ', ' + profile.basicDetails.state : ''}` : ''}
                         onChange={(e) => {
                           const parts = e.target.value.split(',');
                           updateBasic('hometown', parts[0]?.trim() || '');
@@ -663,7 +856,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Pincode</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.pincode || '110042'}
+                        value={profile.basicDetails?.pincode || ''}
                         onChange={(e) => updateBasic('pincode', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -762,7 +955,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Degree Program</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.degree || 'B.Tech'}
+                        value={profile.educationDetails?.degree || ''}
                         onChange={(e) => updateEducation('degree', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -781,7 +974,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Graduation Batch Year</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.graduationBatch || '2028'}
+                        value={profile.educationDetails?.graduationBatch || ''}
                         onChange={(e) => updateEducation('graduationBatch', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -847,7 +1040,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Board (CBSE / ICSE / State)</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.twelfthBoard || 'CBSE'}
+                        value={profile.educationDetails?.twelfthBoard || ''}
                         onChange={(e) => updateEducation('twelfthBoard', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -856,7 +1049,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Stream / Specialization</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.twelfthStream || 'Science (PCM)'}
+                        value={profile.educationDetails?.twelfthStream || ''}
                         onChange={(e) => updateEducation('twelfthStream', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
@@ -875,7 +1068,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Year of Passing</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.twelfthYear || '2024'}
+                        value={profile.educationDetails?.twelfthYear || ''}
                         onChange={(e) => updateEducation('twelfthYear', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -910,7 +1103,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Year of Passing</label>
                       <input
                         type="text"
-                        value={profile.educationDetails?.tenthYear || '2022'}
+                        value={profile.educationDetails?.tenthYear || ''}
                         onChange={(e) => updateEducation('tenthYear', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
@@ -1685,10 +1878,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       </div>
                       <div>
                         <span className="font-bold text-sm text-slate-900 block">
-                          {profile.documents?.resumeFileName || 'Priyansh_Jain_Resume.pdf'}
+                          {profile.documents?.resumeFileName || 'Not uploaded'}
                         </span>
                         <span className="text-[11px] text-slate-500">
-                          Last Updated: {profile.documents?.resumeLastUpdated || 'Oct 24, 2026'} • Verified by Placement Cell
+                          Last Updated: {profile.documents?.resumeLastUpdated || 'Never'} • Verified by Placement Cell
                         </span>
                       </div>
                     </div>
@@ -1860,7 +2053,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Relationship</label>
                       <input
                         type="text"
-                        value={profile.guardians?.emergencyRelation || 'Father'}
+                        value={profile.guardians?.emergencyRelation || ''}
                         onChange={(e) => updateGuardians('emergencyRelation', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                       />

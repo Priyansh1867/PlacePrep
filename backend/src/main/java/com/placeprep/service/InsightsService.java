@@ -49,20 +49,17 @@ public class InsightsService {
         List<InterviewQuestion> questions = interviewQuestionRepository.findByCompanyId(companyId);
         List<InterviewExperience> experiences = interviewExperienceRepository.findByCompanyId(companyId);
 
-        // Fallback to all questions if company-specific questions are sparse
-        if (questions == null || questions.isEmpty()) {
-            questions = interviewQuestionRepository.findAll();
+        if (questions == null) {
+            questions = Collections.emptyList();
+        }
+        if (experiences == null) {
+            experiences = Collections.emptyList();
         }
 
-        // 1. Total samples analyzed
-        int totalSamples = 0;
-        if (company != null && company.getExperienceCount() > 0) {
-            totalSamples = company.getExperienceCount();
-        } else if (experiences != null && !experiences.isEmpty()) {
-            totalSamples = experiences.size();
-        } else {
-            totalSamples = Math.max(questions != null ? questions.size() * 3 : 15, 24);
-        }
+        int qCount = questions.size();
+        int expCount = experiences.size();
+        int totalSamples = qCount + expCount;
+        boolean hasSufficientData = totalSamples >= 3;
 
         // 2. Data Freshness
         String dataFreshness = "Updated for 2024-2028 Placement Cycles";
@@ -71,13 +68,10 @@ public class InsightsService {
         }
 
         // 3. Frequent Questions (sorted by frequencyScore desc, top 5)
-        List<InterviewQuestion> frequentQuestions = new ArrayList<>();
-        if (questions != null) {
-            frequentQuestions = questions.stream()
-                    .sorted(Comparator.comparingInt(InterviewQuestion::getFrequencyScore).reversed())
-                    .limit(5)
-                    .collect(Collectors.toList());
-        }
+        List<InterviewQuestion> frequentQuestions = questions.stream()
+                .sorted(Comparator.comparingInt(InterviewQuestion::getFrequencyScore).reversed())
+                .limit(5)
+                .collect(Collectors.toList());
 
         // 4. Trending Topics
         Map<String, Integer> topicCounts = new HashMap<>();
@@ -88,16 +82,14 @@ public class InsightsService {
                 }
             }
         }
-        if (questions != null) {
-            for (InterviewQuestion q : questions) {
-                if (q.getCategory() != null && !q.getCategory().trim().isEmpty()) {
-                    topicCounts.put(q.getCategory().trim(), topicCounts.getOrDefault(q.getCategory().trim(), 0) + 3);
-                }
-                if (q.getSkills() != null) {
-                    for (String skill : q.getSkills()) {
-                        if (skill != null && !skill.trim().isEmpty()) {
-                            topicCounts.put(skill.trim(), topicCounts.getOrDefault(skill.trim(), 0) + 2);
-                        }
+        for (InterviewQuestion q : questions) {
+            if (q.getCategory() != null && !q.getCategory().trim().isEmpty()) {
+                topicCounts.put(q.getCategory().trim(), topicCounts.getOrDefault(q.getCategory().trim(), 0) + 3);
+            }
+            if (q.getSkills() != null) {
+                for (String skill : q.getSkills()) {
+                    if (skill != null && !skill.trim().isEmpty()) {
+                        topicCounts.put(skill.trim(), topicCounts.getOrDefault(skill.trim(), 0) + 2);
                     }
                 }
             }
@@ -122,11 +114,9 @@ public class InsightsService {
 
         // 6. Preparation Priority
         Map<String, List<InterviewQuestion>> categoryGroups = new HashMap<>();
-        if (questions != null) {
-            for (InterviewQuestion q : questions) {
-                String cat = (q.getCategory() != null && !q.getCategory().trim().isEmpty()) ? q.getCategory().trim() : "General CS";
-                categoryGroups.computeIfAbsent(cat, k -> new ArrayList<>()).add(q);
-            }
+        for (InterviewQuestion q : questions) {
+            String cat = (q.getCategory() != null && !q.getCategory().trim().isEmpty()) ? q.getCategory().trim() : "General CS";
+            categoryGroups.computeIfAbsent(cat, k -> new ArrayList<>()).add(q);
         }
 
         List<Map<String, Object>> preparationPriority = new ArrayList<>();
@@ -153,8 +143,11 @@ public class InsightsService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("companyId", companyId);
         result.put("companyName", company != null ? company.getName() : companyId);
-        result.put("dataFreshness", dataFreshness);
+        result.put("questionCount", qCount);
+        result.put("experienceCount", expCount);
         result.put("totalSamplesAnalyzed", totalSamples);
+        result.put("hasSufficientData", hasSufficientData);
+        result.put("dataFreshness", dataFreshness);
         result.put("frequentQuestions", frequentQuestions);
         result.put("trendingTopics", trendingTopics);
         result.put("historicalVsRecentAnalysis", historicalVsRecent);

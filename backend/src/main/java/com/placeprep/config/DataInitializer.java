@@ -1,5 +1,7 @@
 package com.placeprep.config;
 
+import com.placeprep.model.Candidate;
+import com.placeprep.repository.CandidateRepository;
 import com.placeprep.model.ClassAttendanceRecord;
 import com.placeprep.model.Subject;
 import com.placeprep.model.StudentSubjectEnrollment;
@@ -41,7 +43,8 @@ public class DataInitializer {
             CrtTrainingSessionRepository crtSessionRepository,
             CrtAttendanceRecordRepository crtRecordRepository,
             SubjectRepository subjectRepository,
-            StudentSubjectEnrollmentRepository enrollmentRepository
+            StudentSubjectEnrollmentRepository enrollmentRepository,
+            CandidateRepository candidateRepository
     ) {
         return args -> {
             if (userRepository.count() == 0) {
@@ -259,6 +262,48 @@ public class DataInitializer {
                 app1.setConflictFlagged(true);
                 app1.setConflictReason("Schedule collision detected: Overlaps with Accenture Virtual Assessment slot on 2026-11-18.");
                 applicationRepository.save(app1);
+            }
+
+            if (candidateRepository.findByCandidateId("cand-001").isEmpty()) {
+                Candidate cand1 = new Candidate();
+                cand1.setCandidateId("cand-001");
+                cand1.setName("Priyansh Jain");
+                cand1.setEmail("priyansh.jain@example.edu");
+                cand1.setCollege("Delhi Technological University (DTU)");
+                cand1.setBranch("Computer Science and Engineering");
+                cand1.setGraduationBatch("2028");
+                cand1.setCompanyId("hcltech");
+                cand1.setCompanyName("HCLTech");
+                cand1.setCurrentRound("Technical Interview");
+                cand1.setStatus("ACTIVE");
+                cand1.setOverallScore(82);
+                cand1.setTechnicalDepth(85);
+                cand1.setProblemSolving(80);
+                cand1.setCommunication(82);
+                cand1.setEvaluatorNotes("Strong algorithmic problem solving with solid communication.");
+                cand1.setUpdatedAt(java.time.LocalDateTime.now().toString());
+                candidateRepository.save(cand1);
+            }
+
+            if (candidateRepository.findByCandidateId("cand-002").isEmpty()) {
+                Candidate cand2 = new Candidate();
+                cand2.setCandidateId("cand-002");
+                cand2.setName("Ananya Sharma");
+                cand2.setEmail("ananya.sharma@example.edu");
+                cand2.setCollege("Delhi Technological University (DTU)");
+                cand2.setBranch("Computer Science and Engineering");
+                cand2.setGraduationBatch("2028");
+                cand2.setCompanyId("hcltech");
+                cand2.setCompanyName("HCLTech");
+                cand2.setCurrentRound("Technical Interview");
+                cand2.setStatus("ACTIVE");
+                cand2.setOverallScore(85);
+                cand2.setTechnicalDepth(88);
+                cand2.setProblemSolving(85);
+                cand2.setCommunication(90);
+                cand2.setEvaluatorNotes("Exceptional problem solver.");
+                cand2.setUpdatedAt(java.time.LocalDateTime.now().toString());
+                candidateRepository.save(cand2);
             }
 
             if (classSessionRepository.count() == 0) {

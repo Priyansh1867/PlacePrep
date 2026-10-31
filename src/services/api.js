@@ -426,6 +426,26 @@ export const QuestionApi = {
     return await request(`/questions/${encodeURIComponent(id)}`, {
       method: 'DELETE'
     });
+  },
+
+  async importFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return await request('/questions/import-file', {
+      method: 'POST',
+      body: formData
+    });
+  }
+};
+
+// DSA Code Execution API
+export const DsaApi = {
+  async execute(payload) {
+    return await request('/dsa/execute', {
+      method: 'POST',
+      timeout: 60000,
+      body: JSON.stringify(payload)
+    });
   }
 };
 

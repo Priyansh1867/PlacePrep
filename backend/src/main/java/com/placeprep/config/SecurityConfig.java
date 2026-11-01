@@ -102,7 +102,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.PATCH, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.GET, "/api/attendance/**").permitAll()
-
+                        .requestMatchers("/api/ai/**").permitAll()
                         // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )

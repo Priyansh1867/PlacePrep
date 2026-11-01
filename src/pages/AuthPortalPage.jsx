@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
-import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
+import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
 import { AuthApi } from '../services/api';
 
 const portalOptions = [
@@ -129,119 +129,35 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
         }
       }
 
-      const roleMeta = roleOptions.find((item) => item.id === selectedRole);
       const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
       const emailTrim = formData.email.trim().toLowerCase();
 
       let userObj;
       if (authMode === 'login') {
-        // Look up genuine registered details first
-        const existingStudent = findRegisteredUser(emailTrim);
-        if (existingStudent) {
-          userObj = {
-            ...existingStudent,
-            role: existingStudent.role || selectedRole,
-            roleLabel: roleMeta?.label || existingStudent.roleLabel || selectedRole.toUpperCase(),
-            portal: destinationPortal,
-            authenticatedAt: new Date().toISOString()
-          };
-        } else {
-          const derivedName = (formData.fullName || formData.email.split('@')[0]).trim();
-          userObj = {
-            id: 'user-' + Date.now(),
-            name: derivedName,
-            fullName: derivedName,
-            email: emailTrim,
-            role: selectedRole,
-            roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
-            portal: destinationPortal,
-            college: (formData.college || '').trim(),
-            branch: (formData.branch || '').trim(),
-            graduationBatch: formData.batch || '2028',
-            department: (formData.department || '').trim(),
-            designation: (formData.designation || '').trim(),
-            company: (formData.companyName || '').trim(),
-            rollNumber: (formData.rollNumber || '').trim(),
-            authenticatedAt: new Date().toISOString()
-          };
-        }
-      } else {
-        // Register genuine user - only genuine entered details, strictly no fake demo data
-        const fullNameTrim = formData.fullName.trim();
-        userObj = {
-          id: 'user-' + Date.now(),
-          name: fullNameTrim,
-          fullName: fullNameTrim,
+        const loginRes = await AuthApi.login({
           email: emailTrim,
-          role: selectedRole,
-          roleLabel: roleMeta?.label || selectedRole.toUpperCase(),
-          portal: destinationPortal,
+          password: formData.password
+        });
+        if (!loginRes?.user) throw new Error('Backend login did not return a user session.');
+        userObj = { ...loginRes.user, authenticatedAt: new Date().toISOString() };
+      } else {
+        const fullNameTrim = formData.fullName.trim();
+        const backendRes = await AuthApi.register({
+          name: fullNameTrim,
+          email: emailTrim,
+          password: formData.password,
           college: (formData.college || '').trim(),
           branch: (formData.branch || '').trim(),
           graduationBatch: formData.batch || '2028',
-          rollNumber: (formData.rollNumber || '').trim(),
-          phone: '',
-          dateOfBirth: '',
-          gender: '',
-          currentAddress: '',
-          tenthPercentage: '',
-          twelfthPercentage: '',
-          department: (formData.department || '').trim(),
-          designation: (formData.designation || '').trim(),
-          company: (formData.companyName || '').trim(),
-          authenticatedAt: new Date().toISOString()
-        };
-        saveRegisteredUser(userObj);
-      }
-
-      // Synchronize directly with Spring Boot MySQL Database with instant non-blocking fallback
-      try {
-        if (authMode === 'register') {
-          const payload = {
-            name: userObj.name,
-            email: userObj.email,
-            password: formData.password,
-            college: userObj.college,
-            branch: userObj.branch,
-            graduationBatch: userObj.graduationBatch,
-            role: selectedRole,
-            rollNumber: userObj.rollNumber
-          };
-          try {
-            const backendRes = await AuthApi.register(payload);
-            if (backendRes && backendRes.user) {
-              userObj = { ...userObj, ...backendRes.user, id: backendRes.user.id || userObj.id };
-            }
-          } catch (regErr) {
-            if (regErr && regErr.message && regErr.message.toLowerCase().includes('already exists')) {
-              setErrorMsg(regErr.message + '. Please switch to Sign in.');
-              setIsSubmitting(false);
-              return;
-            }
-            console.warn('Backend database offline or unavailable, continuing with verified local session.');
-          }
-        } else {
-          // Mode is login: attempt live database login
-          try {
-            const loginRes = await AuthApi.login({
-              email: emailTrim,
-              password: formData.password
-            });
-            if (loginRes && loginRes.user) {
-              userObj = { ...userObj, ...loginRes.user, id: loginRes.user.id || userObj.id };
-            }
-          } catch {
-            // If login fails or backend is unreachable, continue smoothly with local session
-            console.warn('Backend login unavailable, continuing with verified session.');
-          }
-        }
-      } catch (err) {
-        console.warn('Backend note:', err);
+          role: selectedRole,
+          rollNumber: (formData.rollNumber || '').trim()
+        });
+        if (!backendRes?.user) throw new Error('Backend registration did not return a user session.');
+        userObj = { ...backendRes.user, authenticatedAt: new Date().toISOString() };
       }
 
       // Persist session to local storage
       setCurrentUser(userObj);
-      saveRegisteredUser(userObj);
       setPortalMode(destinationPortal);
       setPortalRole(selectedRole);
       if (selectedRole === 'student' && userObj.graduationBatch) {

@@ -1,6 +1,8 @@
 package com.placeprep.service;
 
 import com.placeprep.model.ClassAttendanceRecord;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.CrtAttendanceRecord;
 import com.placeprep.model.CrtTrainingSession;
@@ -36,6 +38,66 @@ import com.placeprep.repository.UserRepository;
 
 @Service
 public class AttendanceService {
+
+    @Transactional
+    public EntityResponseDto createClassSessionDto(ClassAttendanceSession session) {
+        return EntityResponseMapper.toDto(createClassSession(session));
+    }
+
+    @Transactional
+    public EntityResponseDto findOrCreateClassSessionDto(ClassAttendanceSession session) {
+        return EntityResponseMapper.toDto(findOrCreateClassSession(session));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getSessionRecordsDto(Long sessionId) {
+        return EntityResponseMapper.toDtoList(getSessionRecords(sessionId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getClassSessionsDto(String department, String semester) {
+        return EntityResponseMapper.toDtoList(getClassSessions(department, semester));
+    }
+
+    @Transactional
+    public List<EntityResponseDto> markClassAttendanceDto(Long sessionId, List<ClassAttendanceRecord> records) {
+        return EntityResponseMapper.toDtoList(markClassAttendance(sessionId, records));
+    }
+
+    @Transactional
+    public EntityResponseDto createCrtSessionDto(CrtTrainingSession session) {
+        return EntityResponseMapper.toDto(createCrtSession(session));
+    }
+
+    @Transactional
+    public EntityResponseDto updateCrtSessionDto(Long id, CrtTrainingSession updated) {
+        return EntityResponseMapper.toDto(updateCrtSession(id, updated));
+    }
+
+    @Transactional
+    public EntityResponseDto updateCrtSessionStatusDto(Long id, String newStatus) {
+        return EntityResponseMapper.toDto(updateCrtSessionStatus(id, newStatus));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getCrtSessionsDto(String targetBatch, String department, String status) {
+        return EntityResponseMapper.toDtoList(getCrtSessions(targetBatch, department, status));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<EntityResponseDto> getCrtSessionByIdDto(Long id) {
+        return EntityResponseMapper.toDtoOptional(getCrtSessionById(id));
+    }
+
+    @Transactional
+    public List<EntityResponseDto> markCrtAttendanceDto(Long crtSessionId, List<CrtAttendanceRecord> records, String recordedBy) {
+        return EntityResponseMapper.toDtoList(markCrtAttendance(crtSessionId, records, recordedBy));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getCrtSessionRecordsDto(Long crtSessionId) {
+        return EntityResponseMapper.toDtoList(getCrtSessionRecords(crtSessionId));
+    }
 
     public static final double SHORTAGE_THRESHOLD = 75.0;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

@@ -117,9 +117,10 @@ export default function CoreCsPage({ onSelectQuestion, onNavigate }) {
           setQuestions(res);
         }
       } catch (err) {
-        console.warn('Backend question fetch error, fallback active:', err);
-        const local = getInterviewQuestions();
-        if (isMounted) setQuestions(local);
+        if (isMounted) {
+          setQuestions([]);
+          console.warn('Backend question fetch failed:', err);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }

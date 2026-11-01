@@ -2,6 +2,7 @@ package com.placeprep.controller;
 
 import com.placeprep.model.Notification;
 import com.placeprep.service.NotificationService;
+import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,8 +30,7 @@ public class NotificationController {
     @PostMapping("/broadcast")
     public ResponseEntity<?> broadcastNotification(@RequestBody Notification notification) {
         try {
-            Notification created = notificationService.broadcast(notification);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(notificationService.broadcast(notification));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -38,11 +38,11 @@ public class NotificationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Notification>> getNotifications(
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getNotifications(
             @RequestParam(required = false, defaultValue = "STUDENT") String role,
             @RequestParam(required = false) String batch
     ) {
-        return ResponseEntity.ok(notificationService.getNotificationsForUser(role, batch));
+        return ResponseEntity.ok(EntityResponseMapper.toDtoList(notificationService.getNotificationsForUser(role, batch)));
     }
 
     @DeleteMapping("/{id}")

@@ -160,7 +160,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   };
 
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [databaseUsers, setDatabaseUsers] = useState(() => getFallbackStudents());
+  const [databaseUsers, setDatabaseUsers] = useState([]);
   const [isLoadingDatabaseUsers, setIsLoadingDatabaseUsers] = useState(false);
   const [databaseUsersError, setDatabaseUsersError] = useState(null);
 
@@ -185,10 +185,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     } catch (err) {
       console.error('Backend users fetch error:', err);
       setDatabaseUsersError(err?.message || 'Failed to fetch registered candidates from database');
-      const fallbackList = getFallbackStudents();
-      if (fallbackList.length > 0) {
-        setDatabaseUsers(fallbackList);
-      }
+      setDatabaseUsers([]);
     } finally {
       setIsLoadingDatabaseUsers(false);
     }
@@ -205,7 +202,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend drives fallback to local:', err?.message));
+        .catch((err) => console.log('Backend drives request failed:', err?.message));
     }
 
     // 2. Fetch CRT training sessions from Spring Boot
@@ -217,7 +214,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend CRT fallback to local:', err?.message));
+        .catch((err) => console.log('Backend CRT request failed:', err?.message));
     }
 
     // 3. Fetch interview questions from Spring Boot
@@ -229,7 +226,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend questions fallback to local:', err?.message));
+        .catch((err) => console.log('Backend questions request failed:', err?.message));
     }
 
     // 4. Fetch registered database users from Spring Boot

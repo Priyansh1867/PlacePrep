@@ -3,6 +3,7 @@ package com.placeprep.tools;
 import com.placeprep.model.Feedback;
 import com.placeprep.model.RecruiterFeedback;
 import com.placeprep.service.FeedbackService;
+import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
@@ -18,12 +19,12 @@ public class FeedbackWriteTool {
     @Tool(description = "Submit general PlacePrep feedback as the authenticated user.")
     public Object submitFeedback(Feedback feedback, ToolContext context) {
         AiToolAuthorization.userId(context);
-        return feedbackService.submit(feedback);
+        return EntityResponseMapper.toJsonSafe(feedbackService.submit(feedback));
     }
 
     @Tool(description = "Submit recruiter feedback for a placement drive. Requires placement staff permission.")
     public Object submitRecruiterFeedback(RecruiterFeedback feedback, ToolContext context) {
         AiToolAuthorization.requirePlacementStaff(context);
-        return feedbackService.submitRecruiterFeedback(feedback);
+        return EntityResponseMapper.toJsonSafe(feedbackService.submitRecruiterFeedback(feedback));
     }
 }

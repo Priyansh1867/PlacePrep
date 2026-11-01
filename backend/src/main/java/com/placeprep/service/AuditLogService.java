@@ -1,9 +1,12 @@
 package com.placeprep.service;
 
 import com.placeprep.model.AuditLog;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.AuditLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,7 +20,8 @@ public class AuditLogService {
     @Autowired
     private AuditLogRepository auditLogRepository;
 
-    public AuditLog logAction(String action, String performedBy, String performerRole, String targetResource, String details) {
+    @Transactional
+    public EntityResponseDto logAction(String action, String performedBy, String performerRole, String targetResource, String details) {
         AuditLog log = AuditLog.builder()
                 .action(action)
                 .performedBy(performedBy != null ? performedBy : "SYSTEM")
@@ -26,10 +30,11 @@ public class AuditLogService {
                 .details(details)
                 .timestamp(LocalDateTime.now().format(TS))
                 .build();
-        return auditLogRepository.save(log);
+        return EntityResponseMapper.toDto(auditLogRepository.save(log));
     }
 
-    public List<AuditLog> getRecentLogs() {
-        return auditLogRepository.findTop100ByOrderByTimestampDesc();
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getRecentLogs() {
+        return EntityResponseMapper.toDtoList(auditLogRepository.findTop100ByOrderByTimestampDesc());
     }
 }

@@ -1,9 +1,12 @@
 package com.placeprep.service;
 
 import com.placeprep.model.Candidate;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.CandidateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -101,6 +104,36 @@ public class WorkflowService {
         }
         candidate.setUpdatedAt(LocalDateTime.now().toString());
         return candidateRepository.save(candidate);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getCandidatesDto(String companyId, String round) {
+        return EntityResponseMapper.toDtoList(getCandidates(companyId, round));
+    }
+
+    @Transactional
+    public EntityResponseDto advanceCandidateDto(String candidateId, String nextRound) {
+        return EntityResponseMapper.toDto(advanceCandidate(candidateId, nextRound));
+    }
+
+    @Transactional
+    public EntityResponseDto eliminateCandidateDto(String candidateId, String reason) {
+        return EntityResponseMapper.toDto(eliminateCandidate(candidateId, reason));
+    }
+
+    @Transactional
+    public EntityResponseDto shortlistCandidateDto(String candidateId) {
+        return EntityResponseMapper.toDto(shortlistCandidate(candidateId));
+    }
+
+    @Transactional
+    public EntityResponseDto selectCandidateDto(String candidateId) {
+        return EntityResponseMapper.toDto(selectCandidate(candidateId));
+    }
+
+    @Transactional
+    public EntityResponseDto submitEvaluationDto(String candidateId, Map<String, Object> evaluation) {
+        return EntityResponseMapper.toDto(submitEvaluation(candidateId, evaluation));
     }
 
     public Candidate save(Candidate candidate) {

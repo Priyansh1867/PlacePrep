@@ -2,6 +2,7 @@ package com.placeprep.controller;
 
 import com.placeprep.model.Hackathon;
 import com.placeprep.model.Internship;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.OpportunityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,15 +32,14 @@ public class OpportunityController {
     // --- HACKATHONS ---
 
     @GetMapping("/hackathons")
-    public ResponseEntity<List<Hackathon>> getHackathons() {
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getHackathons() {
         return ResponseEntity.ok(opportunityService.getAllHackathons());
     }
 
     @PostMapping("/hackathons")
     public ResponseEntity<?> createHackathon(@RequestBody Hackathon hackathon) {
         try {
-            Hackathon created = opportunityService.createHackathon(hackathon);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(opportunityService.createHackathon(hackathon));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -58,15 +58,14 @@ public class OpportunityController {
     // --- INTERNSHIPS ---
 
     @GetMapping("/internships")
-    public ResponseEntity<List<Internship>> getInternships(@RequestParam(required = false) String batch) {
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getInternships(@RequestParam(required = false) String batch) {
         return ResponseEntity.ok(opportunityService.getAllInternships(batch));
     }
 
     @PostMapping("/internships")
     public ResponseEntity<?> createInternship(@RequestBody Internship internship) {
         try {
-            Internship created = opportunityService.createInternship(internship);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(opportunityService.createInternship(internship));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }

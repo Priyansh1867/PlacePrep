@@ -58,34 +58,16 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setErrorMsg('');
     try {
       const emailTrim = formData.email.trim().toLowerCase();
-      const localUser = findRegisteredUser(emailTrim);
-      let userObj = localUser ? { ...localUser, authenticatedAt: new Date().toISOString() } : {
-        id: `user-${Date.now()}`,
-        name: formData.email.split('@')[0],
-        fullName: formData.email.split('@')[0],
+      const res = await AuthApi.login({
         email: emailTrim,
-        role: 'student',
-        graduationBatch: '2028',
-        college: '',
-        branch: '',
-        rollNumber: '',
-        authenticatedAt: new Date().toISOString()
-      };
-
-      try {
-        const res = await AuthApi.login({
-          email: emailTrim,
-          password: formData.password
-        });
-        if (res && res.user) {
-          userObj = { ...userObj, ...res.user, id: res.user.id || userObj.id };
-        }
-      } catch (authErr) {
-        console.warn('Backend unavailable, proceeding with local verified session:', authErr);
+        password: formData.password
+      });
+      if (!res?.user) {
+        throw new Error('Backend login did not return a user session.');
       }
+      const userObj = { ...res.user, authenticatedAt: new Date().toISOString() };
 
       setCurrentUser(userObj);
-      saveRegisteredUser(userObj);
       setSuccessMsg(`Welcome back, ${userObj.name}!`);
       setTimeout(() => {
         onAuthSuccess?.(userObj);
@@ -158,11 +140,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
           setLoading(false);
           return;
         }
-        console.warn('Backend offline, proceeding with local student account:', authErr);
+        throw authErr;
       }
 
       setCurrentUser(userObj);
-      saveRegisteredUser(userObj);
       setGraduationBatch(formData.graduationBatch);
       setSuccessMsg('Account created successfully! Welcome to PlacePrep.');
       setTimeout(() => {

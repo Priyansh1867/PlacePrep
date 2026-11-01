@@ -31,6 +31,9 @@ export function setAuthToken(token) {
     } else {
       localStorage.removeItem('placeprep_auth_token');
     }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-state-changed'));
+    }
   } catch (e) {
     console.error('Error saving auth token:', e);
   }

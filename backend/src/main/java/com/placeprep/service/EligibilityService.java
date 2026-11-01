@@ -4,6 +4,7 @@ import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.User;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -163,6 +164,7 @@ public class EligibilityService {
         return response;
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> checkDriveForStudent(String driveId, String studentEmailOrId) {
         PlacementDrive drive = null;
         List<PlacementDrive> all = driveRepository.findAll();
@@ -186,7 +188,7 @@ public class EligibilityService {
         String batch = null;
 
         Optional<com.placeprep.model.StudentAcademicRecord> verified =
-                academicRecordService.findForStudent(studentEmailOrId);
+                academicRecordService.findForStudentEntity(studentEmailOrId);
         if (verified.isPresent() && verified.get().isVerified()) {
             com.placeprep.model.StudentAcademicRecord r = verified.get();
             cgpa = r.getCgpa();

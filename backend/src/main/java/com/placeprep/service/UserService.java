@@ -1,9 +1,12 @@
 package com.placeprep.service;
 
 import com.placeprep.model.User;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -116,11 +119,12 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
     }
 
-    public User updateBatch(Long userId, String batch) {
+    @Transactional
+    public EntityResponseDto updateBatch(Long userId, String batch) {
         User user = getUserById(userId);
         user.setGraduationBatch(batch);
         user.setOnboardingCompleted(true);
-        return userRepository.save(user);
+        return EntityResponseMapper.toDto(userRepository.save(user));
     }
 
     public List<String> getSavedQuestionIds(Long userId) {
@@ -204,18 +208,34 @@ public class UserService {
         return isSaved;
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getDashboardData(Long userId) {
         User user = getUserById(userId);
+
         Map<String, Object> data = new HashMap<>();
-        data.put("savedCount", user.getSavedQuestionIds() != null ? user.getSavedQuestionIds().size() : 0);
-        data.put("practicedCount", user.getPracticedQuestionIds() != null ? user.getPracticedQuestionIds().size() : 0);
-        data.put("revisionCount", user.getRevisionQuestionIds() != null ? user.getRevisionQuestionIds().size() : 0);
-        data.put("savedCompaniesCount", user.getSavedCompanyIds() != null ? user.getSavedCompanyIds().size() : 0);
-        data.put("user", user);
+
+        data.put("savedCount", user.getSavedQuestionIds().size());
+        data.put("practicedCount", user.getPracticedQuestionIds().size());
+        data.put("revisionCount", user.getRevisionQuestionIds().size());
+        data.put("savedCompaniesCount", user.getSavedCompanyIds().size());
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", user.getId());
+        userData.put("name", user.getName());
+        userData.put("email", user.getEmail());
+        userData.put("college", user.getCollege());
+        userData.put("branch", user.getBranch());
+        userData.put("graduationBatch", user.getGraduationBatch());
+        userData.put("role", user.getRole());
+        userData.put("onboardingCompleted", user.isOnboardingCompleted());
+
+        data.put("user", userData);
+
         return data;
     }
 
-    public List<User> getAllUsers(String role, String search) {
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getAllUsers(String role, String search) {
         List<User> all = userRepository.findAll();
         return all.stream()
                 .filter(u -> role == null || role.trim().isEmpty() || role.equalsIgnoreCase(u.getRole()))
@@ -223,25 +243,28 @@ public class UserService {
                         (u.getName() != null && u.getName().toLowerCase().contains(search.toLowerCase())) ||
                         (u.getEmail() != null && u.getEmail().toLowerCase().contains(search.toLowerCase())) ||
                         (u.getRollNumber() != null && u.getRollNumber().toLowerCase().contains(search.toLowerCase())))
+                .map(EntityResponseMapper::toDto)
                 .toList();
     }
 
-    public User updateUserRole(Long userId, String newRole) {
+    @Transactional
+    public EntityResponseDto updateUserRole(Long userId, String newRole) {
         User user = getUserById(userId);
         if (newRole == null || newRole.trim().isEmpty()) {
             throw new IllegalArgumentException("Role cannot be empty");
         }
         user.setRole(newRole.trim().toLowerCase());
-        return userRepository.save(user);
+        return EntityResponseMapper.toDto(userRepository.save(user));
     }
 
-    public User updateUserStatus(Long userId, String newStatus) {
+    @Transactional
+    public EntityResponseDto updateUserStatus(Long userId, String newStatus) {
         User user = getUserById(userId);
         if (newStatus == null || newStatus.trim().isEmpty()) {
             throw new IllegalArgumentException("Status cannot be empty");
         }
         user.setStatus(newStatus.trim().toUpperCase());
-        return userRepository.save(user);
+        return EntityResponseMapper.toDto(userRepository.save(user));
     }
 
     public void deleteUser(Long userId) {

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class DriveService {
@@ -50,6 +51,9 @@ public class DriveService {
     }
 
     public PlacementDrive create(PlacementDrive drive) {
+        if (drive.getDriveId() == null || drive.getDriveId().trim().isEmpty()) {
+            drive.setDriveId("drv-" + UUID.randomUUID().toString().substring(0, 8));
+        }
         return placementDriveRepository.save(drive);
     }
 

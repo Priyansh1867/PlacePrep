@@ -10,6 +10,7 @@ import {
   calculateGradeAndPoints,
   calculateAgeFromDOB
 } from '../data/initialAcademicRecords.js';
+import { AcademicsApi } from './api.js';
 
 const STORAGE_KEYS = {
   STUDENTS: 'placeprep_student_academic_records',
@@ -19,6 +20,7 @@ const STORAGE_KEYS = {
 
 // Safe JSON parser and writer
 function getStorage(key, fallback) {
+  if (typeof localStorage === 'undefined') return fallback;
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : fallback;
@@ -29,6 +31,7 @@ function getStorage(key, fallback) {
 }
 
 function setStorage(key, value) {
+  if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
@@ -40,6 +43,7 @@ function setStorage(key, value) {
  * Initialize storage with seed data if empty
  */
 export function initializeAcademicRecords() {
+  if (typeof localStorage === 'undefined') return;
   const existingStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
   if (!existingStudents) {
     setStorage(STORAGE_KEYS.STUDENTS, INITIAL_STUDENT_RECORDS);
@@ -416,7 +420,64 @@ export function saveStudent(studentData) {
   }
 
   setStorage(STORAGE_KEYS.STUDENTS, updatedList);
+
+  // Synchronize with database in background
+  syncAcademicRecordsWithDatabase().catch(err => {
+    console.warn('Background database synchronization failed:', err);
+  });
+
   return { success: true, student: normalized };
+}
+
+/**
+ * Synchronize local academic student records with Spring Boot TiDB database
+ */
+export async function syncAcademicRecordsWithDatabase() {
+  const localStudents = getAllStudents();
+  if (!localStudents || localStudents.length === 0) {
+    return { success: true, count: 0 };
+  }
+  try {
+    const payload = localStudents.map(s => {
+      const semMap = {};
+      if (Array.isArray(s.semesters)) {
+        s.semesters.forEach(sem => {
+          if (sem && sem.semester && sem.sgpa !== null && sem.sgpa !== undefined) {
+            semMap[`sem${sem.semester}Sgpa`] = Number(sem.sgpa);
+          }
+        });
+      }
+      return {
+        id: s.id,
+        studentId: s.id,
+        name: s.fullName || s.name,
+        fullName: s.fullName || s.name,
+        email: s.email,
+        rollNumber: s.rollNumber,
+        registrationId: s.registrationNumber || s.registrationId,
+        registrationNumber: s.registrationNumber || s.registrationId,
+        college: s.collegeName || s.college || 'Delhi Technological University (DTU)',
+        collegeName: s.collegeName || s.college || 'Delhi Technological University (DTU)',
+        branch: s.branch,
+        admissionType: s.admissionType || 'Regular Entry',
+        admissionYear: s.admissionYear || '2022',
+        currentSemester: Number(s.currentSemester) || 6,
+        graduationBatch: s.graduationBatch || '2026',
+        cgpa: s.cumulativeCgpa || s.cgpa || null,
+        tenthPercentage: s.class10?.percentage || s.tenthPercentage || null,
+        twelfthPercentage: s.class12?.percentage || s.twelfthPercentage || null,
+        diplomaPercentage: s.diploma?.percentage || s.diplomaPercentage || null,
+        activeBacklogs: s.activeBacklogsCount || s.activeBacklogs || 0,
+        ...semMap
+      };
+    });
+
+    const result = await AcademicsApi.syncStudents(payload);
+    return { success: true, ...result };
+  } catch (err) {
+    console.warn('Backend sync failed, local records preserved:', err);
+    return { success: false, error: err.message };
+  }
 }
 
 /**

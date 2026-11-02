@@ -11,6 +11,10 @@ public interface StudentApplicationRepository extends JpaRepository<StudentAppli
 
     List<StudentApplication> findByStudentId(String studentId);
 
+    List<StudentApplication> findByStudentEmail(String studentEmail);
+
+    List<StudentApplication> findByStudentIdOrStudentEmail(String studentId, String studentEmail);
+
     List<StudentApplication> findByDriveId(String driveId);
 
     List<StudentApplication> findByCompanyId(String companyId);

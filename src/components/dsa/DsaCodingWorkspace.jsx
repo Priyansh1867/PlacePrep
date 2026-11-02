@@ -36,8 +36,21 @@ import {
   recordStudentSubmission,
   recordRecentlyAttempted
 } from '../../services/dsaService.js';
+import { DsaApi } from '../../services/api.js';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+
+function isSqlQuestion(question) {
+  const searchable = [
+    question?.title,
+    question?.question,
+    question?.technicalProblemStatement,
+    question?.category,
+    question?.topic,
+    ...(Array.isArray(question?.skills) ? question.skills : [])
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /\bsql\b|\bdbms\b|\bwhere\b.{0,60}\bhaving\b/i.test(searchable);
+}
 
 export default function DsaCodingWorkspace({
   question,
@@ -53,7 +66,7 @@ export default function DsaCodingWorkspace({
 }) {
   const studentId = currentUser?.id || currentUser?.email || 'default_student';
 
-  const [selectedLanguage, setSelectedLanguage] = useState('java');
+  const [selectedLanguage, setSelectedLanguage] = useState(() => isSqlQuestion(question) ? 'sql' : 'java');
   const [code, setCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [activeConsoleTab, setActiveConsoleTab] = useState('tests'); // 'tests' | 'submissions' | 'solution'
@@ -67,6 +80,10 @@ export default function DsaCodingWorkspace({
   const [activeTabLeft, setActiveTabLeft] = useState('problem'); // 'problem' | 'examples' | 'approach'
 
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (isSqlQuestion(question)) setSelectedLanguage('sql');
+  }, [question?.id]);
 
   // Load code draft or starter code when question or language changes
   useEffect(() => {
@@ -129,41 +146,64 @@ export default function DsaCodingWorkspace({
 
   const lineCount = Math.max(code.split('\n').length, 16);
 
-  // Honest Execution Handler: Validates code structure and transparently notifies of backend runner status
-  const handleRunCode = () => {
+  // Judge0 Backend Execution Handler
+  const handleRunCode = async () => {
     setIsRunning(true);
     setActiveConsoleTab('tests');
 
-    setTimeout(() => {
-      setIsRunning(false);
-      const trimmed = code.trim();
-      let syntaxPass = true;
-      let diagnosticMessage = '';
-
-      // Basic client-side structural sanity checks
-      if (!trimmed) {
-        syntaxPass = false;
-        diagnosticMessage = 'Empty code file: Please write your algorithmic logic before running tests.';
-      } else {
-        const openBraces = (code.match(/{/g) || []).length;
-        const closeBraces = (code.match(/}/g) || []).length;
-        if (openBraces !== closeBraces) {
-          syntaxPass = false;
-          diagnosticMessage = `Bracket mismatch: Found ${openBraces} opening '{' and ${closeBraces} closing '}'. Verify code blocks.`;
-        }
+    try {
+      const testCases = (question?.examples || []).map(ex => ({
+        input: ex.input || '',
+        expectedOutput: ex.output || '',
+        hasExpectedOutput: ex.hasExpectedOutput === true || (ex.hasExpectedOutput !== false && typeof ex.output === 'string')
+      }));
+      if (testCases.length === 0) {
+        testCases.push({ input: '', expectedOutput: '', hasExpectedOutput: false });
       }
 
-      setExecutionResult({
-        type: syntaxPass ? 'notice' : 'error',
-        title: syntaxPass ? 'Local Validation Passed • Execution Environment Pending' : 'Syntax Check Failed',
-        syntaxPassed: syntaxPass,
-        diagnostic: diagnosticMessage,
-        runtimeStatus: 'Pending Sandbox Infrastructure',
-        sampleInput: question?.examples?.[0]?.input || 'N/A',
-        expectedOutput: question?.examples?.[0]?.output || 'N/A',
-        note: 'PlacePrep institutional backend does not host arbitrary remote code execution runners in this tier. Your code was validated and saved locally for your student account.'
+      const res = await DsaApi.execute({
+        questionId: question?.id,
+        language: selectedLanguage,
+        code,
+        testCases
       });
-    }, 700);
+
+      setIsRunning(false);
+      const hasChecks = res.hasExpectedOutputChecks === true;
+      setExecutionResult({
+        type: res.passed ? 'success' : 'error',
+        title: res.passed
+          ? (hasChecks ? 'All Test Cases Passed' : 'Program Executed Successfully — No Expected-Output Check')
+          : 'Execution Failed',
+        syntaxPassed: true,
+        passed: res.passed,
+        hasExpectedOutputChecks: hasChecks,
+        totalTestCases: res.totalTestCases,
+        passedTestCases: res.passedTestCases,
+        results: res.results,
+        engine: res.executionEngine || 'Judge0 CE API',
+        note: hasChecks
+          ? `Compiled and executed via ${res.executionEngine || 'Judge0 CE'} and compared against the supplied expected output.`
+          : `Compiled and executed via ${res.executionEngine || 'Judge0 CE'}. This question has no concrete expected output, so this confirms execution only—not solution correctness.`
+      });
+    } catch (err) {
+      setIsRunning(false);
+      setExecutionResult({
+        type: 'error',
+        title: err.status === 401 || err.status === 403
+          ? 'Sign in required to run code'
+          : err.status === 503
+            ? 'Real code execution is not configured yet'
+            : 'Backend code runner unavailable',
+        passed: false,
+        diagnostic: err.message || 'The code execution request failed.',
+        note: err.status === 401 || err.status === 403
+          ? 'Sign in with a student account, then run the code again. No code was executed.'
+          : err.status === 503
+            ? 'No code was executed. Add your Judge0 API key to the backend environment, enable the runner, and restart the backend. See the repository README for the exact variables.'
+            : 'No code was executed. Check that the backend is running and try again.'
+      });
+    }
   };
 
   const handleSubmitSolution = () => {
@@ -660,21 +700,26 @@ export default function DsaCodingWorkspace({
                         </p>
                       </div>
 
-                      {/* Sample Test Case Inspection */}
-                      <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
-                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                          <span className="text-[10px] uppercase font-bold text-slate-500 font-sans block mb-1">
-                            Sample Input Verified
-                          </span>
-                          <span className="text-slate-800">{executionResult.sampleInput}</span>
+                      {executionResult.results?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold text-slate-600">
+                            {executionResult.hasExpectedOutputChecks
+                              ? `${executionResult.passedTestCases ?? 0} / ${executionResult.totalTestCases ?? executionResult.results.length} tests passed`
+                              : `${executionResult.passedTestCases ?? 0} / ${executionResult.totalTestCases ?? executionResult.results.length} program runs succeeded (no correctness assertions)`} · {executionResult.engine}
+                          </p>
+                          {executionResult.results.map((result, index) => (
+                            <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] font-mono">
+                              <div className="mb-1 flex items-center justify-between gap-2">
+                                <span className="font-bold text-slate-800">Test {index + 1}: {result.status}</span>
+                                <span className={result.passed ? 'text-emerald-700' : 'text-rose-700'}>{result.passed ? 'Passed' : 'Failed'}</span>
+                              </div>
+                              <p><span className="font-semibold">Expected:</span> {result.expected || '(empty)'}</p>
+                              <p><span className="font-semibold">Output:</span> {result.stdout || '(empty)'}</p>
+                              {result.stderr && <p className="mt-1 whitespace-pre-wrap text-rose-700">{result.stderr}</p>}
+                            </div>
+                          ))}
                         </div>
-                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                          <span className="text-[10px] uppercase font-bold text-slate-500 font-sans block mb-1">
-                            Expected Output
-                          </span>
-                          <span className="text-emerald-700 font-bold">{executionResult.expectedOutput}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6 text-slate-400 space-y-1">

@@ -1,8 +1,14 @@
 package com.placeprep.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.placeprep.dto.ResumeAtsResponse;
 import com.placeprep.dto.SampleJdDto;
 import com.placeprep.exception.BadRequestException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,86 +21,28 @@ import java.util.stream.Collectors;
 @Service
 public class ResumeAtsService {
 
+    private static final Logger log = LoggerFactory.getLogger(ResumeAtsService.class);
+
     @Value("${placeprep.resume-ats.approval-threshold:75}")
     private int approvalThreshold;
 
-    // Curated high-frequency technical multi-word phrases for precise ATS extraction
-    private static final List<String> RECOGNIZED_TECH_PHRASES = List.of(
-            "REST API", "REST APIs", "RESTful API", "RESTful APIs",
-            "Spring Boot", "Spring Data JPA", "Spring Security", "Microservices Architecture",
-            "Data Structures", "Algorithms", "Object Oriented Programming",
-            "CI/CD", "Continuous Integration", "Continuous Deployment",
-            "Docker Container", "Docker Containers", "Kubernetes",
-            "Machine Learning", "Deep Learning", "Natural Language Processing",
-            "Relational Database", "SQL Query", "SQL Queries", "NoSQL Database",
-            "Cloud Computing", "AWS Cloud", "Azure Cloud", "Google Cloud",
-            "System Design", "Distributed Systems", "Unit Testing", "Test Driven Development",
-            "Version Control", "Git GitHub", "Full Stack", "Front End", "Back End",
-            "Agile Methodology", "Database Management", "Clean Code", "Design Patterns"
-    );
+    private final ChatClient chatClient;
+    private final ObjectMapper objectMapper;
 
-    // Common stop words and boilerplate recruitment terms to exclude
-    private static final Set<String> STOP_WORDS = Set.of(
-            "a", "about", "above", "across", "after", "again", "against", "all", "almost", "alone",
-            "along", "already", "also", "although", "always", "among", "an", "and", "another",
-            "any", "anybody", "anyone", "anything", "anywhere", "are", "area", "areas", "around",
-            "as", "ask", "asked", "asking", "asks", "at", "away", "b", "back", "backed", "backing",
-            "backs", "be", "became", "because", "become", "becomes", "becoming", "been", "before",
-            "beforehand", "began", "behind", "being", "beings", "below", "beside", "besides",
-            "best", "better", "between", "beyond", "big", "both", "but", "by", "c", "came", "can",
-            "cannot", "cant", "case", "cases", "certain", "certainly", "clear", "clearly", "come",
-            "could", "d", "did", "differ", "different", "differently", "do", "does", "done", "down",
-            "downed", "downing", "downs", "during", "e", "each", "early", "either", "end", "ended",
-            "ending", "ends", "enough", "even", "evenly", "ever", "every", "everybody", "everyone",
-            "everything", "everywhere", "f", "face", "faces", "fact", "facts", "far", "felt", "few",
-            "fewer", "find", "finds", "first", "for", "four", "from", "full", "fully", "further",
-            "furthered", "furthering", "furthers", "g", "gave", "general", "generally", "get",
-            "gets", "give", "given", "gives", "go", "going", "good", "goods", "got", "great",
-            "greater", "greatest", "group", "grouped", "grouping", "groups", "h", "had", "has",
-            "have", "having", "he", "her", "here", "herself", "high", "higher", "highest", "him",
-            "himself", "his", "how", "however", "i", "if", "important", "in", "interest",
-            "interested", "interesting", "interests", "into", "is", "it", "its", "itself", "j",
-            "just", "k", "keep", "keeps", "kind", "knew", "know", "known", "knows", "l", "large",
-            "largely", "last", "later", "latest", "least", "less", "let", "lets", "like", "likely",
-            "long", "longer", "longest", "m", "made", "make", "making", "man", "many", "may", "me",
-            "member", "members", "men", "might", "more", "most", "mostly", "mr", "mrs", "much",
-            "must", "my", "myself", "n", "necessary", "need", "needed", "needing", "needs", "never",
-            "new", "newer", "newest", "next", "no", "nobody", "non", "noone", "not", "nothing",
-            "now", "nowhere", "number", "numbers", "o", "of", "off", "often", "old", "older",
-            "oldest", "on", "once", "one", "only", "open", "opened", "opening", "opens", "or",
-            "order", "ordered", "ordering", "orders", "other", "others", "our", "out", "over", "p",
-            "part", "parted", "parting", "parts", "per", "perhaps", "place", "places", "point",
-            "pointed", "pointing", "points", "possible", "present", "presented", "presenting",
-            "presents", "problem", "problems", "put", "puts", "q", "quite", "r", "rather", "really",
-            "right", "room", "rooms", "s", "said", "same", "saw", "say", "saying", "says", "second",
-            "seconds", "see", "sees", "seem", "seemed", "seeming", "seems", "several", "shall",
-            "she", "should", "show", "showed", "showing", "shows", "side", "sides", "since",
-            "small", "smaller", "smallest", "so", "some", "somebody", "someone", "something",
-            "somewhere", "state", "states", "still", "such", "sure", "t", "take", "taken", "than",
-            "that", "the", "their", "them", "then", "there", "therefore", "these", "they", "thing",
-            "things", "think", "thinks", "this", "those", "though", "thought", "thoughts", "three",
-            "through", "thus", "to", "today", "together", "too", "took", "toward", "turn", "turned",
-            "turning", "turns", "two", "u", "under", "until", "up", "upon", "us", "use", "used",
-            "uses", "v", "very", "w", "want", "wanted", "wanting", "wants", "was", "way", "ways",
-            "we", "well", "wells", "went", "were", "what", "when", "where", "whether", "which",
-            "while", "who", "whole", "whose", "why", "will", "with", "within", "without", "work",
-            "worked", "working", "works", "would", "x", "y", "year", "years", "yet", "you", "young",
-            "younger", "youngest", "your", "yours", "z",
-            // Generic recruitment boilerplates
-            "experience", "candidate", "candidates", "applicant", "applicants", "role", "roles",
-            "responsibility", "responsibilities", "qualification", "qualifications", "requirement",
-            "requirements", "skill", "skills", "ability", "abilities", "opportunity", "team",
-            "teams", "company", "culture", "plus", "preferred", "knowledge", "degree", "bachelor",
-            "master", "bachelors", "masters", "minimum", "maximum", "strong", "excellent"
-    );
+    public ResumeAtsService() {
+        this.chatClient = null;
+        this.objectMapper = new ObjectMapper();
+    }
 
-    // Whitelist of valid 2-letter technical tokens
-    private static final Set<String> SHORT_TECH_TERMS = Set.of(
-            "go", "c", "r", "js", "ts", "ai", "ml", "os", "db", "ui", "ux", "qa", "ci", "cd", "ip"
-    );
+    @Autowired
+    public ResumeAtsService(ChatClient chatClient) {
+        this.chatClient = chatClient;
+        this.objectMapper = new ObjectMapper();
+    }
 
     /**
-     * Performs explainable, deterministic ATS keyword matching and scoring.
+     * Evaluates resume against a target job description using the AI ChatClient to determine
+     * the ATS match score, matched and missing keywords, recommendations, and executive summary.
      */
     public ResumeAtsResponse analyze(String resumeText, String company, String role, String jobDescription, String fileName) {
         if (resumeText == null || resumeText.trim().isEmpty()) {
@@ -108,51 +56,238 @@ public class ResumeAtsService {
         String safeRole = (role != null && !role.trim().isEmpty()) ? role.trim() : "Target Technical Role";
         String safeFileName = (fileName != null && !fileName.trim().isEmpty()) ? fileName.trim() : "uploaded_resume.pdf";
 
-        // 1. Extract keywords and multi-word phrases from Job Description
-        Set<String> jdKeywords = extractKeywordsFromJobDescription(jobDescription);
-        if (jdKeywords.isEmpty()) {
-            throw new BadRequestException("Could not extract meaningful technical keywords from the provided Job Description. " +
-                    "Please include specific technologies, frameworks, and job competencies.");
+        if (chatClient != null) {
+            return analyzeWithAi(resumeText, safeCompany, safeRole, jobDescription, safeFileName);
         }
 
-        // 2. Match each keyword against the normalized resume text
-        List<String> matched = new ArrayList<>();
-        List<String> missing = new ArrayList<>();
+        return analyzeFallback(resumeText, safeCompany, safeRole, jobDescription, safeFileName);
+    }
 
-        for (String keyword : jdKeywords) {
-            if (isKeywordPresentInResume(keyword, resumeText)) {
-                matched.add(keyword);
-            } else {
-                missing.add(keyword);
+    /**
+     * Uses Spring AI ChatClient to evaluate the resume against the job description.
+     */
+    private ResumeAtsResponse analyzeWithAi(String resumeText, String company, String role, String jobDescription, String fileName) {
+        String systemPrompt = """
+                You are an expert Applicant Tracking System (ATS) and senior technical recruiter.
+                Evaluate the candidate's resume against the target Job Description (JD).
+                Analyze technical skills, tools, frameworks, system design, domain knowledge, and requirements.
+
+                Calculate an objective ATS compatibility score (0 to 100) based on how well the candidate meets the JD requirements.
+                Identify matched keywords and skills that are present in the resume.
+                Identify missing keywords and skills required by the JD that are absent or insufficiently demonstrated in the resume.
+                Provide 4 to 6 actionable, concrete recommendations for improving ATS compatibility and alignment.
+                Provide a concise 2-3 sentence executive evaluation summary.
+
+                Respond ONLY with a valid JSON object matching this schema:
+                {
+                  "matchScore": <integer 0-100>,
+                  "matchedKeywords": ["<skill1>", "<skill2>"],
+                  "missingKeywords": ["<missingSkill1>", "<missingSkill2>"],
+                  "recommendations": ["<recommendation1>", "<recommendation2>"],
+                  "summary": "<evaluation summary>"
+                }
+                Do not include markdown code block syntax (such as ```json) or any additional text outside the JSON.
+                """;
+
+        String userPrompt = String.format(Locale.ROOT,
+                """
+                Target Company: %s
+                Target Role: %s
+
+                === JOB DESCRIPTION ===
+                %s
+
+                === CANDIDATE RESUME ===
+                %s
+                """,
+                company, role, jobDescription, resumeText);
+
+        try {
+            String aiResponse = chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .content();
+
+            return parseAiResponse(aiResponse, company, role, fileName);
+        } catch (Exception e) {
+            log.error("AI ATS analysis call failed: {}", e.getMessage(), e);
+            return analyzeFallback(resumeText, company, role, jobDescription, fileName);
+        }
+    }
+
+    /**
+     * Parses the AI response JSON and constructs the ResumeAtsResponse.
+     */
+    private ResumeAtsResponse parseAiResponse(String rawContent, String company, String role, String fileName) {
+        int matchScore = 0;
+        List<String> matchedKeywords = new ArrayList<>();
+        List<String> missingKeywords = new ArrayList<>();
+        List<String> recommendations = new ArrayList<>();
+        String summary = null;
+
+        if (rawContent != null && !rawContent.isBlank()) {
+            String cleanJson = extractJson(rawContent);
+            try {
+                JsonNode root = objectMapper.readTree(cleanJson);
+
+                if (root.has("matchScore")) {
+                    matchScore = Math.max(0, Math.min(100, root.get("matchScore").asInt(0)));
+                }
+
+                if (root.has("matchedKeywords") && root.get("matchedKeywords").isArray()) {
+                    for (JsonNode node : root.get("matchedKeywords")) {
+                        String kw = node.asText("").trim();
+                        if (!kw.isEmpty()) {
+                            matchedKeywords.add(kw);
+                        }
+                    }
+                }
+
+                if (root.has("missingKeywords") && root.get("missingKeywords").isArray()) {
+                    for (JsonNode node : root.get("missingKeywords")) {
+                        String kw = node.asText("").trim();
+                        if (!kw.isEmpty()) {
+                            missingKeywords.add(kw);
+                        }
+                    }
+                }
+
+                if (root.has("recommendations") && root.get("recommendations").isArray()) {
+                    for (JsonNode node : root.get("recommendations")) {
+                        String rec = node.asText("").trim();
+                        if (!rec.isEmpty()) {
+                            recommendations.add(rec);
+                        }
+                    }
+                }
+
+                if (root.has("summary") && !root.get("summary").isNull()) {
+                    summary = root.get("summary").asText("").trim();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse AI JSON response: {}. Raw response: {}", e.getMessage(), rawContent);
             }
         }
 
-        // Sort alphabetically for clean UI presentation
+        matchedKeywords.sort(String.CASE_INSENSITIVE_ORDER);
+        missingKeywords.sort(String.CASE_INSENSITIVE_ORDER);
+
+        int totalKeywords = matchedKeywords.size() + missingKeywords.size();
+        int matchedCount = matchedKeywords.size();
+        int missingCount = missingKeywords.size();
+
+        if (matchScore == 0 && totalKeywords > 0) {
+            matchScore = (int) Math.round(((double) matchedCount / totalKeywords) * 100);
+        }
+
+        String approvalStatus = (matchScore >= approvalThreshold) ? "APPROVED" : "NEEDS_REVISION";
+
+        if (summary == null || summary.isBlank()) {
+            summary = String.format(Locale.ROOT,
+                    "Your resume matched %d out of %d key competencies (score: %d%%) for %s at %s. %s",
+                    matchedCount, totalKeywords, matchScore, role, company,
+                    (matchScore >= approvalThreshold)
+                            ? "High ATS compatibility rating — ready for submission."
+                            : "Requires keyword reinforcement to pass typical campus ATS filtering.");
+        }
+
+        return ResumeAtsResponse.builder()
+                .company(company)
+                .role(role)
+                .fileName(fileName)
+                .matchScore(matchScore)
+                .approvalStatus(approvalStatus)
+                .approvalThreshold(approvalThreshold)
+                .totalJobKeywords(totalKeywords)
+                .matchedCount(matchedCount)
+                .missingCount(missingCount)
+                .matchedKeywords(matchedKeywords)
+                .missingKeywords(missingKeywords)
+                .recommendations(recommendations)
+                .summary(summary)
+                .disclaimer("This ATS compatibility evaluation is an AI-powered diagnostic estimate based on semantic and keyword matching against the provided job description. It does not guarantee employment selection by third-party systems.")
+                .analyzedAt(Instant.now().toString())
+                .build();
+    }
+
+    /**
+     * Extracts JSON object string by stripping markdown code fences or non-JSON wrapper text.
+     */
+    private String extractJson(String text) {
+        if (text == null) {
+            return "{}";
+        }
+        String trimmed = text.trim();
+        if (trimmed.startsWith("```json")) {
+            trimmed = trimmed.substring(7);
+        } else if (trimmed.startsWith("```")) {
+            trimmed = trimmed.substring(3);
+        }
+        if (trimmed.endsWith("```")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 3);
+        }
+        trimmed = trimmed.trim();
+
+        int start = trimmed.indexOf('{');
+        int end = trimmed.lastIndexOf('}');
+        if (start != -1 && end != -1 && end >= start) {
+            return trimmed.substring(start, end + 1);
+        }
+        return trimmed;
+    }
+
+    /**
+     * Fallback ATS analyzer used when AI ChatClient is unavailable.
+     */
+    private ResumeAtsResponse analyzeFallback(String resumeText, String company, String role, String jobDescription, String fileName) {
+        Set<String> jdKeywords = extractKeywordsFromJobDescription(jobDescription);
+        List<String> matched = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+
+        for (String kw : jdKeywords) {
+            Pattern pattern = Pattern.compile("(?i)\\b" + Pattern.quote(kw) + "\\b");
+            if (pattern.matcher(resumeText).find()) {
+                matched.add(kw);
+            } else {
+                missing.add(kw);
+            }
+        }
+
         matched.sort(String.CASE_INSENSITIVE_ORDER);
         missing.sort(String.CASE_INSENSITIVE_ORDER);
 
-        // 3. Calculate score
         int totalKeywords = jdKeywords.size();
         int matchedCount = matched.size();
-        int matchScore = (int) Math.round(((double) matchedCount / totalKeywords) * 100);
-
-        // 4. Approval status determination against configurable threshold (default 75%)
+        int matchScore = totalKeywords > 0 ? (int) Math.round(((double) matchedCount / totalKeywords) * 100) : 0;
         String approvalStatus = (matchScore >= approvalThreshold) ? "APPROVED" : "NEEDS_REVISION";
 
-        // 5. Generate transparent actionable recommendations
-        List<String> recommendations = generateRecommendations(matched, missing, matchScore, safeRole);
+        List<String> recs = new ArrayList<>();
+        if (!missing.isEmpty()) {
+            recs.add("Incorporate missing core competencies prominently in your Technical Skills and Projects sections: " +
+                    String.join(", ", missing.stream().limit(5).collect(Collectors.toList())) + ".");
+        }
+        if (matchScore < approvalThreshold) {
+            recs.add("Your match score (" + matchScore + "%) is currently below the campus recruiter shortlisting threshold (" +
+                    approvalThreshold + "%). Tailor your project bullet points to directly reflect the requirements of " + role + ".");
+        } else {
+            recs.add("Strong alignment achieved (" + matchScore + "%). Ensure each matched skill is substantiated by a concrete project or internship bullet point.");
+        }
+        recs.add("Apply the STAR method (Situation, Task, Action, Result) and quantify outcomes with measurable metrics (e.g., 'Reduced query latency by 35%').");
+        recs.add("Verify standard ATS document formatting: use standard single-column layouts, clear section headers (Education, Skills, Experience, Projects), and avoid non-standard embedded tables or graphics.");
+        recs.add("Begin bullet points with authoritative engineering action verbs such as 'Architected', 'Implemented', 'Engineered', 'Optimized', and 'Spearheaded'.");
 
         String summary = String.format(Locale.ROOT,
                 "Your resume matched %d out of %d key competencies (score: %d%%) for %s at %s. %s",
-                matchedCount, totalKeywords, matchScore, safeRole, safeCompany,
+                matchedCount, totalKeywords, matchScore, role, company,
                 (matchScore >= approvalThreshold)
                         ? "High ATS compatibility rating — ready for submission."
                         : "Requires keyword reinforcement to pass typical campus ATS filtering.");
 
         return ResumeAtsResponse.builder()
-                .company(safeCompany)
-                .role(safeRole)
-                .fileName(safeFileName)
+                .company(company)
+                .role(role)
+                .fileName(fileName)
                 .matchScore(matchScore)
                 .approvalStatus(approvalStatus)
                 .approvalThreshold(approvalThreshold)
@@ -161,7 +296,7 @@ public class ResumeAtsService {
                 .missingCount(missing.size())
                 .matchedKeywords(matched)
                 .missingKeywords(missing)
-                .recommendations(recommendations)
+                .recommendations(recs)
                 .summary(summary)
                 .disclaimer("This ATS compatibility evaluation is an educational diagnostic estimate based on keyword frequency " +
                         "and semantic matching against the provided job description. It does not guarantee employment selection by third-party systems.")
@@ -170,111 +305,22 @@ public class ResumeAtsService {
     }
 
     /**
-     * Extracts multi-word technical phrases and normalized technical tokens from the JD.
+     * Extracts keywords from the job description.
      */
     public Set<String> extractKeywordsFromJobDescription(String jdText) {
+        if (jdText == null || jdText.isBlank()) {
+            return Collections.emptySet();
+        }
         Set<String> keywords = new LinkedHashSet<>();
-        String workingText = jdText;
-
-        // A. Match and extract recognized multi-word phrases first
-        for (String phrase : RECOGNIZED_TECH_PHRASES) {
-            Pattern pattern = Pattern.compile("(?i)\\b" + Pattern.quote(phrase) + "\\b");
-            Matcher matcher = pattern.matcher(workingText);
-            if (matcher.find()) {
-                keywords.add(phrase); // preserve canonical phrase casing
-                // Mask matched phrase from working text so individual words aren't double counted
-                workingText = matcher.replaceAll(" ");
+        Pattern pattern = Pattern.compile("(?i)\\b([a-zA-Z0-9+#.]+)\\b");
+        Matcher matcher = pattern.matcher(jdText);
+        while (matcher.find()) {
+            String token = matcher.group().trim();
+            if (token.length() >= 2) {
+                keywords.add(token);
             }
         }
-
-        // B. Tokenize remaining words, sanitize punctuation and check stopwords
-        // Match tokens like: C++, C#, .NET, Node.js, or alphanumeric words
-        Pattern tokenPattern = Pattern.compile("(?i)\\b([a-z0-9+#.]+)\\b|\\b([a-z]+)\\b");
-        Matcher tokenMatcher = tokenPattern.matcher(workingText);
-
-        while (tokenMatcher.find()) {
-            String token = tokenMatcher.group().trim();
-            String lower = token.toLowerCase(Locale.ROOT);
-
-            // Strip trailing/leading punctuation
-            token = token.replaceAll("^[.]+ champion |[.]+$", "");
-            lower = lower.replaceAll("^[.]+|[.]+$", "");
-
-            if (lower.isEmpty()) continue;
-
-            // Reject if stop word
-            if (STOP_WORDS.contains(lower)) continue;
-
-            // Reject if purely numeric
-            if (lower.matches("^\\d+$")) continue;
-
-            // Accept if short tech term or length >= 3
-            if (SHORT_TECH_TERMS.contains(lower) || lower.length() >= 3) {
-                // Capitalize first letter or retain tech uppercase conventions
-                keywords.add(formatKeyword(token));
-            }
-        }
-
         return keywords;
-    }
-
-    private boolean isKeywordPresentInResume(String keyword, String resumeText) {
-        // Multi-word phrase or word boundary matching
-        String patternString;
-        if (keyword.equalsIgnoreCase("C++")) {
-            patternString = "(?i)\\bC\\+\\+";
-        } else if (keyword.equalsIgnoreCase("C#")) {
-            patternString = "(?i)\\bC#";
-        } else if (keyword.equalsIgnoreCase(".NET")) {
-            patternString = "(?i)\\.NET\\b";
-        } else {
-            patternString = "(?i)\\b" + Pattern.quote(keyword) + "\\b";
-        }
-
-        Pattern pattern = Pattern.compile(patternString);
-        return pattern.matcher(resumeText).find();
-    }
-
-    private String formatKeyword(String token) {
-        String lower = token.toLowerCase(Locale.ROOT);
-        if (lower.equals("sql") || lower.equals("aws") || lower.equals("api") || lower.equals("html") ||
-                lower.equals("css") || lower.equals("dsa") || lower.equals("oop") || lower.equals("jwt") ||
-                lower.equals("gcp") || lower.equals("sdk") || lower.equals("dbms") || lower.equals("jpa") ||
-                lower.equals("rest") || lower.equals("ci/cd")) {
-            return token.toUpperCase(Locale.ROOT);
-        }
-        if (lower.equals("javascript") || lower.equals("typescript") || lower.equals("postgresql") ||
-                lower.equals("mongodb") || lower.equals("mysql") || lower.equals("docker") ||
-                lower.equals("react") || lower.equals("python") || lower.equals("java")) {
-            return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
-        }
-        if (token.length() <= 3 && SHORT_TECH_TERMS.contains(lower)) {
-            return token.toUpperCase(Locale.ROOT);
-        }
-        return Character.toUpperCase(token.charAt(0)) + token.substring(1);
-    }
-
-    private List<String> generateRecommendations(List<String> matched, List<String> missing, int score, String role) {
-        List<String> recs = new ArrayList<>();
-
-        if (!missing.isEmpty()) {
-            List<String> topMissing = missing.stream().limit(5).collect(Collectors.toList());
-            recs.add("Incorporate missing core competencies prominently in your Technical Skills and Projects sections: " +
-                    String.join(", ", topMissing) + ".");
-        }
-
-        if (score < approvalThreshold) {
-            recs.add("Your match score (" + score + "%) is currently below the campus recruiter shortlisting threshold (" +
-                    approvalThreshold + "%). Tailor your project bullet points to directly reflect the requirements of " + role + ".");
-        } else {
-            recs.add("Strong alignment achieved (" + score + "%). Ensure each matched skill is substantiated by a concrete project or internship bullet point.");
-        }
-
-        recs.add("Apply the STAR method (Situation, Task, Action, Result) and quantify outcomes with measurable metrics (e.g., 'Reduced query latency by 35%').");
-        recs.add("Verify standard ATS document formatting: use standard single-column layouts, clear section headers (Education, Skills, Experience, Projects), and avoid non-standard embedded tables or graphics.");
-        recs.add("Begin bullet points with authoritative engineering action verbs such as 'Architected', 'Implemented', 'Engineered', 'Optimized', and 'Spearheaded'.");
-
-        return recs;
     }
 
     /**

@@ -30,7 +30,12 @@ public class AcademicRecordController {
     @Autowired
     private StudentAcademicRecordService academicRecordService;
 
-    @GetMapping("/student/{emailOrId}")
+    @GetMapping({"/students", "/student", "/all"})
+    public ResponseEntity<List<StudentAcademicRecord>> getAllStudentRecords() {
+        return ResponseEntity.ok(academicRecordService.findAllRecords());
+    }
+
+    @GetMapping({"/students/{emailOrId}", "/student/{emailOrId}"})
     public ResponseEntity<?> getStudentRecord(@PathVariable String emailOrId) {
         return academicRecordService.findForStudent(emailOrId)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
@@ -38,7 +43,7 @@ public class AcademicRecordController {
                         .body(Collections.singletonMap("error", "Academic record not found for: " + emailOrId)));
     }
 
-    @PostMapping("/student")
+    @PostMapping({"/students", "/student"})
     public ResponseEntity<?> saveStudentRecord(@RequestBody StudentAcademicRecord record) {
         try {
             StudentAcademicRecord saved = academicRecordService.saveRecord(record);
@@ -48,6 +53,17 @@ public class AcademicRecordController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<?> syncStudentRecords(@RequestBody List<Map<String, Object>> rawRecords) {
+        try {
+            Map<String, Object> result = academicRecordService.syncRawRecords(rawRecords);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Failed to sync academic records: " + e.getMessage()));
         }
     }
 

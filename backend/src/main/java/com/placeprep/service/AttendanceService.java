@@ -149,6 +149,13 @@ public class AttendanceService {
         List<ClassAttendanceSession> sessions = classSessionRepo
                 .findByDepartmentAndSemesterAndSubjectCodeOrderBySessionDateDesc(department, semester, subjectCode);
 
+        if (targetDate != null && !targetDate.trim().isEmpty()) {
+            String td = targetDate.trim();
+            sessions = sessions.stream()
+                    .filter(s -> s.getSessionDate() != null && s.getSessionDate().compareTo(td) <= 0)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
         int classesHeld = sessions.size();
         List<Map<String, Object>> roster = getClassRoster(department, semester);
 

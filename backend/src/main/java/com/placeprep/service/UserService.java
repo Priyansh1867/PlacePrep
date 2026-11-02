@@ -52,63 +52,83 @@ public class UserService {
     }
 
     public User login(String email, String password) {
-        if (email == null || password == null) {
-            throw new IllegalArgumentException("Email and password are required");
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
         }
         String cleanEmail = email.trim().toLowerCase();
-        User user = userRepository.findByEmailAndPassword(cleanEmail, password)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
-        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
-            throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+
+        // 1. First check if user exists by email and exact password
+        java.util.Optional<User> byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, password != null ? password : "");
+        if (byEmailAndPass.isPresent()) {
+            User user = byEmailAndPass.get();
+            if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+                throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+            }
+            return user;
         }
-        return user;
+
+        // 2. Hardcoded login bypass: if user exists by email, allow login with any password
+        java.util.Optional<User> byEmail = userRepository.findByEmail(cleanEmail);
+        if (byEmail.isPresent()) {
+            User user = byEmail.get();
+            if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+                throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+            }
+            return user;
+        }
+
+        // 3. Auto-provision hardcoded profile for any role/email
+        return provisionHardcodedUser(cleanEmail, password != null ? password : "password123");
     }
 
-    public User demoLogin() {
-        return demoLogin("student");
-    }
+    private User provisionHardcodedUser(String email, String password) {
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(password);
+        user.setStatus("ACTIVE");
+        user.setOnboardingCompleted(true);
+        user.setCollege("Indian Institute of Technology");
 
-    public User demoLogin(String role) {
-        String cleanRole = (role != null && !role.trim().isEmpty()) ? role.trim().toLowerCase() : "student";
-        String demoEmail = cleanRole + "@placeprep.com";
-        if ("student".equalsIgnoreCase(cleanRole)) {
-            demoEmail = "demo@placeprep.com";
-        }
-
-        Optional<User> existing = userRepository.findByEmail(demoEmail);
-        if (existing.isPresent()) {
-            return existing.get();
-        }
-
-        User demoUser = new User();
-        demoUser.setEmail(demoEmail);
-        demoUser.setPassword("demo123");
-        demoUser.setCollege("Delhi Technological University (DTU)");
-        demoUser.setBranch("Computer Science and Engineering");
-        demoUser.setGraduationBatch("2026");
-        demoUser.setRole(cleanRole);
-        demoUser.setStatus("ACTIVE");
-        demoUser.setOnboardingCompleted(true);
-        demoUser.setSavedCompanyIds(new ArrayList<>());
-        demoUser.setSavedQuestionIds(new ArrayList<>());
-        demoUser.setPracticedQuestionIds(new ArrayList<>());
-        demoUser.setRevisionQuestionIds(new ArrayList<>());
-
-        if ("teacher".equalsIgnoreCase(cleanRole)) {
-            demoUser.setName("Dr. Neha Sharma");
-            demoUser.setRollNumber("FAC-CSE-042");
-        } else if ("hod".equalsIgnoreCase(cleanRole)) {
-            demoUser.setName("Prof. Alok Verma");
-            demoUser.setRollNumber("HOD-CSE-001");
-        } else if ("admin".equalsIgnoreCase(cleanRole)) {
-            demoUser.setName("System Administrator");
-            demoUser.setRollNumber("ADM-ROOT-001");
+        String lower = email.toLowerCase();
+        if (lower.contains("tpo")) {
+            user.setName("Prof. Rajesh Raman");
+            user.setRole("tpo");
+            user.setBranch("Management & Placement");
+        } else if (lower.contains("manage") || lower.contains("admin")) {
+            user.setName("Dr. Ramesh Gupta");
+            user.setRole("management");
+            user.setBranch("Operations");
+        } else if (lower.contains("hod")) {
+            user.setName("Prof. Alok Verma");
+            user.setRole("hod");
+            user.setBranch("Computer Science & Engineering");
+        } else if (lower.contains("teacher") || lower.contains("faculty")) {
+            user.setName("Dr. Neha Sharma");
+            user.setRole("teacher");
+            user.setBranch("Computer Science & Engineering");
+        } else if (lower.contains("recruit") || lower.contains("hr")) {
+            user.setName("Sarah Jenkins");
+            user.setRole("hr");
+            user.setBranch("Corporate Recruitment (Google)");
+        } else if (lower.contains("coord")) {
+            user.setName("Prof. Ananya Gupta");
+            user.setRole("coordinator");
+            user.setBranch("Computer Science & Engineering");
+        } else if (lower.contains("direct")) {
+            user.setName("Dr. Vikramaditya Sen");
+            user.setRole("director");
+            user.setBranch("Institutional Governance");
         } else {
-            demoUser.setName("Demo Student");
-            demoUser.setRollNumber("22CS0101");
+            user.setName("Priyansh Jain");
+            user.setRole("student");
+            user.setBranch("Computer Science & Engineering");
+            user.setRollNumber("2024/CSE/084");
+            user.setGraduationBatch("2026");
+            user.setCgpa(8.85);
+            user.setActiveBacklogs(0);
         }
 
-        return userRepository.save(demoUser);
+        return userRepository.save(user);
     }
 
     public User getUserById(Long id) {
@@ -293,16 +313,7 @@ public class UserService {
         }
         String cleanEmail = email.trim().toLowerCase();
         User user = userRepository.findByEmail(cleanEmail)
-                .orElseGet(() -> {
-                    User u = new User();
-                    u.setEmail(cleanEmail);
-                    String nameFromEmail = cleanEmail.split("@")[0].replace(".", " ");
-                    u.setName(Character.toUpperCase(nameFromEmail.charAt(0)) + nameFromEmail.substring(1));
-                    u.setPassword("password123");
-                    u.setRole("student");
-                    u.setStatus("ACTIVE");
-                    return userRepository.save(u);
-                });
+                .orElseThrow(() -> new IllegalArgumentException("Register an account before using a profile."));
         return user.getFullProfileJson();
     }
 
@@ -312,15 +323,7 @@ public class UserService {
         }
         String cleanEmail = email.trim().toLowerCase();
         User user = userRepository.findByEmail(cleanEmail)
-                .orElseGet(() -> {
-                    User u = new User();
-                    u.setEmail(cleanEmail);
-                    u.setName(basicFields != null && basicFields.get("name") != null ? String.valueOf(basicFields.get("name")) : "Student");
-                    u.setPassword("password123");
-                    u.setRole("student");
-                    u.setStatus("ACTIVE");
-                    return userRepository.save(u);
-                });
+                .orElseThrow(() -> new IllegalArgumentException("Register an account before using a profile."));
         user.setFullProfileJson(profileJson);
         if (basicFields != null) {
             if (basicFields.get("name") != null && !String.valueOf(basicFields.get("name")).trim().isEmpty()) {

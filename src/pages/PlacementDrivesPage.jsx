@@ -1,3 +1,4 @@
+import { getProfileMetrics } from '../services/profileMetrics';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Briefcase, 
@@ -92,15 +93,15 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [driveToApply, setDriveToApply] = useState(null);
   const [applyStudentProfile, setApplyStudentProfile] = useState({
-    studentName: currentUser?.name || currentUser?.fullName || '',
+    studentName: currentUser?.name || '',
     studentEmail: currentUser?.email || '',
     college: currentUser?.college || '',
     branch: currentUser?.branch || '',
-    graduationBatch: currentUser?.graduationBatch || currentBatch,
-    cgpa: currentUser?.cgpa || '',
-    tenthPercentage: currentUser?.tenthPercentage || '',
-    twelfthPercentage: currentUser?.twelfthPercentage || '',
-    activeBacklogs: currentUser?.activeBacklogs ?? 0
+    graduationBatch: currentBatch,
+    cgpa: getProfileMetrics(currentUser || {}).cgpa ?? '',
+    tenthPercentage: getProfileMetrics(currentUser || {}).tenthPercentage ?? '',
+    twelfthPercentage: getProfileMetrics(currentUser || {}).twelfthPercentage ?? '',
+    activeBacklogs: getProfileMetrics(currentUser || {}).backlogs ?? ''
   });
 
   useEffect(() => {
@@ -123,21 +124,21 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
 
   // Eligibility Engine Live Checker Form State
   const [eligibilityForm, setEligibilityForm] = useState({
-    cgpa: 8.5,
-    tenthPercentage: 90.0,
-    twelfthPercentage: 88.0,
-    activeBacklogs: 0,
-    branch: 'Computer Science and Engineering',
+    cgpa: getProfileMetrics(currentUser || {}).cgpa ?? '',
+    tenthPercentage: getProfileMetrics(currentUser || {}).tenthPercentage ?? '',
+    twelfthPercentage: getProfileMetrics(currentUser || {}).twelfthPercentage ?? '',
+    activeBacklogs: getProfileMetrics(currentUser || {}).backlogs ?? '',
+    branch: currentUser?.branch || '',
     graduationBatch: currentBatch,
-    targetDriveId: drivesList[0]?.id || 'drv-hcl-2026'
+    targetDriveId: drivesList[0]?.id || ''
   });
 
   // Schedule Conflict Interactive Checker State
   const [conflictCheckerForm, setConflictCheckerForm] = useState({
-    targetDate: '2026-11-18',
-    startTime: '10:30 AM',
-    endTime: '11:45 AM',
-    companyName: 'Accenture (Virtual Assessment)'
+    targetDate: '',
+    startTime: '',
+    endTime: '',
+    companyName: ''
   });
   const [conflictResult, setConflictResult] = useState(null);
 
@@ -300,7 +301,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
     
     // Check Conflict
     const conflictCheck = detectScheduleConflicts(
-      currentUser?.id || 'user-demo-01',
+      currentUser?.id,
       driveToApply.driveDate,
       driveToApply.driveTime || '09:00 AM',
       '05:00 PM',
@@ -309,7 +310,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
 
     const newApp = {
       applicationId: `APP-${Date.now().toString(36).toUpperCase()}`,
-      studentId: currentUser?.id || 'user-demo-01',
+      studentId: currentUser?.id,
       studentName: applyStudentProfile.studentName,
       studentEmail: applyStudentProfile.studentEmail,
       college: applyStudentProfile.college,
@@ -370,7 +371,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
   // Run interactive conflict detector
   const handleRunConflictCheck = () => {
     const res = detectScheduleConflicts(
-      currentUser?.id || 'user-demo-01',
+      currentUser?.id,
       conflictCheckerForm.targetDate,
       conflictCheckerForm.startTime,
       conflictCheckerForm.endTime
@@ -727,13 +728,13 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
                     {/* Eligibility thresholds summary */}
                     <div className="flex flex-wrap items-center gap-2 text-[11px] mb-4">
                       <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
-                        Min CGPA: <b>{drive.minCgpa || 6.5}</b>
+                        Min CGPA: <b>{drive.minCgpa || 'Not available'}</b>
                       </span>
                       <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
                         Max Backlogs: <b>{drive.maxBacklogs ?? 0}</b>
                       </span>
                       <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
-                        10th/12th: <b>{drive.minTenthPercentage || 60}%</b>
+                        10th/12th: <b>{drive.minTenthPercentage || 'Not available'}%</b>
                       </span>
                       <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-semibold">
                         Batches: <b>{(drive.eligibleBatches || []).join(', ')}</b>
@@ -743,7 +744,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
                     {/* Rounds Sequence */}
                     <div className="mb-4">
                       <p className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-indigo-600" /> Interview Rounds ({drive.rounds?.length || 3}):
+                        <Layers className="w-3.5 h-3.5 text-indigo-600" /> Interview Rounds ({drive.rounds?.length || 'Not available'}):
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {(drive.rounds || ['Online Assessment', 'Technical Round', 'HR Round']).map((r, i) => (
@@ -862,7 +863,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
               </div>
 
               <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                November - December 2026
+                Drive calendar
               </span>
             </div>
 
@@ -1674,7 +1675,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
                 {selectedDriveForInstructions.venue || 'Auditorium Hall A & Online Computing Labs'}
               </p>
               <p className="text-[11px] text-slate-500">
-                Placement Cell Gate 2 Entrance • Parking permitted at Student Quad
+                See the venue and reporting instructions published for this drive.
               </p>
             </div>
 
@@ -1887,7 +1888,7 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
 
                 <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 text-xs text-indigo-900 leading-snug">
                   <span className="font-bold block">Eligibility Threshold for {driveToApply.companyName}:</span>
-                  <span>Min CGPA: {driveToApply.minCgpa || 6.5} • Max Backlogs: {driveToApply.maxBacklogs ?? 0} • Date: {driveToApply.driveDate || driveToApply.date}</span>
+                  <span>Min CGPA: {driveToApply.minCgpa || 'Not available'} • Max Backlogs: {driveToApply.maxBacklogs ?? 0} • Date: {driveToApply.driveDate || driveToApply.date}</span>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">

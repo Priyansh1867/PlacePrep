@@ -74,6 +74,10 @@ public class SecurityConfig {
 
                         // Management restricted endpoints
                         .requestMatchers("/api/management/attendance/verify-location").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/student/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/version/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/preview-data").permitAll()
                         .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
 
                         // Authenticated student/user actions & attendance verification

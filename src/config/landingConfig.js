@@ -14,7 +14,7 @@ export const landingConfig = {
     accentGlow: 'rgba(99, 102, 241, 0.25)',
     logoPath: '/favicon.ico',
     ctaLink: '#pricing',
-    statusText: 'All systems operational',
+    statusText: 'Campus career workspace',
   },
 
   // Navigation Links
@@ -28,11 +28,7 @@ export const landingConfig = {
   ],
 
   // Hero Section Stats
-  heroStats: [
-    { label: 'Tasks Executed', endVal: 100, suffix: 'K+', display: '100K+' },
-    { label: 'Connected Apps', endVal: 1000, suffix: '+', display: '1000+' },
-    { label: 'Hours Saved', endVal: 5000, suffix: '+', display: '5000+' },
-  ],
+  heroStats: [],
 
   // Feature Bento Grid (4 Cards)
   featureGrid: {
@@ -44,10 +40,7 @@ export const landingConfig = {
         label: 'TELEGRAM CHAT',
         title: 'Message directly via Telegram',
         description: 'Send voice messages or quick text prompts on the go. Your AI manager processes instructions and executes in seconds.',
-        stats: [
-          { label: 'Access', value: '24/7 instant' },
-          { label: 'Response', value: '<1s latency' }
-        ],
+        stats: [],
         icon: 'MessageSquareCode',
         gradient: 'from-sky-500/20 to-blue-600/10'
       },
@@ -56,10 +49,7 @@ export const landingConfig = {
         label: 'SMART TODO',
         title: 'The best todo list you can have',
         description: 'Self-organizing priorities that parse upcoming interview rounds, drive deadlines, and critical milestones automatically.',
-        stats: [
-          { label: 'Prioritization', value: '100% automated' },
-          { label: 'Deadlines', value: '0 missed' }
-        ],
+        stats: [],
         icon: 'CheckSquare',
         gradient: 'from-emerald-500/20 to-teal-600/10'
       },
@@ -68,10 +58,7 @@ export const landingConfig = {
         label: 'VOICE TO ACTION',
         title: 'Turn voice notes into actions',
         description: 'Speak your thought stream. Background transformers distill action items, schedule sessions, and generate code templates.',
-        stats: [
-          { label: 'Workflow', value: '100% hands-free' },
-          { label: 'Transcription', value: 'Real-time sync' }
-        ],
+        stats: [],
         icon: 'Mic',
         gradient: 'from-purple-500/20 to-pink-600/10'
       },
@@ -80,10 +67,7 @@ export const landingConfig = {
         label: 'EXECUTOR',
         title: 'Workflow automation',
         description: 'Autonomous tool orchestration across GitHub, Slack, databases, and recruitment pipelines without fragile webhook scripts.',
-        stats: [
-          { label: 'Executions', value: '20K+ completed' },
-          { label: 'Reliability', value: '99.9% uptime' }
-        ],
+        stats: [],
         icon: 'Cpu',
         gradient: 'from-amber-500/20 to-orange-600/10'
       }
@@ -140,10 +124,7 @@ export const landingConfig = {
     label: 'SECURITY & PRIVACY',
     heading: 'Private by default, Secure by design.',
     subheading: 'Enterprise-grade isolation protocols protecting your personal API secrets and proprietary workspace context.',
-    stats: [
-      { label: 'Sandboxes', value: '100% Isolated' },
-      { label: 'Encryption', value: 'AES-256 GCM' }
-    ],
+    stats: [],
     auditCode: 'AUDIT_LOG // MEM_ISOLATION: OK // ZERO_RETENTION_VERIFIED'
   },
 

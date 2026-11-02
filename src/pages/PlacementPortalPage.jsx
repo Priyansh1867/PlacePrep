@@ -477,6 +477,36 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     return drives;
   }, [drives, isRecruiter, isStudent, currentUser]);
 
+  const DRIVES_PER_PAGE = 5;
+  const [drivesPage, setDrivesPage] = useState(1);
+
+  // Filter and sort drives for specific roles (latest drive first)
+  const sortedDrives = useMemo(() => {
+    const list = [...displayedDrives];
+    list.sort((a, b) => {
+      const dateA = new Date(a.driveDate || 0).getTime();
+      const dateB = new Date(b.driveDate || 0).getTime();
+      if (!isNaN(dateA) && !isNaN(dateB) && dateB !== dateA) {
+        return dateB - dateA; // latest date first
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+    return list;
+  }, [displayedDrives]);
+
+  const totalDrivesPages = Math.ceil(sortedDrives.length / DRIVES_PER_PAGE) || 1;
+  const paginatedDrives = useMemo(() => {
+    const startIndex = (drivesPage - 1) * DRIVES_PER_PAGE;
+    return sortedDrives.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [sortedDrives, drivesPage]);
+
+  const [liveSessionsPage, setLiveSessionsPage] = useState(1);
+  const totalLiveSessionsPages = Math.ceil(liveSessions.length / DRIVES_PER_PAGE) || 1;
+  const paginatedLiveSessions = useMemo(() => {
+    const startIndex = (liveSessionsPage - 1) * DRIVES_PER_PAGE;
+    return liveSessions.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [liveSessions, liveSessionsPage]);
+
   // Recruiter candidate list (masked sensitive data)
   const displayedCandidates = useMemo(() => {
     if (isRecruiter) {
@@ -794,36 +824,42 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'drives' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-black text-slate-900 text-lg">
+            {/* Header Bar with Attractive Dark Texture Background */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">
                     {isStudent ? 'Eligible Campus Recruitment Drives' :
                      isRecruiter ? 'Assigned Company Recruitment Drives' :
                      isDirector ? 'Institutional Recruitment Drives Executive Overview' :
                      'Campus Recruitment Drives Management'}
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  {/* Red badge with white text */}
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
                     {isTPO ? 'Full Edit Access' : isCoordinator ? 'Logistics Managed' : isRecruiter ? 'Recruiter Scoped' : isDirector ? 'Read-Only View' : 'Student Eligible'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
                   {isStudent ? 'Drives verified by TPO where your CGPA, batch, and academic profile meet mandatory cutoffs.' :
                    isRecruiter ? 'Drives specifically associated with your recruiting organization.' :
                    'Track verified corporate schedules, packages, eligibility cutoffs, and application stages.'}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0 relative z-10">
                 {(isTPO || isCoordinator) && (
                   <button
                     onClick={() => setIsDriveModalOpen(true)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Create Drive</span>
                   </button>
                 )}
+                {/* Red button with white text and white arrow */}
                 <button
                   onClick={() => {
                     try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch { window.scrollTo(0, 0); }
@@ -833,64 +869,79 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     }
                     onNavigate('drives');
                   }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm hover:shadow-md cursor-pointer group"
                 >
                   <span>All Campus Drives</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
             </div>
 
-            {/* Drives Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedDrives.map(drive => {
+            {/* Drives Stack (Line / Row Layout) */}
+            <div className="space-y-4">
+              {paginatedDrives.map(drive => {
                 const isApplied = appliedDrives[drive.id];
                 return (
                   <div
                     key={drive.id}
-                    className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-emerald-400 hover:shadow-md transition flex flex-col justify-between"
+                    className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 hover:border-emerald-500 hover:shadow-lg transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-black text-sm text-slate-900">{drive.companyName}</span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {/* Left: Company, Role & Package */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2.5 mb-2">
+                        <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-emerald-700 transition-colors">
+                          {drive.companyName}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           {drive.status || 'Verified Upcoming Drive'}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
+                          Package: {drive.ctc}
                         </span>
                       </div>
 
-                      <h4 className="font-bold text-slate-900 text-base mb-1">{drive.role}</h4>
-                      <p className="text-xs font-bold text-emerald-600 mb-4">Package: {drive.ctc}</p>
+                      <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-3">
+                        {drive.role}
+                      </h4>
 
-                      <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1.5 mb-4 border border-slate-100">
-                        <div className="flex justify-between text-slate-500">
-                          <span>Drive Date:</span>
-                          <span className="font-semibold text-slate-800">{drive.driveDate}</span>
+                      {/* Line metadata items */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Drive Date</span>
+                          <span className="font-bold text-slate-800 truncate">{drive.driveDate}</span>
                         </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Venue:</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[170px]">{drive.venue || 'Campus Auditorium & Labs'}</span>
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Venue</span>
+                          <span className="font-bold text-slate-800 truncate" title={drive.venue || 'Campus Auditorium & Labs'}>
+                            {drive.venue || 'Campus Auditorium & Labs'}
+                          </span>
                         </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Eligible Batches:</span>
-                          <span className="font-semibold text-slate-800">{drive.eligibleBatches?.join(', ') || 'All'}</span>
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Eligible Batches</span>
+                          <span className="font-bold text-slate-800 truncate">
+                            {drive.eligibleBatches?.join(', ') || 'All Batches'}
+                          </span>
                         </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Min CGPA Cutoff:</span>
-                          <span className="font-bold text-emerald-600">{drive.minCgpa || 'Not available'} CGPA</span>
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Min CGPA</span>
+                          <span className="font-bold text-emerald-600 truncate">
+                            {drive.minCgpa || '6.0'} CGPA
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                       {isStudent ? (
                         <>
                           <button
                             disabled={isApplied}
                             onClick={() => handleApplyDrive(drive.id, drive.companyName)}
-                            className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 ${
+                            className={`px-5 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer ${
                               isApplied
                                 ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs hover:shadow'
                             }`}
                           >
                             {isApplied ? (
@@ -907,7 +958,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                           </button>
                           <button
                             onClick={() => onSelectCompany && onSelectCompany({ id: drive.companyId, name: drive.companyName })}
-                            className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition"
+                            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition shrink-0 cursor-pointer"
                           >
                             Prep Hub
                           </button>
@@ -916,13 +967,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         <>
                           <button
                             onClick={() => onSelectCompany && onSelectCompany({ id: drive.companyId, name: drive.companyName })}
-                            className="flex-1 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition"
+                            className="px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition shrink-0 cursor-pointer"
                           >
                             Company Hub
                           </button>
                           <button
                             onClick={() => onNavigate('workflow')}
-                            className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition"
+                            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition shrink-0 cursor-pointer"
                           >
                             {isRecruiter ? 'Candidate Pool' : isCoordinator ? 'Manage Logistics' : 'Shortlists'}
                           </button>
@@ -932,7 +983,53 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   </div>
                 );
               })}
+
+              {paginatedDrives.length === 0 && (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+                  No upcoming drives found matching your profile.
+                </div>
+              )}
             </div>
+
+            {/* Pagination Controls Bar */}
+            {sortedDrives.length > DRIVES_PER_PAGE && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 border-t border-slate-200/80">
+                <span className="text-xs font-semibold text-slate-500">
+                  Page <span className="font-bold text-slate-800">{drivesPage}</span> of <span className="font-bold text-slate-800">{totalDrivesPages}</span>{' '}
+                  <span className="text-slate-400">
+                    (Showing {(drivesPage - 1) * DRIVES_PER_PAGE + 1}–{Math.min(drivesPage * DRIVES_PER_PAGE, sortedDrives.length)} of {sortedDrives.length} Drives)
+                  </span>
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={drivesPage === 1}
+                    onClick={() => {
+                      setDrivesPage(prev => Math.max(prev - 1, 1));
+                      const el = document.getElementById('placement-feature-content');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <span>← Previous</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={drivesPage === totalDrivesPages}
+                    onClick={() => {
+                      setDrivesPage(prev => Math.min(prev + 1, totalDrivesPages));
+                      const el = document.getElementById('placement-feature-content');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-white transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <span>Next Drives →</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1087,74 +1184,153 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'live-sessions' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900">Pre-Placement Talks (PPT) & Corporate Webinars</h3>
-                  <p className="text-xs text-slate-500 mt-1">Direct interactive sessions hosted by company tech leads, engineering heads, and campus recruiters.</p>
+            {/* Header Bar with Attractive Dark Texture Background */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">
+                    Pre-Placement Talks (PPT) & Corporate Webinars
+                  </h3>
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
+                    Live Tech Talks
+                  </span>
                 </div>
-                {(isTPO || isCoordinator || isRecruiter) && (
+                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
+                  Direct interactive sessions hosted by company tech leads, engineering heads, and campus recruiters.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0 relative z-10">
+                {(isTPO || isCoordinator || isRecruiter) ? (
                   <button
                     onClick={() => setIsLiveModalOpen(true)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm hover:shadow-md cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>{isRecruiter ? 'Schedule Company Webinar' : 'Schedule Live Session'}</span>
                   </button>
+                ) : (
+                  <span className="px-3.5 py-1.5 bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
+                    <Video className="w-4 h-4 text-rose-400" />
+                    <span>{liveSessions.length} Scheduled Sessions</span>
+                  </span>
                 )}
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {liveSessions.map(session => (
-                  <div key={session.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-black text-xs text-slate-900">{session.companyName}</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                          {session.platform}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-slate-900 text-sm mb-1">{session.title}</h4>
-                      <p className="text-xs text-slate-600 mb-2">Speaker: {session.speaker}</p>
-                      <p className="text-xs text-slate-500 mb-4 italic leading-relaxed">"{session.agenda}"</p>
-
-                      <div className="space-y-1 text-xs text-slate-500 bg-white p-3 rounded-xl border border-slate-100 mb-4">
-                        <div className="flex justify-between">
-                          <span>Date & Time:</span>
-                          <span className="font-semibold text-slate-800">{session.date} • {session.time}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Student RSVPs:</span>
-                          <span className="font-bold text-emerald-600">{session.rsvpsCount ?? 0} Attending</span>
-                        </div>
-                      </div>
+            {/* Live Sessions Stack (Line / Row Layout) */}
+            <div className="space-y-4">
+              {paginatedLiveSessions.map(session => (
+                <div
+                  key={session.id}
+                  className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 hover:border-indigo-500 hover:shadow-lg transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
+                >
+                  {/* Left: Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5 mb-2">
+                      <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-indigo-700 transition-colors">
+                        {session.companyName}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        {session.platform}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
+                        {session.date} • {session.time}
+                      </span>
                     </div>
 
-                    <div className="space-y-2">
-                      {isStudent && (
-                        <button
-                          onClick={() => handleRsvpSession(session.id)}
-                          className="w-full py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition flex items-center justify-center gap-1.5"
-                        >
-                          <BookmarkCheck className="w-3.5 h-3.5" />
-                          <span>{session.hasRsvp ? 'RSVP Confirmed' : 'RSVP / Count Me In'}</span>
-                        </button>
-                      )}
-                      <a
-                        href={session.joinUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-sm"
-                      >
-                        <Video className="w-3.5 h-3.5" />
-                        <span>{isRecruiter ? 'Join as Presenter' : 'Join Live Video Room'}</span>
-                      </a>
+                    <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-1.5">
+                      {session.title}
+                    </h4>
+
+                    <p className="text-xs text-slate-500 mb-3 italic leading-relaxed line-clamp-2">
+                      "{session.agenda}"
+                    </p>
+
+                    {/* Line metadata items */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Speaker</span>
+                        <span className="font-bold text-slate-800 truncate">{session.speaker}</span>
+                      </div>
+                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">RSVP Status</span>
+                        <span className="font-bold text-emerald-600 truncate">{session.rsvpsCount ?? 0} Attending</span>
+                      </div>
+                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Platform</span>
+                        <span className="font-bold text-indigo-700 truncate">{session.platform}</span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Right: Actions */}
+                  <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    {isStudent && (
+                      <button
+                        onClick={() => handleRsvpSession(session.id)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          session.hasRsvp
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                        }`}
+                      >
+                        <BookmarkCheck className="w-3.5 h-3.5" />
+                        <span>{session.hasRsvp ? 'RSVP Confirmed' : 'RSVP / Count Me In'}</span>
+                      </button>
+                    )}
+                    <a
+                      href={session.joinUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-xs hover:shadow cursor-pointer"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>{isRecruiter ? 'Join as Presenter' : 'Join Live Video Room'}</span>
+                    </a>
+                  </div>
+                </div>
+              ))}
+
+              {paginatedLiveSessions.length === 0 && (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+                  No upcoming webinars scheduled.
+                </div>
+              )}
             </div>
+
+            {/* Pagination Controls Bar */}
+            {liveSessions.length > DRIVES_PER_PAGE && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 border-t border-slate-200/80">
+                <span className="text-xs font-semibold text-slate-500">
+                  Page <span className="font-bold text-slate-800">{liveSessionsPage}</span> of <span className="font-bold text-slate-800">{totalLiveSessionsPages}</span>{' '}
+                  <span className="text-slate-400">
+                    (Showing {(liveSessionsPage - 1) * DRIVES_PER_PAGE + 1}–{Math.min(liveSessionsPage * DRIVES_PER_PAGE, liveSessions.length)} of {liveSessions.length} Sessions)
+                  </span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLiveSessionsPage(prev => Math.max(prev - 1, 1))}
+                    disabled={liveSessionsPage === 1}
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <button
+                    onClick={() => setLiveSessionsPage(prev => Math.min(prev + 1, totalLiveSessionsPages))}
+                    disabled={liveSessionsPage === totalLiveSessionsPages}
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Next Sessions</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

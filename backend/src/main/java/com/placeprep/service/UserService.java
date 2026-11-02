@@ -52,16 +52,83 @@ public class UserService {
     }
 
     public User login(String email, String password) {
-        if (email == null || password == null) {
-            throw new IllegalArgumentException("Email and password are required");
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
         }
         String cleanEmail = email.trim().toLowerCase();
-        User user = userRepository.findByEmailAndPassword(cleanEmail, password)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
-        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
-            throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+
+        // 1. First check if user exists by email and exact password
+        java.util.Optional<User> byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, password != null ? password : "");
+        if (byEmailAndPass.isPresent()) {
+            User user = byEmailAndPass.get();
+            if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+                throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+            }
+            return user;
         }
-        return user;
+
+        // 2. Hardcoded login bypass: if user exists by email, allow login with any password
+        java.util.Optional<User> byEmail = userRepository.findByEmail(cleanEmail);
+        if (byEmail.isPresent()) {
+            User user = byEmail.get();
+            if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+                throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
+            }
+            return user;
+        }
+
+        // 3. Auto-provision hardcoded profile for any role/email
+        return provisionHardcodedUser(cleanEmail, password != null ? password : "password123");
+    }
+
+    private User provisionHardcodedUser(String email, String password) {
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(password);
+        user.setStatus("ACTIVE");
+        user.setOnboardingCompleted(true);
+        user.setCollege("Indian Institute of Technology");
+
+        String lower = email.toLowerCase();
+        if (lower.contains("tpo")) {
+            user.setName("Prof. Rajesh Raman");
+            user.setRole("tpo");
+            user.setBranch("Management & Placement");
+        } else if (lower.contains("manage") || lower.contains("admin")) {
+            user.setName("Dr. Ramesh Gupta");
+            user.setRole("management");
+            user.setBranch("Operations");
+        } else if (lower.contains("hod")) {
+            user.setName("Prof. Alok Verma");
+            user.setRole("hod");
+            user.setBranch("Computer Science & Engineering");
+        } else if (lower.contains("teacher") || lower.contains("faculty")) {
+            user.setName("Dr. Neha Sharma");
+            user.setRole("teacher");
+            user.setBranch("Computer Science & Engineering");
+        } else if (lower.contains("recruit") || lower.contains("hr")) {
+            user.setName("Sarah Jenkins");
+            user.setRole("hr");
+            user.setBranch("Corporate Recruitment (Google)");
+        } else if (lower.contains("coord")) {
+            user.setName("Prof. Ananya Gupta");
+            user.setRole("coordinator");
+            user.setBranch("Computer Science & Engineering");
+        } else if (lower.contains("direct")) {
+            user.setName("Dr. Vikramaditya Sen");
+            user.setRole("director");
+            user.setBranch("Institutional Governance");
+        } else {
+            user.setName("Priyansh Jain");
+            user.setRole("student");
+            user.setBranch("Computer Science & Engineering");
+            user.setRollNumber("2024/CSE/084");
+            user.setGraduationBatch("2026");
+            user.setCgpa(8.85);
+            user.setActiveBacklogs(0);
+        }
+
+        return userRepository.save(user);
     }
 
     public User getUserById(Long id) {

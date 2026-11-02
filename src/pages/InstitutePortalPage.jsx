@@ -39,8 +39,10 @@ import {
   LogOut,
   UserCheck,
   Compass,
-  Radio
+  Radio,
+  CalendarClock
 } from 'lucide-react';
+import StudentMasterTimetableView from '../components/timetable/StudentMasterTimetableView';
 import {
   getCurrentUser,
   getGraduationBatch,
@@ -277,6 +279,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const handleAnalyzeResume = () => onNavigate('resume-ats');
 
   const navTabs = [
+    { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule' },
     { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
     { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
@@ -609,6 +612,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
         
+        {/* MASTER TIMETABLE */}
+        {activeTab === 'master-timetable' && (
+          <div id="institute-tab-master-timetable" className="space-y-6 scroll-mt-24">
+            <StudentMasterTimetableView currentUser={currentUser} />
+          </div>
+        )}
+
         {/* TAB 1: STUDENT DATA */}
         {activeTab === 'student-data' && (
           <div id="institute-tab-student-data" className="scroll-mt-24">

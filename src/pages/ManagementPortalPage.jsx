@@ -9,6 +9,7 @@ import {
   History,
   BarChart3,
   Calendar,
+  CalendarClock,
   LogOut,
   ChevronDown,
   UserCheck,
@@ -30,6 +31,7 @@ import { getCurrentUser } from '../services/storage';
 import { ManagementApi } from '../services/api';
 import PortalModuleCards from '../components/PortalModuleCards';
 import UserProfileModal from '../components/profile/UserProfileModal';
+import MasterTimetableManagement from '../components/management/MasterTimetableManagement';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -45,6 +47,7 @@ L.Icon.Default.mergeOptions({
 // ─── Dashboard nav sections ───────────────────────────────────────────────────
 const SECTIONS = [
   { id: 'overview', label: 'Dashboard Overview', icon: BarChart3, badge: 'Live' },
+  { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Management' },
   { id: 'institute-profile', label: 'Institute Profile', icon: Building2 },
   { id: 'manage-location', label: 'Manage College Location', icon: MapPin, badge: 'GPS' },
   { id: 'geofence', label: 'Geofencing Settings', icon: Shield, badge: '100m Fixed' },
@@ -229,8 +232,58 @@ export default function ManagementPortalPage({ onNavigate }) {
         <PortalModuleCards items={SECTIONS} activeId={activeTab} onSelect={handleCardSelect} tone="teal" />
       </div>
 
-      {/* Content Area */}
-      <div id="mgmt-content" className="max-w-7xl mx-auto scroll-mt-6">
+      {/* 2-Column Portal Layout: Management Portal Sidebar + Main Dashboard Workspace */}
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* Dedicated Management Portal Navigation Sidebar */}
+        <aside className="w-full lg:w-64 shrink-0 bg-white rounded-3xl border border-slate-200 p-3.5 shadow-xs lg:sticky lg:top-6 select-none">
+          <div className="px-3 py-2.5 mb-2 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-black tracking-wider uppercase text-teal-700 block">Navigation</span>
+              <span className="text-xs font-bold text-slate-900">Management Console</span>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+          </div>
+
+          <nav className="space-y-1">
+            {SECTIONS.map((sec) => {
+              const Icon = sec.icon;
+              const isActive = activeTab === sec.id;
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => handleCardSelect(sec.id)}
+                  className={
+                    'w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition text-left cursor-pointer ' +
+                    (isActive
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-600/20'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900')
+                  }
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <span className="truncate">{sec.label}</span>
+                  </div>
+                  {sec.badge && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-extrabold uppercase shrink-0 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {sec.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Content Area */}
+        <div id="mgmt-content" className="flex-1 min-w-0 w-full scroll-mt-6">
+
+        {/* MASTER TIMETABLE */}
+        {activeTab === 'master-timetable' && (
+          <MasterTimetableManagement currentUser={currentUser} />
+        )}
 
         {/* OVERVIEW */}
         {activeTab === 'overview' && (
@@ -239,6 +292,7 @@ export default function ManagementPortalPage({ onNavigate }) {
             loadingLocation={loadingLocation}
             onSetLocation={() => handleCardSelect('manage-location')}
             onViewHistory={() => handleCardSelect('location-history')}
+            onOpenTimetable={() => handleCardSelect('master-timetable')}
           />
         )}
 
@@ -282,6 +336,7 @@ export default function ManagementPortalPage({ onNavigate }) {
           <LocationHistorySection history={locationHistory} loading={loadingHistory} onRefresh={fetchHistory} />
         )}
 
+        </div>
       </div>
 
       {isProfileModalOpen && (
@@ -295,7 +350,7 @@ export default function ManagementPortalPage({ onNavigate }) {
 }
 
 // ─── Overview Section ─────────────────────────────────────────────────────────
-function OverviewSection({ instituteLocation, loadingLocation, onSetLocation, onViewHistory }) {
+function OverviewSection({ instituteLocation, loadingLocation, onSetLocation, onViewHistory, onOpenTimetable }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -343,6 +398,21 @@ function OverviewSection({ instituteLocation, loadingLocation, onSetLocation, on
           <p className="text-xs text-slate-500 mt-1">Track all location changes with timestamp and responsible management account.</p>
           <button onClick={onViewHistory} className="mt-3 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
             View History
+          </button>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-teal-200 shadow-sm sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-teal-50/50 via-white to-emerald-50/40">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-teal-600/20">
+              <CalendarClock className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">Master Academic Timetable Management</h3>
+              <p className="text-xs text-slate-500 mt-0.5 max-w-xl">Upload, edit, version, and publish official master academic timetables across departments and semesters for students and faculty.</p>
+            </div>
+          </div>
+          <button onClick={onOpenTimetable} className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition cursor-pointer shrink-0">
+            Open Timetable Console
           </button>
         </div>
       </div>

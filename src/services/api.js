@@ -830,3 +830,107 @@ export const StudentAttendanceApi = {
     } catch { throw new Error("The backend could not verify or save this request. Please reconnect and try again."); }
   }
 };
+
+// 18. Master Timetable Management API
+export const MasterTimetableApi = {
+  async getStats() {
+    return await request('/management/timetables/stats');
+  },
+
+  async getTimetables(params = {}) {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.academicSession) query.set('academicSession', params.academicSession);
+    if (params.branch) query.set('branch', params.branch);
+    if (params.semester) query.set('semester', params.semester);
+    if (params.year) query.set('year', params.year);
+    if (params.section) query.set('section', params.section);
+    if (params.status && params.status !== 'ALL') query.set('status', params.status);
+    if (params.page !== undefined) query.set('page', params.page);
+    if (params.size !== undefined) query.set('size', params.size);
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.sortDir) query.set('sortDir', params.sortDir);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return await request(`/management/timetables${qs}`);
+  },
+
+  async getTimetable(id) {
+    return await request(`/management/timetables/${id}`);
+  },
+
+  async createTimetable(formData) {
+    return await request('/management/timetables', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  async updateMetadata(id, data) {
+    return await request(`/management/timetables/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async replaceFile(id, formData) {
+    return await request(`/management/timetables/${id}/replace-file`, {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  async publishTimetable(id) {
+    return await request(`/management/timetables/${id}/publish`, {
+      method: 'POST'
+    });
+  },
+
+  async unpublishTimetable(id) {
+    return await request(`/management/timetables/${id}/unpublish`, {
+      method: 'POST'
+    });
+  },
+
+  async archiveTimetable(id) {
+    return await request(`/management/timetables/${id}/archive`, {
+      method: 'POST'
+    });
+  },
+
+  async deleteTimetable(id) {
+    return await request(`/management/timetables/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getVersionHistory(id) {
+    return await request(`/management/timetables/${id}/versions`);
+  },
+
+  async restoreVersion(id, versionId) {
+    return await request(`/management/timetables/${id}/restore-version/${versionId}`, {
+      method: 'POST'
+    });
+  },
+
+  getFileUrl(id) {
+    return `${API_BASE}/management/timetables/${id}/file`;
+  },
+
+  getVersionFileUrl(versionId) {
+    return `${API_BASE}/management/timetables/version/${versionId}/file`;
+  },
+
+  async getPreviewData(id) {
+    return await request(`/management/timetables/${id}/preview-data`);
+  },
+
+  async getStudentActiveTimetable(params = {}) {
+    const query = new URLSearchParams();
+    if (params.branch) query.set('branch', params.branch);
+    if (params.semester) query.set('semester', params.semester);
+    if (params.section) query.set('section', params.section);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return await request(`/management/timetables/student/active${qs}`);
+  }
+};

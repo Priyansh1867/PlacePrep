@@ -2,20 +2,19 @@
 FROM maven:3.9.9-eclipse-temurin-23 AS build
 WORKDIR /app
 
-# Cache dependencies
+# Copy pom.xml and source code directly
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
-
-# Build application jar
 COPY src ./src
-RUN mvn clean package -DskipTests
+
+# Package production jar (skipping unit tests for fast cloud build)
+RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime with Java 23
-FROM eclipse-temurin:23-jre-jammy
+FROM eclipse-temurin:23-jre
 WORKDIR /app
 
 # Copy executable jar from build stage
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/app.jar app.jar
 
 ENV PORT=8082
 EXPOSE 8082

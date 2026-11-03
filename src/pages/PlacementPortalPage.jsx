@@ -793,7 +793,6 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">CGPA {displayValue(academicMetrics.cgpa)} • Backlogs {displayValue(academicMetrics.backlogs)}</span>
                   <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Eligibility depends on each drive</span>
                 </div>
-                </div>
               </>
             ) : isDirector ? (
               <>
@@ -811,7 +810,6 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Highest Package</span>
                   <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">Not reported</span>
                   <span className="text-[11px] text-amber-400/80 mt-0.5 block">No verified package summary</span>
-                </div>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
                   <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Corporate Partners</span>

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
 import { setCurrentUser, setGraduationBatch } from '../services/storage';
@@ -20,6 +21,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
 import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
+import { DEMO_AUTOFILL_ACCOUNTS, autofillLoginFields } from '../data/demoAutofillAccounts';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
   const [tab, setTab] = useState('login'); // 'login' | 'signup'
@@ -45,6 +47,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrorMsg('');
     setSuccessMsg('');
+  };
+
+  const handleAutofillModal = (account) => {
+    setFormData((current) => autofillLoginFields(current, account));
+    setErrorMsg('');
+    setSuccessMsg(`Email filled for ${account.label}. Enter your password to sign in.`);
   };
 
   const handleLogin = async (e) => {
@@ -200,6 +208,23 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
           {tab === 'login' ? (
             <div className="space-y-3.5">
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-orange-50 via-slate-50 to-indigo-50/60 border border-orange-200/70">
+                <div className="flex items-center gap-1.5 mb-1.5 text-xs font-bold text-slate-800">
+                  <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+                  <span>Autofill account email</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {DEMO_AUTOFILL_ACCOUNTS.map((account) => (
+                    <button key={account.role} type="button" onClick={() => handleAutofillModal(account)}
+                      title={`Fill email for ${account.label}`}
+                      className="p-1.5 rounded-lg bg-white border border-slate-200/90 hover:border-orange-500 text-left cursor-pointer transition shadow-2xs">
+                      <span className="block text-[11px] font-bold text-slate-800">{account.label}</span>
+                      <span className="block text-[9px] text-slate-500 truncate">{account.email}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[10px] text-slate-500">Use an existing backend account and enter its password.</p>
+              </div>
               <form onSubmit={handleLogin} className="space-y-3.5">
                 <Input
                   label="Email Address"

@@ -9,6 +9,7 @@ import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
 import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch } from '../services/storage';
 import { AuthApi } from '../services/api';
 import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
+import { autofillLoginFields, demoAutofillForRole } from '../data/demoAutofillAccounts';
 
 const portalOptions = [
   { id: 'institute', label: 'Institute', icon: School },
@@ -93,6 +94,14 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleAutofill = () => {
+    const account = demoAutofillForRole(selectedRole);
+    if (!account) return;
+    setFormData((current) => autofillLoginFields(current, account));
+    setErrorMsg('');
+    setSuccessMsg(`Email filled for ${account.label}. Enter your password to sign in.`);
   };
 
   const handleSubmit = async (event) => {
@@ -321,6 +330,15 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   </InputField>
                 )}
 
+                {authMode === 'login' && demoAutofillForRole(selectedRole) && (
+                  <div className="flex justify-end">
+                    <button type="button" onClick={handleAutofill}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700">
+                      <Sparkles className="w-3 h-3" />
+                      Autofill {roleOptions.find((role) => role.id === selectedRole)?.label} email
+                    </button>
+                  </div>
+                )}
                 <InputField
                   label={
                     <span className="flex items-center justify-between">

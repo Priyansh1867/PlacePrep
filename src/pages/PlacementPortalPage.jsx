@@ -61,6 +61,7 @@ import {
   addDrive,
   getEligibilityMatrix,
   getLiveSessions,
+  getLiveSessionsForStudent,
   addLiveSession,
   rsvpLiveSession,
   getOffCampusCompanies,
@@ -79,6 +80,7 @@ import PortalModuleCards from '../components/PortalModuleCards';
 import ReportsExporterPage from './ReportsExporterPage';
 import UserProfileModal from '../components/profile/UserProfileModal';
 import DirectorPlacementAnalytics from '../components/placement/DirectorPlacementAnalytics';
+import DirectorLiveSessionsView from '../components/placement/DirectorLiveSessionsView';
 import placementWorkflowHero from '../assets/images/placement-workflow-hero.png';
 
 // Standard Role Metadata for labels
@@ -281,10 +283,14 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     },
     {
       id: 'live-sessions',
-      label: '4. Live Sessions',
+      label: isDirector ? '4. Live Sessions & Webinars' : '4. Live Sessions',
       icon: Video,
       badge: `${liveSessions.length} Webinars`,
-      description: isStudent ? 'Attend corporate pre-placement talks & live webinars' : 'Schedule interactive pre-placement talks and video rooms'
+      description: isDirector
+        ? 'Executive scheduling of PPTs & webinars with smart student notifications'
+        : isStudent
+        ? 'Attend corporate pre-placement talks & live webinars'
+        : 'Schedule interactive pre-placement talks and video rooms'
     },
     {
       id: 'shortlisted',
@@ -559,12 +565,17 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     return sortedDrives.slice(startIndex, startIndex + DRIVES_PER_PAGE);
   }, [sortedDrives, drivesPage]);
 
+  const studentEligibleLiveSessions = useMemo(() => {
+    if (!isStudent) return liveSessions;
+    return getLiveSessionsForStudent(currentUser, drives);
+  }, [liveSessions, isStudent, currentUser, drives]);
+
   const [liveSessionsPage, setLiveSessionsPage] = useState(1);
-  const totalLiveSessionsPages = Math.ceil(liveSessions.length / DRIVES_PER_PAGE) || 1;
+  const totalLiveSessionsPages = Math.ceil(studentEligibleLiveSessions.length / DRIVES_PER_PAGE) || 1;
   const paginatedLiveSessions = useMemo(() => {
     const startIndex = (liveSessionsPage - 1) * DRIVES_PER_PAGE;
-    return liveSessions.slice(startIndex, startIndex + DRIVES_PER_PAGE);
-  }, [liveSessions, liveSessionsPage]);
+    return studentEligibleLiveSessions.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [studentEligibleLiveSessions, liveSessionsPage]);
 
   // Recruiter candidate list (masked sensitive data)
   const displayedCandidates = useMemo(() => {
@@ -1242,7 +1253,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* FEATURE 4: LIVE SESSIONS (PPTS & WEBINARS)                                */}
         {/* ========================================================================= */}
         {activeTab === 'live-sessions' && (
-          <div className="space-y-6">
+          isDirector ? (
+            <DirectorLiveSessionsView onNavigate={onNavigate} showToast={showToast} />
+          ) : (
+            <div className="space-y-6">
             {/* Header Bar with Attractive Dark Texture Background */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
               <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -1391,6 +1405,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               </div>
             )}
           </div>
+          )
         )}
 
         {/* ========================================================================= */}

@@ -51,6 +51,8 @@ public class SecurityConfig {
                         // Public reads & public interactions
                         .requestMatchers(HttpMethod.GET, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/drives/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/live-sessions/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/live-sessions/*/rsvp").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/insights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/experiences/**").permitAll()
@@ -67,6 +69,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.DELETE, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.POST, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.PUT, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.DELETE, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.POST, "/api/questions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/questions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasRole("ADMIN")

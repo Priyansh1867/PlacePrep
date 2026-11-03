@@ -2,6 +2,7 @@ package com.placeprep.tools;
 
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.service.DriveService;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
@@ -19,19 +20,21 @@ public class DriveWriteTool {
     @Tool(description = "Create a placement drive from the supplied details. Requires ADMIN permission.")
     public Object createDrive(PlacementDrive drive, ToolContext context) {
         AiToolAuthorization.requireAdmin(context);
-        return driveService.create(drive);
+        return driveService.createDto(drive);
     }
 
     @Tool(description = "Update rounds and round configuration for a placement drive. Requires ADMIN permission.")
-    public Object updateDriveRounds(String driveId, List<String> rounds, String roundConfigsJson, ToolContext context) {
+    public Object updateDriveRounds(String driveId, List<String> rounds, JsonNode roundConfigsJson, ToolContext context) {
         AiToolAuthorization.requireAdmin(context);
-        return driveService.updateRounds(driveId, rounds, roundConfigsJson);
+        String serialized = roundConfigsJson == null || roundConfigsJson.isNull() ? null
+                : roundConfigsJson.isTextual() ? roundConfigsJson.asText() : roundConfigsJson.toString();
+        return driveService.updateRoundsDto(driveId, rounds, serialized);
     }
 
     @Tool(description = "Update venue, reporting time, and instructions for a placement drive. Requires ADMIN permission.")
     public Object updateDriveInstructions(String driveId, String venue, String reportingTime,
                                           String instructions, ToolContext context) {
         AiToolAuthorization.requireAdmin(context);
-        return driveService.updateInstructions(driveId, venue, reportingTime, instructions);
+        return driveService.updateInstructionsDto(driveId, venue, reportingTime, instructions);
     }
 }

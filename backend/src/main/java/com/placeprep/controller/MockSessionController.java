@@ -2,6 +2,7 @@ package com.placeprep.controller;
 
 import com.placeprep.model.MockSession;
 import com.placeprep.service.MockSessionService;
+import com.placeprep.mapper.EntityResponseMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,24 +33,24 @@ public class MockSessionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MockSession>> getMockSessions(@RequestParam(required = false) String userId, HttpServletRequest request) {
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getMockSessions(@RequestParam(required = false) String userId, HttpServletRequest request) {
         if (userId != null && !userId.trim().isEmpty()) {
-            return ResponseEntity.ok(mockSessionService.getByUserId(userId));
+            return ResponseEntity.ok(mockSessionService.getByUserIdDto(userId));
         }
         Object currentUserId = request.getAttribute("currentUserId");
         String uid = currentUserId != null ? String.valueOf(currentUserId) : "1";
-        return ResponseEntity.ok(mockSessionService.getByUserId(uid));
+        return ResponseEntity.ok(mockSessionService.getByUserIdDto(uid));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<MockSession>> getMyMockSessions(HttpServletRequest request) {
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getMyMockSessions(HttpServletRequest request) {
         Object currentUserId = request.getAttribute("currentUserId");
         String uid = currentUserId != null ? String.valueOf(currentUserId) : "1";
-        return ResponseEntity.ok(mockSessionService.getByUserId(uid));
+        return ResponseEntity.ok(mockSessionService.getByUserIdDto(uid));
     }
 
     @PostMapping
-    public ResponseEntity<MockSession> createMockSession(@RequestBody MockSession session, HttpServletRequest request) {
+    public ResponseEntity<com.placeprep.dto.EntityResponseDto> createMockSession(@RequestBody MockSession session, HttpServletRequest request) {
         if (session.getUserId() == null || session.getUserId().trim().isEmpty()) {
             Object currentUserId = request.getAttribute("currentUserId");
             if (currentUserId != null) {
@@ -58,7 +59,6 @@ public class MockSessionController {
                 session.setUserId("1");
             }
         }
-        MockSession saved = mockSessionService.save(session);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mockSessionService.saveDto(session));
     }
 }

@@ -17,9 +17,11 @@ const STORAGE_KEYS = {
   BACKLOGS: 'placeprep_backlog_records',
   CONFIG: 'placeprep_academic_config'
 };
+const BACKEND_ONLY = true;
 
 // Safe JSON parser and writer
 function getStorage(key, fallback) {
+  if (BACKEND_ONLY) return Array.isArray(fallback) ? [] : {};
   if (typeof localStorage === 'undefined') return fallback;
   try {
     const item = localStorage.getItem(key);
@@ -31,6 +33,7 @@ function getStorage(key, fallback) {
 }
 
 function setStorage(key, value) {
+  if (BACKEND_ONLY) return;
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -43,7 +46,7 @@ function setStorage(key, value) {
  * Initialize storage with seed data if empty
  */
 export function initializeAcademicRecords() {
-  if (typeof localStorage === 'undefined') return;
+  if (BACKEND_ONLY || typeof localStorage === 'undefined') return;
   const existingStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
   if (!existingStudents) {
     setStorage(STORAGE_KEYS.STUDENTS, INITIAL_STUDENT_RECORDS);
@@ -58,6 +61,7 @@ export function initializeAcademicRecords() {
  * Reset to seed data (useful for demonstration or testing)
  */
 export function resetAcademicRecordsToDefault() {
+  if (BACKEND_ONLY) return { students: [], backlogs: [] };
   setStorage(STORAGE_KEYS.STUDENTS, INITIAL_STUDENT_RECORDS);
   setStorage(STORAGE_KEYS.BACKLOGS, INITIAL_BACKLOG_RECORDS);
   return { students: INITIAL_STUDENT_RECORDS, backlogs: INITIAL_BACKLOG_RECORDS };
@@ -67,6 +71,7 @@ export function resetAcademicRecordsToDefault() {
  * Fetch all students
  */
 export function getAllStudents() {
+  if (BACKEND_ONLY) return [];
   initializeAcademicRecords();
   return getStorage(STORAGE_KEYS.STUDENTS, INITIAL_STUDENT_RECORDS);
 }
@@ -83,6 +88,7 @@ export function getStudentById(id) {
  * Fetch all backlogs with optional filter
  */
 export function getAllBacklogs(filter = {}) {
+  if (BACKEND_ONLY) return [];
   initializeAcademicRecords();
   let backlogs = getStorage(STORAGE_KEYS.BACKLOGS, INITIAL_BACKLOG_RECORDS);
   

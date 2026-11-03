@@ -6,6 +6,7 @@ import AuthModal from './components/AuthModal';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import PushNotificationDrawer from './components/PushNotificationDrawer';
 import ErrorBoundary from './components/ErrorBoundary';
+import AiChatWidget from './components/AiChatWidget';
 
 // Unified Portal Pages
 import PortalGatewayPage from './pages/PortalGatewayPage';
@@ -239,9 +240,15 @@ export default function App() {
   // If route is 'landing', render standalone Remii-style Landing Page
   if (currentRoute === 'landing') {
     return (
-      <Suspense fallback={<div className="pp-route-loading" role="status">Opening PlacePrep…</div>}><RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} /></Suspense>
+      <Suspense fallback={<div className="pp-route-loading" role="status">Opening PlacePrep…</div>}>
+        <>
+          <RemiiLandingPage onBackToApp={() => handleNavigate('gateway')} />
+          <AiChatWidget />
+        </>
+      </Suspense>
     );
   }
+
 
   const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
@@ -533,6 +540,8 @@ export default function App() {
           />
         </>
       )}
+
+      <AiChatWidget />
 
     </div>
   );

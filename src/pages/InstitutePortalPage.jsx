@@ -52,14 +52,13 @@ import {
   getResumeStatus,
   updateResumeStatus,
   getStudentRounds,
-  getHackathons,
   getInternships,
   getOffCampusCompanies,
   getUpcomingDrives,
   getInterviewQuestions,
   broadcastPushNotification
 } from '../services/storage';
-import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi } from '../services/api';
+import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi, OpportunityApi } from '../services/api';
 import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
@@ -104,7 +103,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [classAttendance, setClassAttendance] = useState(() => getClassAttendance() || []);
   const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: null });
   const [studentRounds, setStudentRounds] = useState(() => getStudentRounds() || []);
-  const [hackathons, setHackathons] = useState(() => getHackathons() || []);
+  const [hackathons, setHackathons] = useState([]);
+  const [isLoadingHackathons, setIsLoadingHackathons] = useState(true);
+  const [hackathonsError, setHackathonsError] = useState('');
   const [internships, setInternships] = useState(() => getInternships() || []);
   const [offCampusCompanies, setOffCampusCompanies] = useState(() => getOffCampusCompanies() || []);
   const [upcomingDrives, setUpcomingDrives] = useState(() => getUpcomingDrives() || []);
@@ -213,7 +214,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   };
 
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [databaseUsers, setDatabaseUsers] = useState(() => getFallbackStudents());
+  const [databaseUsers, setDatabaseUsers] = useState([]);
   const [isLoadingDatabaseUsers, setIsLoadingDatabaseUsers] = useState(false);
   const [databaseUsersError, setDatabaseUsersError] = useState(null);
 
@@ -238,17 +239,31 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     } catch (err) {
       console.error('Backend users fetch error:', err);
       setDatabaseUsersError(err?.message || 'Failed to fetch registered candidates from database');
-      const fallbackList = getFallbackStudents();
-      if (fallbackList.length > 0) {
-        setDatabaseUsers(fallbackList);
-      }
+      setDatabaseUsers([]);
     } finally {
       setIsLoadingDatabaseUsers(false);
     }
   };
 
   // Sync with Spring Boot Backend (:8082)
+  const refreshHackathons = async () => {
+    setIsLoadingHackathons(true);
+    setHackathonsError('');
+    try {
+      const liveHackathons = await OpportunityApi.getHackathons();
+      if (!Array.isArray(liveHackathons)) throw new Error('Invalid hackathons response');
+      setHackathons(liveHackathons);
+      setHackathonsPage(1);
+    } catch (error) {
+      setHackathons([]);
+      setHackathonsError(error?.message || 'Could not load hackathons.');
+    } finally {
+      setIsLoadingHackathons(false);
+    }
+  };
+
   useEffect(() => {
+    refreshHackathons();
     // 1. Fetch drives from Spring Boot
     if (DriveApi?.getAll) {
       DriveApi.getAll()
@@ -258,7 +273,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend drives fallback to local:', err?.message));
+        .catch((err) => console.log('Backend drives request failed:', err?.message));
     }
 
     // 2. Fetch CRT training sessions from Spring Boot
@@ -270,7 +285,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend CRT fallback to local:', err?.message));
+        .catch((err) => console.log('Backend CRT request failed:', err?.message));
     }
 
     // 3. Fetch interview questions from Spring Boot
@@ -282,7 +297,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend questions fallback to local:', err?.message));
+        .catch((err) => console.log('Backend questions request failed:', err?.message));
     }
 
     // 4. Fetch registered database users from Spring Boot
@@ -1413,7 +1428,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               <div className="flex items-center gap-2.5 shrink-0 relative z-10">
                 <span className="px-3.5 py-1.5 bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
                   <Award className="w-4 h-4 text-amber-400" />
-                  <span>{hackathons.length} Active Challenges</span>
+                  <span>{hackathons.length} Hackathon Listings</span>
                 </span>
               </div>
             </div>
@@ -1430,9 +1445,6 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     <div className="flex flex-wrap items-center gap-2.5 mb-2">
                       <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-indigo-700 transition-colors">
                         {hack.organizer}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                        {hack.status}
                       </span>
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
                         Prize: {hack.prizePool}
@@ -1457,28 +1469,33 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                         <span className="font-bold text-slate-800 truncate">{hack.teamSize}</span>
                       </div>
                       <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Registration</span>
-                        <span className="font-bold text-purple-700 truncate">{hack.status}</span>
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Deadline</span>
+                        <span className="font-bold text-purple-700 truncate">{hack.registrationDeadline || 'Not provided'}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Right: Action */}
                   <div className="flex items-center gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                    <a
-                      href={hack.registrationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-xs hover:shadow flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Register for Hackathon</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
+                    {hack.registrationUrl ? (
+                      <a href={hack.registrationUrl} target="_blank" rel="noreferrer"
+                        className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-xs hover:shadow flex items-center gap-1.5 cursor-pointer">
+                        <span>Register for Hackathon</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    ) : <span className="text-xs font-medium text-slate-500">Registration link unavailable</span>}
                   </div>
                 </div>
               ))}
 
-              {paginatedHackathons.length === 0 && (
+              {isLoadingHackathons && <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">Loading hackathons...</div>}
+              {hackathonsError && (
+                <div className="p-6 bg-white rounded-2xl border border-red-200 text-red-700 text-sm" role="alert">
+                  Could not load hackathons: {hackathonsError}
+                  <button type="button" onClick={refreshHackathons} className="ml-3 font-bold underline">Retry</button>
+                </div>
+              )}
+              {!isLoadingHackathons && !hackathonsError && paginatedHackathons.length === 0 && (
                 <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
                   No active hackathons found.
                 </div>

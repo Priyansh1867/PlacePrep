@@ -49,7 +49,7 @@ export async function request(endpoint, options = {}) {
   };
   let response;
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeoutMs = options.timeout || 8000;
+  const timeoutMs = options.timeout || 30000;
   const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     response = await fetch(`${API_BASE}${endpoint}`, {
@@ -1166,3 +1166,561 @@ export const StudentAttendanceApi = {
     }
   }
 };
+
+
+// 16. Master Timetable API (Role-Based Read & Management)
+export const MasterTimetableApi = {
+  // --- Management Core (/api/management/timetables/**) ---
+  async getStats() {
+    return await request('/management/timetables/stats');
+  },
+  async listTimetables(filters = {}) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') params.append(k, v);
+    });
+    const qs = params.toString();
+    const res = await request(`/management/timetables${qs ? `?${qs}` : ''}`);
+    return Array.isArray(res) ? res : (res?.content || []);
+  },
+  async getTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}`);
+  },
+  async createTimetable(data) {
+    return await request('/management/timetables', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateTimetable(id, data) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
+  async cloneTimetable(id, data = {}) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async reviseTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/revise`, {
+      method: 'POST'
+    });
+  },
+  async publishTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/publish`, {
+      method: 'POST'
+    });
+  },
+  async unpublishTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/unpublish`, {
+      method: 'POST'
+    });
+  },
+  async archiveTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/archive`, {
+      method: 'POST'
+    });
+  },
+  async getVersions(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/versions`);
+  },
+  async getVersion(id, versionNo) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionNo)}`);
+  },
+  async restoreVersion(id, versionNo) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/restore/${encodeURIComponent(versionNo)}`, {
+      method: 'POST'
+    });
+  },
+  async getDiff(id, fromVersion, toVersion) {
+    const params = new URLSearchParams();
+    if (fromVersion) params.append('fromVersion', fromVersion);
+    if (toVersion) params.append('toVersion', toVersion);
+    return await request(`/management/timetables/${encodeURIComponent(id)}/diff?${params.toString()}`);
+  },
+  async validateTimetable(id) {
+    return await request(`/management/timetables/${encodeURIComponent(id)}/validate`);
+  },
+
+  // --- Slot Operations ---
+  async createSlot(timetableId, slotData) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/slots`, {
+      method: 'POST',
+      body: JSON.stringify(slotData)
+    });
+  },
+  async updateSlot(timetableId, slotId, slotData) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/slots/${encodeURIComponent(slotId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(slotData)
+    });
+  },
+  async deleteSlot(timetableId, slotId) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/slots/${encodeURIComponent(slotId)}`, {
+      method: 'DELETE'
+    });
+  },
+  async moveSlot(timetableId, slotId, { dayOfWeek, startPeriod }) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/slots/${encodeURIComponent(slotId)}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ dayOfWeek, startPeriod })
+    });
+  },
+  async swapSlots(timetableId, slotId1, slotId2) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/slots/swap`, {
+      method: 'POST',
+      body: JSON.stringify({ slotId1, slotId2 })
+    });
+  },
+  async validateCandidateSlot(timetableId, payload) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/slots/validate`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // --- Reference Data Drawers ---
+  async getSubjects(departmentCode = '', semester = null) {
+    const params = new URLSearchParams();
+    if (departmentCode) params.append('departmentCode', departmentCode);
+    if (semester) params.append('semester', semester);
+    const qs = params.toString();
+    return await request(`/management/timetables/subjects${qs ? `?${qs}` : ''}`);
+  },
+  async createSubject(data) {
+    return await request('/management/timetables/subjects', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateSubject(id, data) {
+    return await request(`/management/timetables/subjects/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteSubject(id) {
+    return await request(`/management/timetables/subjects/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
+  async getRooms() {
+    return await request('/management/timetables/rooms');
+  },
+  async createRoom(data) {
+    return await request('/management/timetables/rooms', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateRoom(id, data) {
+    return await request(`/management/timetables/rooms/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteRoom(id) {
+    return await request(`/management/timetables/rooms/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
+  async getFacultyProfiles(departmentCode = '') {
+    const qs = departmentCode ? `?departmentCode=${encodeURIComponent(departmentCode)}` : '';
+    return await request(`/management/timetables/faculty-profiles${qs}`);
+  },
+  async createFacultyProfile(data) {
+    return await request('/management/timetables/faculty-profiles', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateFacultyProfile(id, data) {
+    return await request(`/management/timetables/faculty-profiles/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteFacultyProfile(id) {
+    return await request(`/management/timetables/faculty-profiles/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
+  async linkFacultyUser(facultyId, userId) {
+    return await request(`/management/timetables/faculty-profiles/${encodeURIComponent(facultyId)}/link-user`, {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+  },
+  async addSection(timetableId, data) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/sections`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateSection(timetableId, sectionId, data) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/sections/${encodeURIComponent(sectionId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteSection(timetableId, sectionId) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/sections/${encodeURIComponent(sectionId)}`, {
+      method: 'DELETE'
+    });
+  },
+  async addLabGroup(sectionId, data) {
+    return await request(`/management/timetables/sections/${encodeURIComponent(sectionId)}/lab-groups`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateLabGroup(sectionId, groupId, data) {
+    return await request(`/management/timetables/sections/${encodeURIComponent(sectionId)}/lab-groups/${encodeURIComponent(groupId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteLabGroup(sectionId, groupId) {
+    return await request(`/management/timetables/sections/${encodeURIComponent(sectionId)}/lab-groups/${encodeURIComponent(groupId)}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // --- Import Wizard (/api/management/timetables/import/**) ---
+  async uploadImport(file, { academicSession = '2026-27', term = 'ODD', departmentCode = 'AI_DS' } = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('academicSession', academicSession);
+    formData.append('term', term);
+    formData.append('departmentCode', departmentCode);
+
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/management/timetables/import`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Upload failed with status ${res.status}`);
+    }
+    return await res.json();
+  },
+  async getImportJob(jobId) {
+    return await request(`/management/timetables/import/${encodeURIComponent(jobId)}`);
+  },
+  async saveImportResolutions(jobId, resolutions) {
+    return await request(`/management/timetables/import/${encodeURIComponent(jobId)}/resolutions`, {
+      method: 'PUT',
+      body: JSON.stringify(resolutions),
+      timeout: 60000
+    });
+  },
+  async commitImport(jobId, replaceExisting = false) {
+    return await request(`/management/timetables/import/${encodeURIComponent(jobId)}/commit?replaceExisting=${replaceExisting}`, {
+      method: 'POST',
+      timeout: 120000
+    });
+  },
+  async cancelImport(jobId) {
+    return await request(`/management/timetables/import/${encodeURIComponent(jobId)}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // --- Export Timetable (XLSX or PDF stream) ---
+  async exportTimetable(id, format = 'xlsx', scope = 'all') {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/management/timetables/${encodeURIComponent(id)}/export?format=${format}&scope=${encodeURIComponent(scope)}`, {
+      method: 'GET',
+      headers
+    });
+    if (!res.ok) {
+      throw new Error(`Export failed with status ${res.status}`);
+    }
+    return await res.blob();
+  },
+
+  // --- Students Tab (Roll No to Group Assignment) ---
+  async uploadStudentGroups(timetableId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('timetableId', timetableId);
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/management/timetables/student-groups/import`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    if (!res.ok) throw new Error(`Student groups upload failed: ${res.statusText}`);
+    return await res.json();
+  },
+  async commitStudentGroups(payload) {
+    return await request('/management/timetables/student-groups/import/commit', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  async getStudentGroups(timetableId) {
+    return await request(`/management/timetables/${encodeURIComponent(timetableId)}/student-groups`);
+  },
+  async updateStudentGroup(groupId, data) {
+    return await request(`/management/timetables/student-groups/${encodeURIComponent(groupId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // --- Academic Calendar Events ---
+  async listCalendarEvents(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.from) qs.append('from', params.from);
+    if (params.to) qs.append('to', params.to);
+    if (params.scope) qs.append('scope', params.scope);
+    if (params.department) qs.append('department', params.department);
+    if (params.year) qs.append('year', params.year);
+    if (params.section) qs.append('section', params.section);
+    const queryString = qs.toString() ? `?${qs.toString()}` : '';
+    return await request(`/management/timetables/calendar-events${queryString}`);
+  },
+  async createCalendarEvent(data) {
+    return await request('/management/timetables/calendar-events', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async updateCalendarEvent(id, data) {
+    return await request(`/management/timetables/calendar-events/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteCalendarEvent(id) {
+    return await request(`/management/timetables/calendar-events/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // --- Reports (Faculty Workload, Room Utilisation, Free Periods) ---
+  async getFacultyWorkloadReport(departmentCode = '') {
+    const qs = departmentCode ? `?departmentCode=${encodeURIComponent(departmentCode)}` : '';
+    return await request(`/management/timetables/reports/faculty-workload${qs}`);
+  },
+  async exportFacultyWorkloadXlsx(departmentCode = '') {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const qs = departmentCode ? `?departmentCode=${encodeURIComponent(departmentCode)}` : '';
+    const res = await fetch(`${API_BASE}/management/timetables/reports/faculty-workload/export${qs}`, {
+      headers
+    });
+    if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+    return await res.blob();
+  },
+  async getRoomUtilisationReport(departmentCode = '') {
+    const qs = departmentCode ? `?departmentCode=${encodeURIComponent(departmentCode)}` : '';
+    return await request(`/management/timetables/reports/room-utilisation${qs}`);
+  },
+  async getSectionFreePeriodsReport(departmentCode = '') {
+    const qs = departmentCode ? `?departmentCode=${encodeURIComponent(departmentCode)}` : '';
+    return await request(`/management/timetables/reports/section-free-periods${qs}`);
+  },
+
+  // --- Find a Slot Helper ---
+  async findCandidateSlots(data, timetableId = null) {
+    const endpoint = timetableId
+      ? `/management/timetables/${encodeURIComponent(timetableId)}/find-slot`
+      : '/management/timetables/find-slot';
+    return await request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // --- Availability Matrix ---
+  async getAvailabilityMatrix({ facultyIds = [], sectionId = null } = {}) {
+    const qs = new URLSearchParams();
+    if (facultyIds && facultyIds.length > 0) {
+      facultyIds.forEach(id => qs.append('facultyIds', id));
+    }
+    if (sectionId) qs.append('sectionId', sectionId);
+    return await request(`/management/timetables/availability?${qs.toString()}`);
+  },
+
+  // --- Audit Logs ---
+  async getAuditLogs({ from, to, userId, timetableId, page = 0, size = 50 } = {}) {
+    const qs = new URLSearchParams();
+    if (from) qs.append('from', from);
+    if (to) qs.append('to', to);
+    if (userId) qs.append('userId', userId);
+    if (timetableId) qs.append('timetableId', timetableId);
+    qs.append('page', page);
+    qs.append('size', size);
+    return await request(`/management/timetables/audit-logs?${qs.toString()}`);
+  }
+};
+
+// 17. Timetable View API (Role-Based Viewing for Students, Faculty, HOD)
+export const TimetableViewApi = {
+  async getMyTimetable() {
+    return await request('/timetable/me');
+  },
+  async getMyToday() {
+    return await request('/timetable/me/today');
+  },
+  async getMyWeek(date) {
+    const qs = date ? `?date=${encodeURIComponent(date)}` : '';
+    return await request(`/timetable/me/week${qs}`);
+  },
+  async exportMyTimetable(format = 'pdf') {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/timetable/me/export?format=${format}`, {
+      headers
+    });
+    if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+    return await res.blob();
+  },
+  async getHodOverview(department = '') {
+    const qs = department ? `?department=${encodeURIComponent(department)}` : '';
+    return await request(`/timetable/hod/overview${qs}`);
+  },
+  async getFacultyGrid(facultyId) {
+    return await request(`/timetable/faculty/${encodeURIComponent(facultyId)}`);
+  },
+  async getSectionGrid(sectionId) {
+    return await request(`/timetable/sections/${encodeURIComponent(sectionId)}`);
+  },
+  async getRoomGrid(roomId) {
+    return await request(`/timetable/rooms/${encodeURIComponent(roomId)}`);
+  },
+  async getFreeRooms({ day, period, roomType } = {}) {
+    const params = new URLSearchParams();
+    if (day !== undefined && day !== null) params.append('day', day);
+    if (period !== undefined && period !== null) params.append('period', period);
+    if (roomType) params.append('roomType', roomType);
+    return await request(`/timetable/rooms/free?${params.toString()}`);
+  },
+  async requestOverride(data) {
+    return await request('/timetable/overrides', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async listOverrides() {
+    return await request('/timetable/overrides');
+  },
+  async approveOverride(id) {
+    return await request(`/timetable/overrides/${encodeURIComponent(id)}/approve`, {
+      method: 'POST'
+    });
+  },
+  async rejectOverride(id, reason = '') {
+    const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return await request(`/timetable/overrides/${encodeURIComponent(id)}/reject${qs}`, {
+      method: 'POST'
+    });
+  },
+
+  // --- Calendar Events (Read-only for all roles) ---
+  async getCalendarEvents(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.from) qs.append('from', params.from);
+    if (params.to) qs.append('to', params.to);
+    if (params.scope) qs.append('scope', params.scope);
+    if (params.department) qs.append('department', params.department);
+    const queryString = qs.toString() ? `?${qs.toString()}` : '';
+    return await request(`/timetable/calendar-events${queryString}`);
+  },
+
+  // --- HOD Reports ---
+  async getHodFacultyWorkload(department = '') {
+    const qs = department ? `?department=${encodeURIComponent(department)}` : '';
+    return await request(`/timetable/hod/reports/faculty-workload${qs}`);
+  },
+  async exportHodFacultyWorkloadXlsx(department = '') {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const qs = department ? `?department=${encodeURIComponent(department)}` : '';
+    const res = await fetch(`${API_BASE}/timetable/hod/reports/faculty-workload/export${qs}`, {
+      headers
+    });
+    if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+    return await res.blob();
+  },
+  async getHodRoomUtilisation(department = '') {
+    const qs = department ? `?department=${encodeURIComponent(department)}` : '';
+    return await request(`/timetable/hod/reports/room-utilisation${qs}`);
+  },
+  async getHodSectionFreePeriods(department = '') {
+    const qs = department ? `?department=${encodeURIComponent(department)}` : '';
+    return await request(`/timetable/hod/reports/section-free-periods${qs}`);
+  },
+
+  // --- Find Slot & Availability ---
+  async findCandidateSlots(data) {
+    return await request('/timetable/find-slot', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async getAvailabilityMatrix({ facultyIds = [], sectionId = null } = {}) {
+    const qs = new URLSearchParams();
+    if (facultyIds && facultyIds.length > 0) {
+      facultyIds.forEach(id => qs.append('facultyIds', id));
+    }
+    if (sectionId) qs.append('sectionId', sectionId);
+    return await request(`/timetable/availability?${qs.toString()}`);
+  },
+
+  // --- Peer Swaps ---
+  async proposePeerSwap(data) {
+    return await request('/timetable/peer-swaps', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  async acceptPeerSwap(id) {
+    return await request(`/timetable/peer-swaps/${encodeURIComponent(id)}/accept`, {
+      method: 'POST'
+    });
+  },
+  async rejectPeerSwap(id, reason = '') {
+    const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return await request(`/timetable/peer-swaps/${encodeURIComponent(id)}/reject${qs}`, {
+      method: 'POST'
+    });
+  }
+};
+
+/**
+ * Helper to trigger browser download from a Blob
+ */
+export function downloadFileBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  a.remove();
+}

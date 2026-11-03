@@ -39,6 +39,21 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(
+                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/management/timetables/**")
+                        )
+                        .defaultAuthenticationEntryPointFor(
+                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/timetable/**")
+                        )
+                        .defaultAuthenticationEntryPointFor(
+                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/master-timetable/**")
+                        )
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -75,6 +90,8 @@ public class SecurityConfig {
                         // Management restricted endpoints
                         .requestMatchers("/api/management/attendance/verify-location").permitAll()
                         .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
+                        .requestMatchers("/api/timetable/**").authenticated()
+                        .requestMatchers("/api/master-timetable/**").authenticated()
 
                         // Authenticated student/user actions & attendance verification
                         .requestMatchers("/api/student/attendance/status").permitAll()

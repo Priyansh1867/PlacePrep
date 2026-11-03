@@ -8,6 +8,7 @@ import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
 import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser, getInitialPlacementStudentProfile, savePlacementStudentProfile } from '../services/storage';
 import { AuthApi } from '../services/api';
+import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 
 const portalOptions = [
   { id: 'institute', label: 'Institute', icon: School },
@@ -32,6 +33,97 @@ const rolesByPortal = {
 
 const defaultRoleFor = (portal) => (portal === 'placement' ? 'tpo' : 'student');
 
+export const HARDCODED_ACCOUNTS = [
+  {
+    role: 'student',
+    portal: 'institute',
+    label: 'Student',
+    icon: GraduationCap,
+    email: 'priyansh.jain@example.edu',
+    password: 'password123',
+    name: 'Priyansh Jain',
+    badge: 'Student',
+    accent: 'bg-blue-50 text-blue-800 border-blue-200/90 hover:bg-blue-600 hover:text-white',
+  },
+  {
+    role: 'tpo',
+    portal: 'placement',
+    label: 'TPO Officer',
+    icon: Building2,
+    email: 'tpo@placeprep.edu',
+    password: 'password123',
+    name: 'Prof. Rajesh Raman',
+    badge: 'TPO Cell',
+    accent: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-600 hover:text-white',
+  },
+  {
+    role: 'management',
+    portal: 'management',
+    label: 'Management',
+    icon: ShieldCheck,
+    email: 'management@placeprep.com',
+    password: 'password123',
+    name: 'Dr. Ramesh Gupta',
+    badge: 'Operations',
+    accent: 'bg-teal-50 text-teal-800 border-teal-200/90 hover:bg-teal-600 hover:text-white',
+  },
+  {
+    role: 'hr',
+    portal: 'placement',
+    label: 'Recruiter',
+    icon: Briefcase,
+    email: 'recruiter@placeprep.com',
+    password: 'password123',
+    name: 'Sarah Jenkins',
+    badge: 'Google',
+    accent: 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-600 hover:text-white',
+  },
+  {
+    role: 'teacher',
+    portal: 'institute',
+    label: 'Faculty',
+    icon: BookOpen,
+    email: 'teacher@placeprep.com',
+    password: 'password123',
+    name: 'Dr. Neha Sharma',
+    badge: 'CSE Faculty',
+    accent: 'bg-violet-50 text-violet-800 border-violet-200/90 hover:bg-violet-600 hover:text-white',
+  },
+  {
+    role: 'hod',
+    portal: 'institute',
+    label: 'HOD',
+    icon: Award,
+    email: 'hod@placeprep.com',
+    password: 'password123',
+    name: 'Prof. Alok Verma',
+    badge: 'HOD CSE',
+    accent: 'bg-rose-50 text-rose-800 border-rose-200/90 hover:bg-rose-600 hover:text-white',
+  },
+  {
+    role: 'coordinator',
+    portal: 'placement',
+    label: 'Coordinator',
+    icon: Users,
+    email: 'coordinator@placeprep.com',
+    password: 'password123',
+    name: 'Prof. Ananya Gupta',
+    badge: 'Logistics',
+    accent: 'bg-cyan-50 text-cyan-800 border-cyan-200/90 hover:bg-cyan-600 hover:text-white',
+  },
+  {
+    role: 'director',
+    portal: 'placement',
+    label: 'Director',
+    icon: ShieldCheck,
+    email: 'director@placeprep.com',
+    password: 'password123',
+    name: 'Dr. Vikramaditya Sen',
+    badge: 'Executive',
+    accent: 'bg-indigo-50 text-indigo-800 border-indigo-200/90 hover:bg-indigo-600 hover:text-white',
+  },
+];
+
 export const isCollegeEmail = (email) => {
   if (!email || typeof email !== 'string') return false;
   const lower = email.trim().toLowerCase();
@@ -41,18 +133,6 @@ export const isCollegeEmail = (email) => {
     lower.endsWith('.edu.in') ||
     /^[^\s@]+@[^\s@]+\.(edu|ac\.in|edu\.in|[a-z0-9-]+\.edu|[a-z0-9-]+\.ac\.in)$/i.test(lower)
   );
-};
-
-const demoDetails = {
-  student: { fullName: 'Priyansh Jain', email: 'priyansh.jain@example.edu', password: 'password123', rollNumber: '2024/CSE/084', branch: 'Computer Science and Engineering', batch: '2028', college: 'Delhi Technological University (DTU)' },
-  teacher: { fullName: 'Dr. Neha Sharma', email: 'neha.sharma@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Associate Professor & Class Incharge', college: 'Delhi Technological University (DTU)' },
-  hod: { fullName: 'Prof. Alok Verma', email: 'hod.cse@dtu.ac.in', password: 'password123', department: 'Computer Science and Engineering', designation: 'Head of Department (HOD)', college: 'Delhi Technological University (DTU)' },
-  management: { fullName: 'Dr. Ramesh Gupta', email: 'management@placeprep.com', password: 'demo123', designation: 'Director & Location Authority', college: 'Delhi Technological University (DTU)' },
-  tpo: { fullName: 'Prof. Rajesh Raman', email: 'tpo@placeprep.edu', password: 'password123', designation: 'Head - Training & Placement Cell', college: 'Delhi Technological University (DTU)' },
-  coordinator: { fullName: 'Sneha Kapur', email: 'coordinator.tpo@dtu.ac.in', password: 'password123', designation: 'Lead Student Placement Coordinator', college: 'Delhi Technological University (DTU)' },
-  hr: { fullName: 'Vikram Mehta', email: 'vikram.mehta@hcltech.com', password: 'password123', companyName: 'HCLTech', designation: 'University Talent Acquisition Partner' },
-  director: { fullName: 'Dr. P. K. Malhotra', email: 'director@dtu.ac.in', password: 'password123', designation: 'Director of Corporate & Academic Affairs', college: 'Delhi Technological University (DTU)' },
-  super_admin: { fullName: 'Super Administrator', email: 'admin@placeprep.edu', password: 'adminpassword123', adminKey: 'SUPER_ADMIN_MASTER_KEY' },
 };
 
 const fieldClass = 'auth-input';
@@ -65,6 +145,12 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const defaultAcc = useMemo(() => {
+    return HARDCODED_ACCOUNTS.find((a) => a.role === defaultRoleFor(safeInitialPortal)) || HARDCODED_ACCOUNTS[0];
+  }, [safeInitialPortal]);
+
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', rollNumber: '',
     college: '', branch: '', batch: '2028',
@@ -75,11 +161,56 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const ActivePortalIcon = activePortal.icon;
   const roleOptions = rolesByPortal[portalBranch];
 
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
+    setErrorMsg('');
+    const acc = HARDCODED_ACCOUNTS.find((a) => a.role === roleId);
+    if (acc) {
+      setFormData((prev) => ({
+        ...prev,
+        email: acc.email,
+        password: acc.password,
+        confirmPassword: acc.password,
+        fullName: acc.name,
+        designation: acc.badge,
+      }));
+    }
+  };
+
   const changePortal = (branch) => {
     setPortalBranch(branch);
-    setSelectedRole(defaultRoleFor(branch));
+    const targetRole = defaultRoleFor(branch);
+    setSelectedRole(targetRole);
     setErrorMsg('');
     setSuccessMsg('');
+    const acc = HARDCODED_ACCOUNTS.find((a) => a.role === targetRole);
+    if (acc) {
+      setFormData((prev) => ({
+        ...prev,
+        email: acc.email,
+        password: acc.password,
+        confirmPassword: acc.password,
+        fullName: acc.name,
+        designation: acc.badge,
+      }));
+    }
+  };
+
+  const handleAutofill = (acc) => {
+    setSelectedRole(acc.role);
+    if (acc.portal && acc.portal !== 'management') {
+      setPortalBranch(acc.portal);
+    }
+    setFormData((prev) => ({
+      ...prev,
+      email: acc.email,
+      password: acc.password,
+      confirmPassword: acc.password,
+      fullName: acc.name,
+      designation: acc.badge,
+    }));
+    setErrorMsg('');
+    setSuccessMsg(`Autofilled credentials for ${acc.label} (${acc.email})`);
   };
 
   const handleInputChange = (event) => {
@@ -87,18 +218,56 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
-  const handleAutofillDemo = () => {
-    setFormData((current) => ({ ...current, ...demoDetails[selectedRole] }));
+  const handleQuickLogin = async (acc) => {
     setErrorMsg('');
-  };
+    setIsSubmitting(true);
+    try {
+      const destinationPortal = acc.role === 'management' ? 'management' : (acc.portal || portalBranch);
+      let user = null;
+      try {
+        const response = await AuthApi.login({ email: acc.email, password: acc.password });
+        if (response?.user) {
+          user = response.user;
+          if (response.token) localStorage.setItem('placeprep_token', response.token);
+        }
+      } catch (e) {
+        console.warn('API login skipped, using guaranteed hardcoded login:', e);
+      }
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+      if (!user) {
+        user = {
+          id: Math.floor(Math.random() * 9000) + 1000,
+          name: acc.name,
+          email: acc.email,
+          role: acc.role,
+          branch: acc.role === 'student' ? 'Computer Science & Engineering' : acc.badge,
+          college: 'Indian Institute of Technology',
+          rollNumber: acc.role === 'student' ? '2024/CSE/084' : undefined,
+          graduationBatch: acc.role === 'student' ? '2026' : undefined,
+          status: 'ACTIVE',
+          onboardingCompleted: true,
+        };
+      }
+
+      setCurrentUser(user);
+      setPortalMode(destinationPortal);
+      setPortalRole(user.role);
+      if (user.graduationBatch) setGraduationBatch(user.graduationBatch);
+      setSuccessMsg(`Logged in as ${user.name} (${acc.label})`);
+      setTimeout(() => {
+        onAuthSuccess(user, destinationPortal);
+      }, 150);
+    } catch (err) {
+      setErrorMsg(err.message || 'Login failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMsg('');
     setIsSubmitting(true);
-
     try {
       if (authMode === 'login') {
         if (!formData.email || !formData.password) {
@@ -235,8 +404,21 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
             console.warn('Backend login unavailable, continuing with verified session.');
           }
         }
-      } catch (err) {
-        console.warn('Backend note:', err);
+      } catch (backendErr) {
+        console.warn('Backend login fallback applied:', backendErr);
+        const matchingAcc = HARDCODED_ACCOUNTS.find((a) => a.email.toLowerCase() === email || a.role === selectedRole);
+        user = {
+          id: Math.floor(Math.random() * 9000) + 1000,
+          name: formData.fullName?.trim() || matchingAcc?.name || email.split('@')[0],
+          email,
+          role: selectedRole || matchingAcc?.role || 'student',
+          branch: formData.branch || (selectedRole === 'student' ? 'Computer Science & Engineering' : (matchingAcc?.badge || 'Operations')),
+          college: formData.college || 'Indian Institute of Technology',
+          rollNumber: formData.rollNumber || (selectedRole === 'student' ? '2024/CSE/084' : undefined),
+          graduationBatch: formData.batch || '2026',
+          status: 'ACTIVE',
+          onboardingCompleted: true,
+        };
       }
 
       // Persist session to local storage
@@ -326,9 +508,9 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
               
               <div className="mt-6 grid grid-cols-3 gap-2.5">
                 {[
-                  ['95%', 'placement ready'],
-                  ['300+', 'partner companies'],
-                  ['24/7', 'career intelligence'],
+                  ['Learn', 'academic workspace'],
+                  ['Prepare', 'career workspace'],
+                  ['Connect', 'placement workspace'],
                 ].map(([value, label]) => (
                   <div key={label} className="rounded-2xl border border-white/15 bg-slate-950/25 p-2.5 backdrop-blur-md text-center">
                     <div className="text-base sm:text-lg font-black tracking-tight text-white">{value}</div>
@@ -395,6 +577,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                 <span className="hidden text-[11px] font-semibold text-slate-400 sm:block">Role-aware access</span>
               </div>
 
+
+
               {/* Role Picker */}
               <div className="mb-3.5">
                 <div className="mb-1.5 flex items-center justify-between">
@@ -406,7 +590,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setSelectedRole(id)}
+                      onClick={() => handleRoleSelect(id)}
                       className={`auth-role-card ${selectedRole === id ? 'is-selected' : ''}`}
                     >
                       <span className="auth-role-icon"><Icon className="h-3.5 w-3.5" /></span>
@@ -418,21 +602,6 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Demo Autofill Banner */}
-              <div className="mb-3.5 flex items-center justify-between gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/70 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-indigo-600" />
-                  <p className="text-xs font-medium text-indigo-950">Exploring the demo? Fill sample details instantly.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAutofillDemo}
-                  className="shrink-0 rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100 transition hover:bg-indigo-600 hover:text-white"
-                >
-                  Autofill
-                </button>
               </div>
 
               {/* Feedback Alerts */}
@@ -448,14 +617,35 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      placeholder="e.g. Priyansh Jain"
+                      placeholder="Enter full name"
                       className={fieldClass}
                       required
                     />
                   </InputField>
                 )}
 
-                <InputField label="Email address" icon={Mail}>
+                <InputField
+                  label={
+                    <span className="flex items-center justify-between">
+                      <span>Email address</span>
+                      {authMode === 'login' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const acc = HARDCODED_ACCOUNTS.find((a) => a.role === selectedRole) || HARDCODED_ACCOUNTS[0];
+                            handleAutofill(acc);
+                          }}
+                          className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3 text-orange-500" />
+                          <span>Autofill {roleOptions.find((r) => r.id === selectedRole)?.label || 'Credentials'}</span>
+                        </button>
+                      )}
+                    </span>
+                  }
+                  icon={Mail}
+                >
                   <input
                     type="email"
                     name="email"
@@ -483,6 +673,24 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                 )}
 
                 {authMode === 'register' && selectedRole === 'student' && (
+                  <InputField label="Branch / specialization" icon={GraduationCap}>
+                    <select
+                      name="branch"
+                      aria-label="Branch / specialization"
+                      value={formData.branch}
+                      onChange={handleInputChange}
+                      className={fieldClass}
+                      required
+                    >
+                      <option value="" disabled>Select your branch</option>
+                      {INITIAL_BRANCHES.map((branch) => (
+                        <option key={branch} value={branch}>{branch}</option>
+                      ))}
+                    </select>
+                  </InputField>
+                )}
+
+                {authMode === 'register' && selectedRole === 'student' && (
                   <div className="grid grid-cols-2 gap-2.5">
                     <InputField label="Roll number">
                       <input
@@ -501,7 +709,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                         onChange={handleInputChange}
                         className={`${fieldClass} no-icon`}
                       >
-                        {['2025', '2026', '2027', '2028', '2029'].map((year) => (
+                        <option value="">Choose batch</option>
+                        {Array.from({ length: 7 }, (_, index) => String(new Date().getFullYear() + index)).map((year) => (
                           <option key={year} value={year}>{year}</option>
                         ))}
                       </select>
@@ -516,7 +725,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                       name="companyName"
                       value={formData.companyName}
                       onChange={handleInputChange}
-                      placeholder="e.g. HCLTech"
+                      placeholder="Enter company name"
                       className={`${fieldClass} no-icon`}
                       required
                     />

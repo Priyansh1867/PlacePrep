@@ -45,6 +45,7 @@ public class SecurityConfig {
                         // Public authentication & info
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/resume-ats/**").permitAll()
+                        .requestMatchers("/api/academics/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         
                         // Public reads & public interactions
@@ -73,6 +74,10 @@ public class SecurityConfig {
 
                         // Management restricted endpoints
                         .requestMatchers("/api/management/attendance/verify-location").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/student/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/version/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/preview-data").permitAll()
                         .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
 
                         // Authenticated student/user actions & attendance verification
@@ -86,6 +91,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/student/attendance/**").permitAll()
                         .requestMatchers("/api/mock-sessions/**").authenticated()
+                        .requestMatchers("/api/applications/my").permitAll()
                         .requestMatchers("/api/applications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/experiences").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/report").authenticated()

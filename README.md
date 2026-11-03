@@ -22,7 +22,7 @@
 ```mermaid
 graph TD
     Client["React 19 Frontend (Vite 8)<br/>Tailwind CSS • Lucide Icons<br/>Port: 5173"]
-    Proxy["Vite Dev Proxy<br/>/api -> :8080/api"]
+    Proxy["Vite Dev Proxy<br/>/api -> :8082/api"]
     Gateway["Spring Security 6<br/>AuthTokenFilter (pp_ tokens)<br/>BCrypt Password Hashing"]
     
     Controllers["Spring Boot 3.5 REST Controllers<br/>Auth • User • Company • Drive<br/>Application • Question • Experience<br/>Insights • MockSession • Workflow • Feedback<br/>Eligibility • ScheduleConflict"]
@@ -89,7 +89,7 @@ npm install
 npm run dev
 ```
 * **Frontend Application**: `http://localhost:5173/`
-* API requests to `/api/*` are automatically forwarded to `http://localhost:8080/api` via the Vite proxy configured in `vite.config.js`.
+* API requests to `/api/*` are automatically forwarded to `http://localhost:8082/api` via the Vite proxy configured in `vite.config.js`. Override the proxy target with `VITE_API_PROXY_TARGET` when using another backend port.
 
 ---
 
@@ -153,6 +153,27 @@ The database is automatically pre-populated on boot via `backend/src/main/java/c
   * Arrays & Hashing • Two Pointers & Sliding Window • Linked Lists
   * Trees & Graphs • Dynamic Programming • Stacks & Queues
 * Difficulty filters, solved tracking, and active recall flag shortcuts.
+* Real code execution is disabled until a sandbox is configured. Without a runner, the UI reports that execution is unavailable; it never fabricates a passing result.
+* The editor supports Java, Python, C++, JavaScript, and SQL (SQLite). SQL interview questions can use the SQLite runner; a `WHERE`/`HAVING` starter script is provided for the HCLTECH question.
+
+### Configure real Judge0 code execution
+
+The backend supports Judge0 CE through its server-side API. The runner is disabled by default. After obtaining a Judge0 RapidAPI key, add these variables to the backend's private environment (for example, `backend/.env` loaded by your process manager, or the deployment platform's secret settings). Do not put the key in a `VITE_*` variable, frontend code, or a committed file:
+
+```dotenv
+PLACEPREP_JUDGE0_ENABLED=true
+PLACEPREP_JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
+PLACEPREP_JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
+PLACEPREP_JUDGE0_API_KEY=replace_with_your_private_key
+```
+
+Restart the Spring backend after setting the variables. The backend submits each test case to Judge0, polls the returned submission token, and reports the provider's status, standard output, compile/runtime diagnostics, time, and memory. Never run user-submitted programs directly inside the application server; use a properly isolated execution service.
+
+When a question has a concrete expected output, the runner compares the program's output against it. Some interview/concept questions do not define executable sample input/output. For those, the workspace can show that a program compiled and ran, but it explicitly does not claim the answer is correct. Add real examples with exact input and expected output to the question data to enable correctness checks.
+
+To use a self-hosted Judge0 instance instead, set `PLACEPREP_JUDGE0_API_URL` to its base URL. A self-hosted endpoint may not require the RapidAPI key; follow the authentication settings of that deployment.
+
+The corresponding placeholders are in `.env.example`. This template contains no real API credential.
 
 ### 4. Core CS Technical Interview Studio (`#core-cs`)
 * Dedicated preparation studio covering the 4 foundational pillars:

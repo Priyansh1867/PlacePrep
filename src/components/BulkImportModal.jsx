@@ -25,7 +25,8 @@ import {
   commitStudentImport,
   isUserAuthorizedForImport
 } from '../services/studentRegistrationService';
-import { getAllStudents } from '../services/academicRecordsService';
+import { getAllStudents, syncAcademicRecordsWithDatabase } from '../services/academicRecordsService';
+import { AuthApi } from '../services/api';
 import { getCurrentUser } from '../services/storage';
 
 export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
@@ -99,13 +100,42 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
     }
   };
 
-  const handleExecuteImport = () => {
+  const handleExecuteImport = async () => {
     if (!parseResult || !parseResult.rows) return;
     const eligibleRows = parseResult.rows.filter(r => r.status === 'Valid');
     if (eligibleRows.length === 0) return;
 
     setIsCommitting(true);
+    // 1. Commit to local storage & records
     const result = commitStudentImport(eligibleRows, currentUser);
+
+    // 2. Commit to remote database via bulk-register endpoint
+    try {
+      const dbPayload = eligibleRows.map(r => ({
+        name: r.fullName,
+        fullName: r.fullName,
+        email: r.email,
+        rollNumber: r.rollNumber,
+        studentId: r.rollNumber,
+        branch: r.branch,
+        college: r.collegeName || 'Delhi Technological University (DTU)',
+        graduationBatch: r.graduationBatch || '2026',
+        cgpa: r.cgpa ? parseFloat(r.cgpa) : null,
+        tenthPercentage: r.tenthPercentage ? parseFloat(r.tenthPercentage) : null,
+        twelfthPercentage: r.twelfthPercentage ? parseFloat(r.twelfthPercentage) : null
+      }));
+      await AuthApi.bulkRegisterStudents(dbPayload);
+    } catch (dbErr) {
+      console.warn('Backend bulk register failed, falling back to sync:', dbErr);
+    }
+
+    // 3. Trigger full academic records database sync
+    try {
+      await syncAcademicRecordsWithDatabase();
+    } catch (syncErr) {
+      console.warn('Sync academic records with database failed:', syncErr);
+    }
+
     setIsCommitting(false);
 
     setCommitSummary({

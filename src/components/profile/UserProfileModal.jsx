@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Camera,
@@ -50,14 +51,32 @@ const SECTIONS = [
 ];
 
 export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) {
-  if (!isOpen) return null;
 
+  const dialogRef = useRef(null);
   const [activeTab, setActiveTab] = useState('basic');
   const [profile, setProfile] = useState(() => getFullStudentProfile(getCurrentUser()));
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
 
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus();
+    const handleKey = (event) => {
+      if (event.key === 'Escape') { onClose(); return; }
+      if (event.key !== 'Tab') return;
+      const items = [...(dialogRef.current?.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || [])].filter(item => item.getClientRects().length);
+      if (!items.length) { event.preventDefault(); return; }
+      if (event.shiftKey && (document.activeElement === items[0] || document.activeElement === dialogRef.current)) { event.preventDefault(); items.at(-1).focus(); }
+      else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0].focus(); }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown',handleKey); previousFocus?.focus?.(); };
+  }, [isOpen,onClose]);
   // Dynamic Profile Completion calculation based strictly on genuine persisted data
   const completionUser = {
     fullName: profile.basicDetails?.fullName || profile.basicDetails?.name || '',
@@ -82,6 +101,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
 
   // Re-sync with backend database and storage on mount
   useEffect(() => {
+    if (!isOpen) return;
     const user = getCurrentUser();
     if (!user) return;
     const local = getFullStudentProfile(user);
@@ -145,7 +165,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
       setSaveSuccessMsg('Profile details synchronized with database successfully!');
     } catch (err) {
       console.warn('Backend profile save warning:', err);
-      setSaveSuccessMsg('Profile details saved successfully!');
+      setSaveSuccessMsg('Saved on this device. Database sync failed; reconnect and save again.');
     } finally {
       setIsSaving(false);
       if (onProfileUpdated) onProfileUpdated(profile);
@@ -428,7 +448,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white rounded-3xl max-w-6xl w-full h-[94vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col text-slate-900 animate-scale-in">
-        
+
         {/* Top Header Bar */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -439,7 +459,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
               <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
                 Placement & Student Profile
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
-                  Verified Candidate
+                  {profile.verified ? 'Verified Candidate' : 'Profile details'}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 hidden sm:block">
@@ -644,7 +664,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
           {/* RIGHT PANE: SELECTED SECTION CONTENT & INTERACTIVE FORM   */}
           {/* ========================================================= */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-slate-50/30">
-            
+
             {/* Top Incomplete Profile Notification / Complete Status Banner */}
             {!completionInfo.isComplete ? (
               <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
@@ -696,7 +716,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 </span>
               </div>
             )}
-            
+
             {/* 1. BASIC DETAILS */}
             {activeTab === 'basic' && (
               <div className="space-y-6 max-w-4xl">
@@ -719,7 +739,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Personal Demographics</h4>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Full Name</label>
@@ -764,7 +784,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                         value={profile.basicDetails?.gender || ''}
                         onChange={(e) => updateBasic('gender', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
-                      >
+                      ><option value="">Select an option</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
@@ -787,7 +807,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                         value={profile.basicDetails?.category || ''}
                         onChange={(e) => updateBasic('category', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
-                      >
+                      ><option value="">Select an option</option>
                         <option value="General">General (UR)</option>
                         <option value="OBC">OBC (Non-Creamy)</option>
                         <option value="SC">SC</option>
@@ -801,7 +821,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                         value={profile.basicDetails?.differentlyAbled || ''}
                         onChange={(e) => updateBasic('differentlyAbled', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white cursor-pointer"
-                      >
+                      ><option value="">Select an option</option>
                         <option value="No">No</option>
                         <option value="Yes">Yes</option>
                       </select>
@@ -843,7 +863,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Hometown & State</label>
                       <input
                         type="text"
-                        value={profile.basicDetails?.hometown || profile.basicDetails?.state ? `${profile.basicDetails?.hometown || ''}${profile.basicDetails?.state ? ', ' + profile.basicDetails.state : ''}` : ''}
+                        value={[profile.basicDetails?.hometown, profile.basicDetails?.state].filter(Boolean).join(', ')}
                         onChange={(e) => {
                           const parts = e.target.value.split(',');
                           updateBasic('hometown', parts[0]?.trim() || '');
@@ -996,8 +1016,8 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                         step="0.01"
                         min="0"
                         max="10"
-                        value={profile.educationDetails?.cgpa ?? 8.5}
-                        onChange={(e) => updateEducation('cgpa', parseFloat(e.target.value) || 0)}
+                        value={profile.educationDetails?.cgpa ?? ''}
+                        onChange={(e) => updateEducation('cgpa', e.target.value === '' ? '' : Number(e.target.value))}
                         className="w-full px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl font-black text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
@@ -1006,8 +1026,8 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <input
                         type="number"
                         min="0"
-                        value={profile.educationDetails?.activeBacklogs ?? 0}
-                        onChange={(e) => updateEducation('activeBacklogs', parseInt(e.target.value, 10) || 0)}
+                        value={profile.educationDetails?.activeBacklogs ?? ''}
+                        onChange={(e) => updateEducation('activeBacklogs', e.target.value === '' ? '' : Number(e.target.value))}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
                     </div>
@@ -1015,8 +1035,8 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <label className="block font-bold text-slate-700 mb-1">Total Academic Credits</label>
                       <input
                         type="number"
-                        value={profile.educationDetails?.totalCreditsEarned || 132}
-                        onChange={(e) => updateEducation('totalCreditsEarned', parseInt(e.target.value, 10) || 0)}
+                        value={profile.educationDetails?.totalCreditsEarned || ''}
+                        onChange={(e) => updateEducation('totalCreditsEarned', e.target.value === '' ? '' : Number(e.target.value))}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono"
                       />
                     </div>
@@ -1059,8 +1079,8 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <input
                         type="number"
                         step="0.1"
-                        value={profile.educationDetails?.twelfthPercentage ?? 86.0}
-                        onChange={(e) => updateEducation('twelfthPercentage', parseFloat(e.target.value) || 0)}
+                        value={profile.educationDetails?.twelfthPercentage ?? ''}
+                        onChange={(e) => updateEducation('twelfthPercentage', e.target.value === '' ? '' : Number(e.target.value))}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
                     </div>
@@ -1094,8 +1114,8 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       <input
                         type="number"
                         step="0.1"
-                        value={profile.educationDetails?.tenthPercentage ?? 88.0}
-                        onChange={(e) => updateEducation('tenthPercentage', parseFloat(e.target.value) || 0)}
+                        value={profile.educationDetails?.tenthPercentage ?? ''}
+                        onChange={(e) => updateEducation('tenthPercentage', e.target.value === '' ? '' : Number(e.target.value))}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                       />
                     </div>
@@ -1274,7 +1294,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 {/* Technical Skills */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Technical Skills & Frameworks</h4>
-                  
+
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -1316,7 +1336,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 {/* Core Coursework */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Core CS Subjects & Coursework</h4>
-                  
+
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -1366,7 +1386,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                           <span className="text-slate-500 text-[11px]">{langItem.proficiency}</span>
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          Verified
+                          Added by you
                         </span>
                       </div>
                     ))}
@@ -1647,7 +1667,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                           <label className="block font-bold text-slate-700 mb-1">Year / Date</label>
                           <input
                             type="text"
-                            value={acc.year || '2025'}
+                            value={acc.year || ''}
                             onChange={(e) => updateAccomplishment(idx, 'year', e.target.value)}
                             className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono"
                           />
@@ -1827,7 +1847,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                           <label className="block font-bold text-slate-700 mb-1">Year</label>
                           <input
                             type="text"
-                            value={ec.year || '2024'}
+                            value={ec.year || ''}
                             onChange={(e) => updateExtraCurricular(idx, 'year', e.target.value)}
                             className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono"
                           />
@@ -1878,10 +1898,10 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                       </div>
                       <div>
                         <span className="font-bold text-sm text-slate-900 block">
-                          {profile.documents?.resumeFileName || 'Not uploaded'}
+                          {profile.documents?.resumeFileName || 'No resume uploaded'}
                         </span>
                         <span className="text-[11px] text-slate-500">
-                          Last Updated: {profile.documents?.resumeLastUpdated || 'Never'} • Verified by Placement Cell
+                          Last Updated: {profile.documents?.resumeLastUpdated || 'Not uploaded'}
                         </span>
                       </div>
                     </div>
@@ -1930,7 +1950,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                           <span className="text-[11px] text-slate-500">Sem 1 to Sem 4 Marksheets</span>
                         </div>
                       </div>
-                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">Verified</span>
+                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">{profile.verified ? 'Verified' : 'Not verified'}</span>
                     </div>
 
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
@@ -1941,7 +1961,7 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                           <span className="text-[11px] text-slate-500">Government Identity Proof</span>
                         </div>
                       </div>
-                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">Verified</span>
+                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">{profile.verified ? 'Verified' : 'Not verified'}</span>
                     </div>
                   </div>
                 </div>
@@ -2078,5 +2098,5 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
 
       </div>
     </div>
-  );
+  , document.body);
 }

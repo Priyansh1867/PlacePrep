@@ -517,7 +517,7 @@ export default function SemesterMarksheetsView({
               {/* Institution Header */}
               <div className="text-center border-b-2 border-slate-900 pb-4">
                 <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">
-                  {currentStudent.collegeName || 'Delhi Technological University (DTU)'}
+                  {currentStudent.collegeName || ''}
                 </h1>
                 <p className="text-xs uppercase tracking-widest text-slate-600 mt-1 font-semibold">
                   Office of the Controller of Examinations &bull; Academic Transcript

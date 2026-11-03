@@ -226,7 +226,7 @@ export default function StudentGpsAttendanceWidget({
       const payload = {
         sessionId: activeLecture?.sessionId || 1,
         qrToken: qrToken,
-        studentEmail: currentUser.email || 'priyansh.jain@example.edu',
+        studentEmail: currentUser.email || '',
         latitude: gpsResult.studentLat,
         longitude: gpsResult.studentLon,
         gpsAccuracy: gpsResult.gpsAccuracy
@@ -364,7 +364,7 @@ export default function StudentGpsAttendanceWidget({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Enforced for <strong className="text-slate-800">{currentUser.name || 'Priyansh Jain'}</strong> • {currentUser.branch || 'CSE'} Sem 6 • Roll: {currentUser.rollNumber || '22CS0101'}
+              Enforced for <strong className="text-slate-800">{currentUser.name || ''}</strong> • {currentUser.branch || 'CSE'} Sem 6 • Roll: {currentUser.rollNumber || ''}
             </p>
           </div>
         </div>

@@ -59,8 +59,8 @@ import SearchBar from '../ui/SearchBar';
 
 export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
   // Current user & active role
-  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || { role: 'teacher', name: 'Dr. Neha Sharma', email: 'teacher@placeprep.com' });
-  const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || 'teacher'));
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || {});
+  const [activeRole, setActiveRole] = useState(() => (getCurrentUser()?.role || ''));
 
   // Active View Tab: 'sessions' | 'marking' | 'session-report' | 'cumulative-report'
   const [activeTab, setActiveTab] = useState('sessions');
@@ -119,15 +119,6 @@ export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
   // Authorization check
   const isAuthorized = activeRole === 'teacher' || activeRole === 'hod' || activeRole === 'admin' || activeRole === 'faculty' || activeRole === 'tpo' || activeRole === 'coordinator';
 
-  // Demo Role Switcher
-  const handleSwitchDemoRole = (newRole) => {
-    setActiveRole(newRole);
-    setPortalRole(newRole);
-    const updated = { ...currentUser, role: newRole };
-    setCurrentUser(updated);
-    setCurrentUserState(updated);
-    showToast(`Switched active portal role to: ${newRole.toUpperCase()}`, 'info');
-  };
 
   // Toast Helper
   const showToast = (message, type = 'success') => {
@@ -394,7 +385,7 @@ export default function CrtAttendancePortalView({ onNavigate: _onNavigate }) {
       const payload = {
         ...sessionFormData,
         timeSlot,
-        createdBy: currentUser.email || 'teacher@placeprep.com'
+        createdBy: currentUser.email || ''
       };
 
       if (isEditingSession && sessionFormData.id) {

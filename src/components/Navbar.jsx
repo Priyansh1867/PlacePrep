@@ -33,6 +33,13 @@ import { getCurrentUser, getGraduationBatch, getPushNotifications } from '../ser
 import PlacePrepLogo from './PlacePrepLogo';
 import UserProfileModal from './profile/UserProfileModal';
 
+const getInitials = (name) => {
+  if (!name) return 'U';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function Navbar({ 
   currentRoute, 
   setCurrentRoute, 
@@ -289,76 +296,157 @@ export default function Navbar({
             {userDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
-                <div className="absolute right-0 mt-3 w-72 sm:w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-[0_16px_40px_rgba(17,20,57,0.12)] py-2 z-50 animate-in fade-in-50 zoom-in-95 text-xs max-h-[calc(100vh-100px)] overflow-y-auto">
-                <div className="px-4 py-3 border-b border-black/[0.05]">
-                  <p className="font-semibold text-[#111439]">{user?.name || user?.fullName || 'Student'}</p>
-                  <p className="text-[11px] text-slate-500 truncate">{user?.email || 'Active Account'}</p>
-                  <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold uppercase">
-                    Role: {user?.role || 'STUDENT'} • {batch}
-                  </div>
-                </div>
+                <div className="absolute right-0 mt-3 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 text-xs max-h-[min(540px,calc(100vh-120px))] overflow-y-auto">
+                  {(user?.role || '').toLowerCase() === 'student' ? (
+                    <>
+                      {/* Screenshot 3: Student Profile Header */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
+                          {getInitials(user?.name || user?.fullName || 'Student')}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-slate-900 text-sm truncate">{user?.name || user?.fullName || 'Priyansh Jain'}</h4>
+                          <p className="text-[11px] text-slate-500 truncate font-mono">{user?.email || 'priyansh.jain@example.edu'}</p>
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
+                            STUDENT
+                          </span>
+                        </div>
+                      </div>
 
-                <div className="py-1">
-                  <button
-                    onClick={() => handleNavigate('dashboard')}
-                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-                    Student Dashboard
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('institute-portal')}
-                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <School className="w-3.5 h-3.5 text-indigo-600" />
-                    Institute Dashboard
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('placement-portal')}
-                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
-                    Placement Dashboard
-                  </button>
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      setIsProfileModalOpen(true);
-                    }}
-                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <User className="w-3.5 h-3.5 text-indigo-600" />
-                    My Student Profile
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('resume-ats')}
-                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    ATS Resume Checker
-                  </button>
-                  <button
-                    onClick={() => handleNavigate('admin')}
-                    className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                    Super Admin Panel
-                  </button>
-                </div>
+                      {/* Student Details */}
+                      <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Institute:</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{user?.college || 'Delhi Technological University...'}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-500">
+                          <span>Roll Number:</span>
+                          <span className="font-bold text-slate-800 font-mono">{user?.rollNumber || '2024/CSE/084'}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-500">
+                          <span>Branch & Batch:</span>
+                          <span className="font-semibold text-slate-800">{user?.branch || 'Computer Science and Engineering'} ({batch || user?.graduationBatch || '2028'})</span>
+                        </div>
+                        <div className="flex justify-between text-slate-500">
+                          <span>Academic Standing:</span>
+                          <span className="font-bold text-emerald-600">CGPA 8.4 • 0 Backlogs</span>
+                        </div>
+                      </div>
 
-                <div className="border-t border-black/[0.05] pt-1">
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      onNavigateAuth('institute');
-                    }}
-                    className="w-full text-left px-4 py-2 text-indigo-600 hover:bg-indigo-50/50 flex items-center gap-2 font-semibold cursor-pointer"
-                  >
-                    <LogIn className="w-3.5 h-3.5" />
-                    Switch Persona / Sign In
-                  </button>
+                      {/* Screenshot 3: Single Profile Action (View Complete Profile) + Switch Portal & Sign Out */}
+                      <div className="pt-2 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            handleNavigate('placement-portal');
+                          }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-bold transition text-left cursor-pointer"
+                        >
+                          <UserCheck className="w-4 h-4 text-emerald-600" />
+                          <span>View Complete Profile</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            handleNavigate('gateway');
+                          }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold transition text-left cursor-pointer"
+                        >
+                          <Compass className="w-4 h-4 text-indigo-600" />
+                          <span>Switch Portal</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            if (onNavigateAuth) {
+                              onNavigateAuth('gateway');
+                            } else {
+                              handleNavigate('gateway');
+                            }
+                          }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold transition text-left cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="px-4 py-3 border-b border-black/[0.05]">
+                        <p className="font-semibold text-[#111439]">{user?.name || user?.fullName || 'User'}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{user?.email || 'Active Account'}</p>
+                        <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold uppercase">
+                          Role: {user?.role || 'User'}
+                        </div>
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleNavigate('dashboard')}
+                          className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                          Student Dashboard
+                        </button>
+                        <button
+                          onClick={() => handleNavigate('institute-portal')}
+                          className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <School className="w-3.5 h-3.5 text-indigo-600" />
+                          Institute Dashboard
+                        </button>
+                        <button
+                          onClick={() => handleNavigate('placement-portal')}
+                          className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+                          Placement Dashboard
+                        </button>
+                        <button
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            setIsProfileModalOpen(true);
+                          }}
+                          className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <User className="w-3.5 h-3.5 text-indigo-600" />
+                          My Profile
+                        </button>
+                        <button
+                          onClick={() => handleNavigate('resume-ats')}
+                          className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          ATS Resume Checker
+                        </button>
+                        <button
+                          onClick={() => handleNavigate('admin')}
+                          className="w-full text-left px-4 py-2 text-slate-700 hover:bg-black/[0.03] flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                          Super Admin Panel
+                        </button>
+                      </div>
+
+                      <div className="border-t border-black/[0.05] pt-1">
+                        <button
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            onNavigateAuth('institute');
+                          }}
+                          className="w-full text-left px-4 py-2 text-indigo-600 hover:bg-indigo-50/50 flex items-center gap-2 font-semibold cursor-pointer"
+                        >
+                          <LogIn className="w-3.5 h-3.5" />
+                          Switch Persona / Sign In
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
               </>
             )}
           </div>

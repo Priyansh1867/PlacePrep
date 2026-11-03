@@ -326,14 +326,16 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsProfileModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>Complete My Profile</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('placement-portal')}
+                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>7-Step Placement Registration</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
           <div className="space-y-1.5 pt-2 border-t border-amber-200/70">
             <div className="w-full bg-amber-200/70 rounded-full h-2.5 overflow-hidden">
@@ -366,13 +368,22 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsProfileModalOpen(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 font-bold text-xs hover:bg-emerald-100/50 transition cursor-pointer"
-          >
-            Edit Profile
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('placement-portal')}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs transition cursor-pointer"
+            >
+              Placement Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 font-bold text-xs hover:bg-emerald-100/50 transition cursor-pointer"
+            >
+              Edit Details
+            </button>
+          </div>
         </div>
       )}
 

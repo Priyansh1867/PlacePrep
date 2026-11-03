@@ -190,6 +190,40 @@ export const UserApi = {
   }
 };
 
+// 2b. Placement Student Profile API (Placement Portal -> Student Section)
+export const PlacementProfileApi = {
+  async getProfile(email, userId) {
+    try {
+      const q = email ? `email=${encodeURIComponent(email)}` : userId ? `userId=${userId}` : '';
+      return await request(`/placement-profile${q ? `?${q}` : ''}`);
+    } catch {
+      return null;
+    }
+  },
+
+  async getStatus(email) {
+    try {
+      return await request(`/placement-profile/status?email=${encodeURIComponent(email || '')}`);
+    } catch {
+      return null;
+    }
+  },
+
+  async saveProfile(profileData, email, userId) {
+    return await request('/placement-profile', {
+      method: 'PUT',
+      body: JSON.stringify({ ...profileData, email, userId })
+    });
+  },
+
+  async saveDraft(draftData, email, userId) {
+    return await request('/placement-profile/draft', {
+      method: 'POST',
+      body: JSON.stringify({ ...draftData, email, userId })
+    });
+  }
+};
+
 // 3. Companies API
 export const CompanyApi = {
   async getAll(batch = null) {

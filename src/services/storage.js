@@ -52,7 +52,8 @@ const STORAGE_KEYS = {
   LIVE_SESSIONS: 'placeprep_live_sessions',
   PUSH_NOTIFICATIONS: 'placeprep_push_notifications',
   FEEDBACK_LOOP: 'placeprep_feedback_loop',
-  FULL_STUDENT_PROFILE: 'placeprep_student_full_profile'
+  FULL_STUDENT_PROFILE: 'placeprep_student_full_profile',
+  PLACEMENT_STUDENT_PROFILE: 'placeprep_placement_student_profile'
 };
 
 // Safe JSON parser
@@ -285,6 +286,310 @@ export function saveFullStudentProfile(profile, currentUser = null) {
   dispatchSafeCustomEvent('user-changed', current);
   dispatchSafeCustomEvent('profile-updated', profile);
 }
+
+// =========================================================================
+// PLACEMENT STUDENT SECTION - 7-STEP REGISTRATION & PROFILE DATA ENGINE
+// =========================================================================
+
+export function getInitialPlacementStudentProfile(currentUser = null) {
+  const user = currentUser || getCurrentUser() || {};
+  const userEmail = (user?.email || '').trim().toLowerCase();
+  const userName = user?.name || user?.fullName || '';
+  const rollNumber = user?.rollNumber || '';
+  const college = user?.college || 'Delhi Technological University (DTU)';
+  const branch = user?.branch || 'Computer Science and Engineering';
+  const graduationBatch = user?.graduationBatch || '2026';
+  const uniqueId = user?.uniqueStudentId || (userEmail ? generateUniqueStudentId(userEmail) : 'PP-STUDENT');
+
+  return {
+    uniqueStudentId: uniqueId,
+    isCompleted: false,
+    currentStep: 1,
+    lastUpdatedAt: new Date().toISOString(),
+
+    // Section 1: Personal Information
+    personalInfo: {
+      fullName: userName,
+      fatherName: '',
+      motherName: '',
+      dateOfBirth: user?.dateOfBirth || '',
+      gender: user?.gender || '',
+      registrationNumber: rollNumber,
+      university: 'Delhi Technological University',
+      college: college,
+      branch: branch,
+      currentYear: '3rd Year',
+      currentSemester: '6th Semester'
+    },
+
+    // Section 2: Contact Information
+    contactInfo: {
+      primaryEmail: userEmail,
+      personalEmail: '',
+      mobileNumber: user?.phone || '',
+      emailVerified: Boolean(userEmail),
+      mobileVerified: Boolean(user?.phone),
+      permanentAddress: '',
+      currentAddress: user?.currentAddress || ''
+    },
+
+    // Section 3: Current / Most Recent Education
+    currentEducation: {
+      degree: 'B.Tech',
+      university: 'Delhi Technological University',
+      college: college,
+      branch: branch,
+      admissionYear: '2022',
+      graduationYear: graduationBatch,
+      cgpa: user?.cgpa !== undefined && user?.cgpa !== null ? user.cgpa : 8.4,
+      backlogs: user?.activeBacklogs !== undefined && user?.activeBacklogs !== null ? user.activeBacklogs : 0
+    },
+
+    // Section 4: Previous Education
+    previousEducation: {
+      tenthSchool: 'Delhi Public School',
+      tenthBoard: 'CBSE',
+      tenthPercentage: user?.tenthPercentage || 92.4,
+      tenthYear: '2020',
+      twelfthSchool: 'Delhi Public School',
+      twelfthBoard: 'CBSE',
+      twelfthStream: 'Science (PCM)',
+      twelfthPercentage: user?.twelfthPercentage || 89.6,
+      twelfthYear: '2022',
+      hasDiploma: false,
+      diplomaInstitute: '',
+      diplomaBranch: '',
+      diplomaPercentage: '',
+      diplomaYear: ''
+    },
+
+    // Section 5: Internships & Work Experience
+    internships: [
+      {
+        id: 'exp-1',
+        organization: 'Infosys Springboard',
+        role: 'Full Stack Engineering Intern',
+        employmentType: 'Internship',
+        duration: 'June 2025 - August 2025 (3 Months)',
+        description: 'Developed scalable microservices using Spring Boot, React, and MySQL. Implemented RESTful APIs and optimized database query execution.',
+        skillsUsed: 'Spring Boot, React, MySQL, REST APIs, Git',
+        certificates: 'Infosys_Certificate_Credential_2025.pdf'
+      }
+    ],
+
+    // Section 6: Profile Photo & Documents
+    documents: {
+      profilePhoto: '',
+      resumeFileName: 'Priyansh_Jain_Placement_Resume_2026.pdf',
+      resumeUrl: '',
+      resumeLastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      academicMarksheets: [
+        { id: 'doc-1', title: '10th Secondary Marksheet (CBSE)', fileName: '10th_CBSE_Marksheet.pdf', size: '1.2 MB', verified: true },
+        { id: 'doc-2', title: '12th Senior Secondary Marksheet (CBSE)', fileName: '12th_CBSE_Marksheet.pdf', size: '1.4 MB', verified: true },
+        { id: 'doc-3', title: 'B.Tech Consolidated Gradecard (Sem 1-5)', fileName: 'BTech_Gradecard_Sem1_5.pdf', size: '2.8 MB', verified: true }
+      ],
+      certificates: [
+        { id: 'cert-1', title: 'Full Stack Cloud Development Professional', issuer: 'AWS / Coursera', fileName: 'AWS_Cloud_Dev_Cert.pdf', size: '850 KB' },
+        { id: 'cert-2', title: 'Data Structures and Algorithms Specialization', issuer: 'PlacePrep AI', fileName: 'DSA_Specialization_Cert.pdf', size: '640 KB' }
+      ],
+      otherDocuments: [
+        { id: 'oth-1', title: 'College Photo Identity Card', fileName: 'College_ID_2022_2026.pdf', size: '420 KB' }
+      ]
+    },
+
+    // Section 7: Placement Details
+    placementDetails: {
+      placementEnrollmentStatus: 'ENROLLED',
+      placementCycle: '2026-2027',
+      enrollmentDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      preferredLocations: ['Bengaluru', 'Delhi NCR', 'Hyderabad', 'Pune'],
+      primaryDomain: 'Software Engineering / Full Stack Development',
+      willingToRelocate: true,
+      willingToSignBond: true,
+      declarationAgreed: true,
+      placementNotes: 'Actively participating in Day-1 Corporate Recruitment Drives.'
+    }
+  };
+}
+
+export function getPlacementStudentProfile(currentUser = null) {
+  const current = currentUser || getCurrentUser() || {};
+  const userEmail = (current.email || '').toLowerCase().trim();
+  const storageKey = userEmail
+    ? `placeprep_placement_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}`
+    : STORAGE_KEYS.PLACEMENT_STUDENT_PROFILE;
+
+  const saved = getStorageItem(storageKey, null);
+  if (saved && (saved.personalInfo || saved.basicDetails)) {
+    // If saved in unified format
+    if (saved.personalInfo) {
+      if (!saved.uniqueStudentId) {
+        saved.uniqueStudentId = current.uniqueStudentId || (userEmail ? generateUniqueStudentId(userEmail) : 'PP-STUDENT');
+      }
+      return saved;
+    }
+  }
+
+  // Fallback / initialization from full student profile if exists
+  const fullProf = getFullStudentProfile(current);
+  const initial = getInitialPlacementStudentProfile(current);
+
+  if (fullProf && fullProf.basicDetails?.fullName) {
+    initial.personalInfo.fullName = fullProf.basicDetails.fullName || initial.personalInfo.fullName;
+    initial.personalInfo.dateOfBirth = fullProf.basicDetails.dateOfBirth || initial.personalInfo.dateOfBirth;
+    initial.personalInfo.gender = fullProf.basicDetails.gender || initial.personalInfo.gender;
+    initial.contactInfo.mobileNumber = fullProf.basicDetails.phone || initial.contactInfo.mobileNumber;
+    initial.contactInfo.currentAddress = fullProf.basicDetails.currentAddress || initial.contactInfo.currentAddress;
+    initial.contactInfo.permanentAddress = fullProf.basicDetails.permanentAddress || initial.contactInfo.permanentAddress;
+  }
+  if (fullProf && fullProf.educationDetails?.college) {
+    initial.personalInfo.college = fullProf.educationDetails.college || initial.personalInfo.college;
+    initial.personalInfo.branch = fullProf.educationDetails.branch || initial.personalInfo.branch;
+    initial.personalInfo.registrationNumber = fullProf.educationDetails.rollNumber || initial.personalInfo.registrationNumber;
+    initial.currentEducation.college = fullProf.educationDetails.college || initial.currentEducation.college;
+    initial.currentEducation.branch = fullProf.educationDetails.branch || initial.currentEducation.branch;
+    initial.currentEducation.graduationYear = fullProf.educationDetails.graduationBatch || initial.currentEducation.graduationYear;
+    if (fullProf.educationDetails.cgpa) initial.currentEducation.cgpa = fullProf.educationDetails.cgpa;
+  }
+  if (fullProf?.workExperiences && fullProf.workExperiences.length > 0) {
+    initial.internships = fullProf.workExperiences.map((w, idx) => ({
+      id: `exp-${idx + 1}`,
+      organization: w.company || w.organization || 'Tech Corp',
+      role: w.role || 'Software Intern',
+      employmentType: w.type || 'Internship',
+      duration: w.duration || '3 Months',
+      description: w.description || '',
+      skillsUsed: w.skills || 'Full Stack',
+      certificates: w.certificate || ''
+    }));
+  }
+
+  // If the user already has completed onboarding or has complete details
+  if (current.onboardingCompleted || (current.rollNumber && current.college && current.branch)) {
+    initial.isCompleted = true;
+    initial.placementDetails.placementEnrollmentStatus = 'ENROLLED';
+  }
+
+  setStorageItem(storageKey, initial);
+  return initial;
+}
+
+export function savePlacementStudentProfile(profile, currentUser = null) {
+  const current = currentUser || getCurrentUser() || {};
+  const userEmail = (profile?.contactInfo?.primaryEmail || current.email || '').toLowerCase().trim();
+  const storageKey = userEmail
+    ? `placeprep_placement_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}`
+    : STORAGE_KEYS.PLACEMENT_STUDENT_PROFILE;
+
+  // Persist placement profile
+  setStorageItem(storageKey, profile);
+
+  // Synchronize top-level currentUser
+  if (profile?.personalInfo) {
+    current.name = profile.personalInfo.fullName || current.name;
+    current.fullName = profile.personalInfo.fullName || current.fullName;
+    current.rollNumber = profile.personalInfo.registrationNumber || current.rollNumber;
+    current.college = profile.personalInfo.college || current.college;
+    current.branch = profile.personalInfo.branch || current.branch;
+    current.dateOfBirth = profile.personalInfo.dateOfBirth || current.dateOfBirth;
+    current.gender = profile.personalInfo.gender || current.gender;
+  }
+  if (profile?.contactInfo) {
+    current.phone = profile.contactInfo.mobileNumber || current.phone;
+    current.currentAddress = profile.contactInfo.currentAddress || current.currentAddress;
+  }
+  if (profile?.currentEducation) {
+    current.graduationBatch = profile.currentEducation.graduationYear || current.graduationBatch;
+    current.cgpa = profile.currentEducation.cgpa ?? current.cgpa;
+    current.activeBacklogs = profile.currentEducation.backlogs ?? current.activeBacklogs;
+  }
+  if (profile?.documents?.profilePhoto) {
+    current.avatarUrl = profile.documents.profilePhoto;
+    current.profilePhoto = profile.documents.profilePhoto;
+  }
+  if (profile?.uniqueStudentId) {
+    current.uniqueStudentId = profile.uniqueStudentId;
+  }
+
+  current.placementProfileCompleted = Boolean(profile.isCompleted);
+  if (profile.isCompleted) {
+    current.placementStatus = profile.placementDetails?.placementEnrollmentStatus || 'ENROLLED';
+    current.onboardingCompleted = true;
+  }
+
+  setCurrentUser(current);
+  saveRegisteredUser(current);
+
+  // Synchronize with full student profile store for cross-modal consistency
+  const fullProf = getFullStudentProfile(current);
+  if (profile.personalInfo) {
+    fullProf.basicDetails.fullName = profile.personalInfo.fullName;
+    fullProf.basicDetails.dateOfBirth = profile.personalInfo.dateOfBirth;
+    fullProf.basicDetails.gender = profile.personalInfo.gender;
+  }
+  if (profile.contactInfo) {
+    fullProf.basicDetails.phone = profile.contactInfo.mobileNumber;
+    fullProf.basicDetails.currentAddress = profile.contactInfo.currentAddress;
+    fullProf.basicDetails.permanentAddress = profile.contactInfo.permanentAddress;
+  }
+  if (profile.currentEducation) {
+    fullProf.educationDetails.college = profile.currentEducation.college;
+    fullProf.educationDetails.branch = profile.currentEducation.branch;
+    fullProf.educationDetails.rollNumber = profile.personalInfo?.registrationNumber;
+    fullProf.educationDetails.graduationBatch = profile.currentEducation.graduationYear;
+    fullProf.educationDetails.cgpa = profile.currentEducation.cgpa;
+    fullProf.educationDetails.activeBacklogs = profile.currentEducation.backlogs;
+  }
+  if (profile.previousEducation) {
+    fullProf.educationDetails.tenthPercentage = profile.previousEducation.tenthPercentage;
+    fullProf.educationDetails.tenthSchool = profile.previousEducation.tenthSchool;
+    fullProf.educationDetails.tenthBoard = profile.previousEducation.tenthBoard;
+    fullProf.educationDetails.twelfthPercentage = profile.previousEducation.twelfthPercentage;
+    fullProf.educationDetails.twelfthSchool = profile.previousEducation.twelfthSchool;
+    fullProf.educationDetails.twelfthBoard = profile.previousEducation.twelfthBoard;
+  }
+  if (profile.internships) {
+    fullProf.workExperiences = profile.internships.map(i => ({
+      company: i.organization,
+      role: i.role,
+      type: i.employmentType,
+      duration: i.duration,
+      description: i.description,
+      skills: i.skillsUsed
+    }));
+  }
+  if (profile.documents?.resumeFileName) {
+    fullProf.documents.resumeFileName = profile.documents.resumeFileName;
+    fullProf.documents.resumeUrl = profile.documents.resumeUrl;
+  }
+  saveFullStudentProfile(fullProf, current);
+
+  // Fire synchronization events
+  dispatchSafeCustomEvent('user-changed', current);
+  dispatchSafeCustomEvent('profile-updated', profile);
+  dispatchSafeCustomEvent('placement-profile-updated', profile);
+}
+
+export function isPlacementProfileCompleted(currentUser = null) {
+  const current = currentUser || getCurrentUser();
+  if (!current) return false;
+  const profile = getPlacementStudentProfile(current);
+  return Boolean(profile?.isCompleted);
+}
+
+export function savePlacementRegistrationDraft(draftData, currentUser = null) {
+  const current = currentUser || getCurrentUser() || {};
+  const currentProfile = getPlacementStudentProfile(current);
+  const merged = {
+    ...currentProfile,
+    ...draftData,
+    isCompleted: false,
+    lastUpdatedAt: new Date().toISOString()
+  };
+  savePlacementStudentProfile(merged, current);
+  return merged;
+}
+
 
 // Batch Management
 export function getGraduationBatch() {

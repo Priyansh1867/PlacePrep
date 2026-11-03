@@ -37,7 +37,8 @@ import {
   Trash2,
   ArrowRight
 } from 'lucide-react';
-import { getCurrentUser, setCurrentUser, saveRegisteredUser, findRegisteredUser, getPushNotifications } from '../services/storage';
+import { getCurrentUser, setCurrentUser, saveRegisteredUser, findRegisteredUser, getPushNotifications, getPlacementStudentProfile } from '../services/storage';
+import PlacementStudentProfileView from '../components/placement/PlacementStudentProfileView';
 import { UserApi } from '../services/api';
 import { calculateProfileCompletion, REQUIRED_PROFILE_FIELDS } from '../utils/profileCompletion';
 import PlacePrepLogo from '../components/PlacePrepLogo';
@@ -342,6 +343,7 @@ export default function ProfilePage({ onNavigate, onBack, onOpenSettings, onOpen
   };
 
   const sidebarMenuItems = [
+    { id: 'placement-profile', label: '7-Step Placement Profile', isSpecial: true },
     { id: 'basic-details', label: 'Basic Details' },
     { id: 'education-details', label: 'Education Details' },
     { id: 'internship', label: 'Internship & Work Ex' },
@@ -685,6 +687,18 @@ export default function ProfilePage({ onNavigate, onBack, onOpenSettings, onOpen
           )}
 
           {/* TAB 1: BASIC DETAILS */}
+          {activeTab === 'placement-profile' && (
+            <div className="space-y-6">
+              <PlacementStudentProfileView
+                profile={getPlacementStudentProfile(user)}
+                currentUser={user}
+                onProfileUpdated={() => {
+                  setUser(getCurrentUser());
+                }}
+              />
+            </div>
+          )}
+
           {activeTab === 'basic-details' && (
             <div className="max-w-4xl space-y-8 animate-in fade-in duration-200">
               

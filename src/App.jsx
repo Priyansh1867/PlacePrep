@@ -34,6 +34,7 @@ import ReportsExporterPage from './pages/ReportsExporterPage';
 import CurriculumGovernancePage from './pages/CurriculumGovernancePage';
 import DsaPracticePage from './pages/DsaPracticePage';
 import ResumeAtsCheckerPage from './pages/ResumeAtsCheckerPage';
+import ProfilePage from './pages/ProfilePage';
 
 import { getCompanies, getCurrentUser } from './services/storage';
 import { getRoleDefaultDashboard } from './components/ui/BackNavButton';
@@ -44,7 +45,7 @@ const VALID_ROUTES = new Set([
   'prep', 'experiences', 'ai-insights', 'mock-interview', 'dashboard', 'academic-records',
   'admin', 'attendance', 'daily-attendance', 'class-attendance', 'crt-attendance',
   'crt-training-attendance', 'reports', 'reports-exporter', 'curriculum-governance',
-  'syllabus-governance', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker', 'ats-checker'
+  'syllabus-governance', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker', 'ats-checker', 'profile'
 ]);
 
 function getInitialRoute() {
@@ -476,6 +477,14 @@ export default function App() {
           <ResumeAtsCheckerPage
             onNavigate={handleNavigate}
             onSelectCompany={handleSelectCompany}
+          />
+        )}
+
+        {/* 24. DEDICATED STUDENT PROFILE PAGE */}
+        {currentRoute === 'profile' && (
+          <ProfilePage
+            onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 

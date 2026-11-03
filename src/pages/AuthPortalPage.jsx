@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
-import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
+import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser, getInitialPlacementStudentProfile, savePlacementStudentProfile } from '../services/storage';
 import { AuthApi } from '../services/api';
 
 const portalOptions = [
@@ -117,8 +117,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           setIsSubmitting(false);
           return;
         }
-        if (selectedRole === 'student' && !isCollegeEmail(formData.email)) {
-          setErrorMsg('Student registration requires an official college email (.edu, .ac.in, or .edu.in).');
+        if (selectedRole === 'student' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+          setErrorMsg('Please enter a valid email address.');
           setIsSubmitting(false);
           return;
         }
@@ -246,6 +246,20 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       setPortalRole(selectedRole);
       if (selectedRole === 'student' && userObj.graduationBatch) {
         setGraduationBatch(userObj.graduationBatch);
+      }
+
+      // Initialize Placement Profile draft for student registration workflow
+      if (selectedRole === 'student') {
+        const studentPlacementProfile = getInitialPlacementStudentProfile(userObj);
+        studentPlacementProfile.isCompleted = false;
+        studentPlacementProfile.currentStep = 1;
+        studentPlacementProfile.personalInfo.fullName = userObj.fullName || userObj.name;
+        studentPlacementProfile.personalInfo.registrationNumber = userObj.rollNumber || '';
+        studentPlacementProfile.personalInfo.college = userObj.college || 'Delhi Technological University (DTU)';
+        studentPlacementProfile.personalInfo.branch = userObj.branch || 'Computer Science and Engineering';
+        studentPlacementProfile.contactInfo.primaryEmail = userObj.email || '';
+        studentPlacementProfile.currentEducation.graduationYear = userObj.graduationBatch || '2028';
+        savePlacementStudentProfile(studentPlacementProfile, userObj);
       }
 
       // Fast, smooth, responsive redirect without freezing

@@ -2,13 +2,12 @@
 FROM maven:3.9.9-eclipse-temurin-23 AS build
 WORKDIR /app
 
-# Cache Maven dependencies
-COPY backend/pom.xml .
-RUN mvn dependency:go-offline -B
-
-# Copy backend source code and build jar
+# Copy pom.xml and backend source code
+COPY backend/pom.xml ./pom.xml
 COPY backend/src ./src
-RUN mvn clean package -DskipTests
+
+# Build production jar skipping tests
+RUN mvn clean package -DskipTests -B
 
 # Runtime stage with Java 23
 FROM eclipse-temurin:23-jre-jammy

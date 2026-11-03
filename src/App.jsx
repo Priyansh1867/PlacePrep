@@ -251,7 +251,7 @@ export default function App() {
   const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'student-onboarding', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
   return (
-    <div className={`pp-app ${['gateway', 'home', 'auth-portal', 'student-onboarding', 'landing'].includes(currentRoute) ? '' : 'pp-workspace'} min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
+    <div className={`pp-app ${['gateway', 'home', 'auth-portal', 'student-onboarding', 'landing'].includes(currentRoute) ? '' : 'pp-workspace'} min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${currentRoute === 'student-onboarding' ? 'bg-[#F0EFFF] text-slate-800' : isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
       
       {!isGuidedFlowRoute && (
         <Navbar

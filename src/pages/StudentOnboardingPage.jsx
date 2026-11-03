@@ -613,29 +613,36 @@ export default function StudentOnboardingPage({ onComplete, onNavigateBack }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FAF9FF] via-[#F0EFFF] to-[#E9E6FC] text-slate-800">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-          <p className="text-sm font-semibold">Loading your profile wizard...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <p className="text-sm font-semibold text-slate-700">Loading your profile wizard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-between py-6 sm:py-10 px-4 sm:px-6 lg:px-8 text-slate-800 antialiased">
-      <div className="mx-auto w-full max-w-6xl my-auto">
+    <div className="relative min-h-screen bg-gradient-to-br from-[#FAF9FF] via-[#F0EFFF] to-[#E9E6FC] flex flex-col justify-between py-6 sm:py-10 px-4 sm:px-6 lg:px-8 text-slate-800 antialiased overflow-hidden">
+      {/* Subtle Ambient Glow Background Highlights */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[400px] bg-indigo-200/25 blur-3xl rounded-full" />
+        <div className="absolute top-1/4 -left-24 w-[380px] h-[380px] bg-purple-200/20 blur-3xl rounded-full" />
+        <div className="absolute bottom-0 -right-24 w-[420px] h-[420px] bg-indigo-200/25 blur-3xl rounded-full" />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-6xl my-auto">
         {/* Top Minimal Branding Header */}
         <div className="flex items-center justify-between mb-4 px-2">
-          <PlacePrepLogo className="h-7 w-auto" theme="dark" />
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl">
+          <PlacePrepLogo className="h-7 w-auto" theme="light" />
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl shadow-xs">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
             <span>Placement Portal • Student Profile Completion</span>
           </div>
         </div>
 
         {/* Master Card Split Layout matching Screenshot 2 */}
-        <div className="rounded-3xl border border-slate-800 bg-[#161922] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
+        <div className="rounded-3xl border border-indigo-100/80 bg-[#161922] shadow-[0_20px_50px_-12px_rgba(99,102,241,0.18),0_10px_30px_-10px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
           
           {/* A. LEFT SIDEBAR – PROGRESS TRACKER */}
           <aside className="lg:col-span-4 bg-[#161922] p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/80 text-white">

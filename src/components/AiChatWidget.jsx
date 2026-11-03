@@ -262,17 +262,11 @@ export default function AiChatWidget() {
     try {
       await streamAiChat(text, {
         signal: controller.signal,
-       onText: (chunk) => {
-  console.log("AI CHUNK:", JSON.stringify(chunk));
-
-  setMessages((current) =>
-    current.map((item) =>
-      item.id === assistantId
-        ? { ...item, content: item.content + chunk }
-        : item
-    )
-  );
-},
+        onText: (chunk) => {
+          setMessages((current) => current.map((item) => item.id === assistantId
+            ? { ...item, content: item.content + chunk }
+            : item));
+        },
         onError: (streamError) => setError(streamError)
       });
     } catch (requestError) {

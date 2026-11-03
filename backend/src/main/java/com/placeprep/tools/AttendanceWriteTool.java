@@ -56,6 +56,6 @@ public class AttendanceWriteTool {
                                     @ToolParam(description = "Staff identifier recording attendance") String recordedBy,
                                     ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.markCrtAttendanceDto(sessionId, records, recordedBy));
+        return EntityResponseMapper.toJsonSafe(attendanceService.markCrtAttendanceDto(sessionId, records, AiToolAuthorization.userId(context)));
     }
 }

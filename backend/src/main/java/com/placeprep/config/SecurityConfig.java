@@ -43,7 +43,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Public authentication & info
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/reset-password").permitAll()
+                        .requestMatchers("/api/auth/users", "/api/auth/user/**").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/resume-ats/**").permitAll()
                         .requestMatchers("/api/academics/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
@@ -74,6 +76,10 @@ public class SecurityConfig {
 
                         // Management restricted endpoints
                         .requestMatchers("/api/management/attendance/verify-location").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/student/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/version/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/preview-data").permitAll()
                         .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
 
                         // Authenticated student/user actions & attendance verification
@@ -84,6 +90,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/profile/**", "/api/users/profile").permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/student/attendance/subjects", "/api/student/attendance/subjects/**", "/api/student/attendance/history").authenticated()
                         .requestMatchers("/api/student/attendance/**").permitAll()
                         .requestMatchers("/api/mock-sessions/**").authenticated()
                         .requestMatchers("/api/applications/my").permitAll()
@@ -101,8 +108,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.PATCH, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.GET, "/api/attendance/student/*/summary").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/attendance/**").permitAll()
-                        .requestMatchers("/api/ai/**").permitAll()
+                        .requestMatchers("/api/ai/**").authenticated()
                         // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )

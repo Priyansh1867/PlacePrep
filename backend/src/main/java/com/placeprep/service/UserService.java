@@ -7,6 +7,8 @@ import com.placeprep.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,6 +18,8 @@ import java.util.Optional;
 
 @Service
 public class UserService {
+
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Autowired
     private UserRepository userRepository;
@@ -31,14 +35,21 @@ public class UserService {
         if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Email is required");
         }
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
         String cleanEmail = user.getEmail().trim().toLowerCase();
         if (userRepository.findByEmail(cleanEmail).isPresent()) {
             throw new IllegalArgumentException("User with email " + cleanEmail + " already exists");
         }
         user.setEmail(cleanEmail);
-        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
-            user.setRole("student");
-        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setId(null);
+        user.setStatus("ACTIVE");
+        user.setResetPasswordToken(null);
+        user.setResetPasswordExpiry(null);
+        // Public registration cannot grant placement staff or administrator privileges.
+        user.setRole("student");
         if (user.getSavedCompanyIds() == null) {
             user.setSavedCompanyIds(new ArrayList<>());
         }
@@ -55,63 +66,29 @@ public class UserService {
     }
 
     public User login(String email, String password) {
-        if (email == null || password == null) {
-            throw new IllegalArgumentException("Email and password are required");
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
         }
         String cleanEmail = email.trim().toLowerCase();
-        User user = userRepository.findByEmailAndPassword(cleanEmail, password)
+
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+        User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+        String storedPassword = user.getPassword();
+        boolean legacyPlaintext = storedPassword != null && storedPassword.equals(password);
+        if (!legacyPlaintext && (storedPassword == null || !passwordEncoder.matches(password, storedPassword))) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
         if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
             throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
         }
+        if (legacyPlaintext) {
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
+        }
         return user;
-    }
-
-    public User demoLogin() {
-        return demoLogin("student");
-    }
-
-    public User demoLogin(String role) {
-        String cleanRole = (role != null && !role.trim().isEmpty()) ? role.trim().toLowerCase() : "student";
-        String demoEmail = cleanRole + "@placeprep.com";
-        if ("student".equalsIgnoreCase(cleanRole)) {
-            demoEmail = "demo@placeprep.com";
-        }
-
-        Optional<User> existing = userRepository.findByEmail(demoEmail);
-        if (existing.isPresent()) {
-            return existing.get();
-        }
-
-        User demoUser = new User();
-        demoUser.setEmail(demoEmail);
-        demoUser.setPassword("demo123");
-        demoUser.setCollege("Delhi Technological University (DTU)");
-        demoUser.setBranch("Computer Science and Engineering");
-        demoUser.setGraduationBatch("2026");
-        demoUser.setRole(cleanRole);
-        demoUser.setStatus("ACTIVE");
-        demoUser.setOnboardingCompleted(true);
-        demoUser.setSavedCompanyIds(new ArrayList<>());
-        demoUser.setSavedQuestionIds(new ArrayList<>());
-        demoUser.setPracticedQuestionIds(new ArrayList<>());
-        demoUser.setRevisionQuestionIds(new ArrayList<>());
-
-        if ("teacher".equalsIgnoreCase(cleanRole)) {
-            demoUser.setName("Dr. Neha Sharma");
-            demoUser.setRollNumber("FAC-CSE-042");
-        } else if ("hod".equalsIgnoreCase(cleanRole)) {
-            demoUser.setName("Prof. Alok Verma");
-            demoUser.setRollNumber("HOD-CSE-001");
-        } else if ("admin".equalsIgnoreCase(cleanRole)) {
-            demoUser.setName("System Administrator");
-            demoUser.setRollNumber("ADM-ROOT-001");
-        } else {
-            demoUser.setName("Demo Student");
-            demoUser.setRollNumber("22CS0101");
-        }
-
-        return userRepository.save(demoUser);
     }
 
     public User getUserById(Long id) {
@@ -292,7 +269,11 @@ public class UserService {
         List<User> users = userRepository.findAll();
         for (User u : users) {
             if (token.equals(u.getResetPasswordToken())) {
-                u.setPassword(newPassword.trim());
+                if (u.getResetPasswordExpiry() == null ||
+                        !java.time.LocalDateTime.parse(u.getResetPasswordExpiry()).isAfter(java.time.LocalDateTime.now())) {
+                    throw new IllegalArgumentException("Invalid or expired password reset token");
+                }
+                u.setPassword(passwordEncoder.encode(newPassword.trim()));
                 u.setResetPasswordToken(null);
                 u.setResetPasswordExpiry(null);
                 userRepository.save(u);
@@ -316,16 +297,7 @@ public class UserService {
         }
         String cleanEmail = email.trim().toLowerCase();
         User user = userRepository.findByEmail(cleanEmail)
-                .orElseGet(() -> {
-                    User u = new User();
-                    u.setEmail(cleanEmail);
-                    String nameFromEmail = cleanEmail.split("@")[0].replace(".", " ");
-                    u.setName(Character.toUpperCase(nameFromEmail.charAt(0)) + nameFromEmail.substring(1));
-                    u.setPassword("password123");
-                    u.setRole("student");
-                    u.setStatus("ACTIVE");
-                    return userRepository.save(u);
-                });
+                .orElseThrow(() -> new IllegalArgumentException("Register an account before using a profile."));
         return user.getFullProfileJson();
     }
 
@@ -335,15 +307,7 @@ public class UserService {
         }
         String cleanEmail = email.trim().toLowerCase();
         User user = userRepository.findByEmail(cleanEmail)
-                .orElseGet(() -> {
-                    User u = new User();
-                    u.setEmail(cleanEmail);
-                    u.setName(basicFields != null && basicFields.get("name") != null ? String.valueOf(basicFields.get("name")) : "Student");
-                    u.setPassword("password123");
-                    u.setRole("student");
-                    u.setStatus("ACTIVE");
-                    return userRepository.save(u);
-                });
+                .orElseThrow(() -> new IllegalArgumentException("Register an account before using a profile."));
         user.setFullProfileJson(profileJson);
         if (basicFields != null) {
             if (basicFields.get("name") != null && !String.valueOf(basicFields.get("name")).trim().isEmpty()) {

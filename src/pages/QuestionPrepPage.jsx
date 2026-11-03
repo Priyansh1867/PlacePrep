@@ -191,14 +191,7 @@ export default function QuestionPrepPage({
         {/* Company Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1.5 shrink-0">Company:</span>
-          {[
-            { id: 'all', name: 'All Companies' },
-            { id: 'tcs', name: 'TCS' },
-            { id: 'infosys', name: 'Infosys' },
-            { id: 'hcltech', name: 'HCLTech' },
-            { id: 'accenture', name: 'Accenture' },
-            { id: 'amazon', name: 'Amazon' }
-          ].map(c => (
+          {[{ id: 'all', name: 'All Companies' }, ...getCompanies()].map(c => (
             <button
               key={c.id}
               onClick={() => {

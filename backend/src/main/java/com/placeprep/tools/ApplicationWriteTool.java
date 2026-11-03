@@ -17,8 +17,16 @@ public class ApplicationWriteTool {
 
     @Tool(description = "Register the authenticated student for a placement drive. The student identity must come from the authenticated session.")
     public Object registerForDrive(StudentApplication application, ToolContext context) {
+        if (!"STUDENT".equalsIgnoreCase(String.valueOf(context.getContext().get("role")))) {
+            throw new SecurityException("Only students can register for a placement drive");
+        }
         String userId = AiToolAuthorization.userId(context);
+        Object email = context.getContext().get("userEmail");
+        if (email == null || String.valueOf(email).isBlank()) {
+            throw new IllegalStateException("Authenticated email context is missing");
+        }
         application.setStudentId(userId);
+        application.setStudentEmail(String.valueOf(email));
         return EntityResponseMapper.toJsonSafe(applicationService.registerApplication(application));
     }
 

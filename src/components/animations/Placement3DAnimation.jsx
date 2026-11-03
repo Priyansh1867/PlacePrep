@@ -46,7 +46,7 @@ export default function Placement3DAnimation() {
           style={{ transformStyle: 'preserve-3d' }}
         >
           <TrendingUp className="w-2.5 h-2.5 text-emerald-400" />
-          <span>32 LPA</span>
+          <span>CAREER GROWTH</span>
         </div>
 
         {/* Floating Holographic Satellite 2: Live PPT */}
@@ -63,7 +63,7 @@ export default function Placement3DAnimation() {
           className="absolute top-1/2 -left-6 -translate-y-1/2 px-1.5 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/30 text-[8px] font-mono text-emerald-300 flex items-center gap-1 shadow-md"
         >
           <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
-          <span>142 PLACED</span>
+          <span>HIRING PIPELINE</span>
         </div>
 
       </div>

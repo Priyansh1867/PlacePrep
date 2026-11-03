@@ -336,7 +336,7 @@ public class AttendanceService {
                         if (matchBranch) {
                             Map<String, Object> map = new LinkedHashMap<>();
                             map.put("studentId", u.getEmail());
-                            map.put("rollNumber", u.getRollNumber() != null ? u.getRollNumber() : "22CS" + String.format("%04d", u.getId()));
+                            map.put("rollNumber", u.getRollNumber());
                             map.put("name", u.getName());
                             map.put("email", u.getEmail());
                             map.put("department", u.getBranch());
@@ -349,46 +349,12 @@ public class AttendanceService {
             }
         }
 
-        if (list.isEmpty()) {
-            list = getDefaultClassRoster(department, semester);
-        }
+
         return list;
     }
 
-    private List<Map<String, Object>> getDefaultClassRoster(String department, String semester) {
-        String deptCode = (department != null && department.toUpperCase().contains("IT")) ? "IT" :
-                          (department != null && department.toUpperCase().contains("EC")) ? "EC" : "CS";
-        String[][] students = {
-            {"22" + deptCode + "0101", "Priyansh Jain", "priyansh.jain@example.edu"},
-            {"22" + deptCode + "0102", "Ananya Sharma", "ananya.sharma@example.edu"},
-            {"22" + deptCode + "0103", "Rohan Kulkarni", "rohan.kulkarni@example.edu"},
-            {"22" + deptCode + "0104", "Siddharth Nair", "siddharth.nair@example.edu"},
-            {"22" + deptCode + "0105", "Meera Venkat", "meera.venkat@example.edu"},
-            {"22" + deptCode + "0106", "Kabir Mehta", "kabir.mehta@example.edu"},
-            {"22" + deptCode + "0107", "Divya Reddy", "divya.reddy@example.edu"},
-            {"22" + deptCode + "0108", "Aarav Gupta", "aarav.gupta@example.edu"},
-            {"22" + deptCode + "0109", "Ishita Verma", "ishita.verma@example.edu"},
-            {"22" + deptCode + "0110", "Tanmay Deshmukh", "tanmay.deshmukh@example.edu"},
-            {"22" + deptCode + "0111", "Sneha Iyer", "sneha.iyer@example.edu"},
-            {"22" + deptCode + "0112", "Aditya Rawat", "aditya.rawat@example.edu"}
-        };
-
-        List<Map<String, Object>> roster = new ArrayList<>();
-        for (String[] s : students) {
-            Map<String, Object> map = new LinkedHashMap<>();
-            map.put("studentId", s[2]);
-            map.put("rollNumber", s[0]);
-            map.put("name", s[1]);
-            map.put("email", s[2]);
-            map.put("department", department != null ? department : "CSE");
-            map.put("semester", semester != null ? semester : "6");
-            roster.add(map);
-        }
-        return roster;
-    }
-
     public Map<String, Object> getStudentAttendanceSummary(String studentId) {
-        List<ClassAttendanceRecord> records = classRecordRepo.findByStudentId(studentId);
+        List<ClassAttendanceRecord> records = findClassRecordsForStudent(studentId);
 
         int totalSessions = records.size();
         int attendedSessions = 0;
@@ -490,7 +456,7 @@ public class AttendanceService {
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        List<ClassAttendanceRecord> studentRecords = classRecordRepo.findByStudentId(studentEmail);
+        List<ClassAttendanceRecord> studentRecords = findClassRecordsForStudent(studentEmail);
         Map<Long, ClassAttendanceRecord> recordsBySession = new HashMap<>();
         for (ClassAttendanceRecord r : studentRecords) {
             recordsBySession.put(r.getSessionId(), r);
@@ -591,7 +557,7 @@ public class AttendanceService {
         }
 
         List<ClassAttendanceSession> sessions = classSessionRepo.findBySubjectCodeOrderBySessionDateDesc(subjectCode);
-        List<ClassAttendanceRecord> records = classRecordRepo.findByStudentId(studentEmail);
+        List<ClassAttendanceRecord> records = findClassRecordsForStudent(studentEmail);
         Map<Long, ClassAttendanceRecord> recordsBySession = new HashMap<>();
         for (ClassAttendanceRecord r : records) {
             recordsBySession.put(r.getSessionId(), r);
@@ -799,7 +765,8 @@ public class AttendanceService {
     }
 
     public List<Map<String, Object>> getStudentAttendanceHistory(String studentEmail) {
-        List<ClassAttendanceRecord> records = classRecordRepo.findByStudentIdOrderByRecordedAtDesc(studentEmail);
+        List<ClassAttendanceRecord> records = new ArrayList<>(findClassRecordsForStudent(studentEmail));
+        records.sort((left, right) -> String.valueOf(right.getRecordedAt()).compareTo(String.valueOf(left.getRecordedAt())));
         List<Map<String, Object>> history = new ArrayList<>();
 
         for (ClassAttendanceRecord r : records) {
@@ -831,6 +798,34 @@ public class AttendanceService {
         }
 
         return history;
+    }
+
+    private List<ClassAttendanceRecord> findClassRecordsForStudent(String identity) {
+        if (identity == null || identity.isBlank()) {
+            return List.of();
+        }
+        Map<Long, ClassAttendanceRecord> recordsBySession = new LinkedHashMap<>();
+        for (ClassAttendanceRecord record : classRecordRepo.findByStudentId(identity)) {
+            recordsBySession.putIfAbsent(record.getSessionId(), record);
+        }
+        if (userRepo != null) {
+            Optional<User> user = userRepo.findByEmail(identity);
+            if (user.isEmpty() && identity.matches("\\d+")) {
+                try {
+                    user = userRepo.findById(Long.parseLong(identity));
+                } catch (NumberFormatException ignored) {
+                    return new ArrayList<>(recordsBySession.values());
+                }
+            }
+            if (user.isPresent()) {
+                String otherIdentity = identity.equalsIgnoreCase(user.get().getEmail())
+                        ? String.valueOf(user.get().getId()) : user.get().getEmail();
+                for (ClassAttendanceRecord record : classRecordRepo.findByStudentId(otherIdentity)) {
+                    recordsBySession.putIfAbsent(record.getSessionId(), record);
+                }
+            }
+        }
+        return new ArrayList<>(recordsBySession.values());
     }
 
     // --- CRT ATTENDANCE CONFIGURATION & SERVICE ---

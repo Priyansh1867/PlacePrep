@@ -130,7 +130,7 @@ public class StudentAttendanceController {
             ));
         }
 
-        String studentEmail = principal != null ? principal.getName() : "student@placeprep.com";
+        String studentEmail = principal != null ? principal.getName() : null;
 
         // Face identity verification checks:
         // Ensures photo has valid image header/payload, reasonable dimensions, and matches student profile
@@ -142,20 +142,10 @@ public class StudentAttendanceController {
             ));
         }
 
-        // Biometric match confidence calculation
-        double matchScore = 95.0 + (Math.random() * 4.8); // 95% - 99.8% match confidence
-        boolean isMatch = matchScore >= 80.0;
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("verified", isMatch);
-        response.put("studentEmail", studentEmail);
-        response.put("matchScore", Math.round(matchScore * 10.0) / 10.0);
-        response.put("antiSpoofingCheck", "PASSED");
-        response.put("facialLandmarksDetected", true);
-        response.put("message", isMatch
-                ? "Facial identity verified: Correct student match confirmed with profile photo."
-                : "Face verification failed. Please look directly into the camera in a well-lit area.");
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(501).body(Map.of(
+                "verified", false,
+                "message", "Biometric verification is not configured. Use the supported QR attendance flow."
+        ));
     }
 
     /**
@@ -241,8 +231,8 @@ public class StudentAttendanceController {
      * Returns all subjects relevant to the authenticated student with attendance statistics.
      */
     @GetMapping("/subjects")
-    public ResponseEntity<?> getEnrolledSubjects(Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getEnrolledSubjects(Principal principal) {
+        String email = principal.getName();
         List<Map<String, Object>> subjects = attendanceService.getEnrolledSubjectsWithSummary(email);
         return ResponseEntity.ok(subjects);
     }
@@ -252,8 +242,8 @@ public class StudentAttendanceController {
      * Returns subject details and all scheduled/completed/open lectures for this student.
      */
     @GetMapping("/subjects/{subjectCode}")
-    public ResponseEntity<?> getSubjectDetails(@PathVariable String subjectCode, Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getSubjectDetails(@PathVariable String subjectCode, Principal principal) {
+        String email = principal.getName();
         Map<String, Object> details = attendanceService.getSubjectDetailsWithLectures(subjectCode, email);
         return ResponseEntity.ok(details);
     }
@@ -263,8 +253,8 @@ public class StudentAttendanceController {
      * Returns all scheduled lectures for a subject.
      */
     @GetMapping("/subjects/{subjectCode}/lectures")
-    public ResponseEntity<?> getSubjectLectures(@PathVariable String subjectCode, Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getSubjectLectures(@PathVariable String subjectCode, Principal principal) {
+        String email = principal.getName();
         Map<String, Object> details = attendanceService.getSubjectDetailsWithLectures(subjectCode, email);
         return ResponseEntity.ok(details.get("lectures"));
     }
@@ -321,8 +311,8 @@ public class StudentAttendanceController {
      * Returns full lecture-wise attendance history of the authenticated student across all subjects.
      */
     @GetMapping("/history")
-    public ResponseEntity<?> getAttendanceHistory(Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getAttendanceHistory(Principal principal) {
+        String email = principal.getName();
         List<Map<String, Object>> history = attendanceService.getStudentAttendanceHistory(email);
         return ResponseEntity.ok(history);
     }

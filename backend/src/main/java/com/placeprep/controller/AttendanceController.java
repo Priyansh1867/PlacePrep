@@ -7,6 +7,7 @@ import com.placeprep.model.CrtTrainingSession;
 import com.placeprep.dto.EntityResponseDto;
 import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.AttendanceService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -108,7 +109,14 @@ public class AttendanceController {
     }
 
     @GetMapping("/student/{studentId}/summary")
-    public ResponseEntity<?> getStudentAttendanceSummary(@PathVariable String studentId) {
+    public ResponseEntity<?> getStudentAttendanceSummary(@PathVariable String studentId, HttpServletRequest request) {
+        Object currentUserId = request.getAttribute("currentUserId");
+        Object currentUserEmail = request.getAttribute("currentUserEmail");
+        if (currentUserId == null || (!studentId.equals(String.valueOf(currentUserId))
+                && !studentId.equalsIgnoreCase(String.valueOf(currentUserEmail)))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Collections.singletonMap("error", "You can only view your own attendance summary."));
+        }
         try {
             Map<String, Object> summary = attendanceService.getStudentAttendanceSummary(studentId);
             return ResponseEntity.ok(summary);

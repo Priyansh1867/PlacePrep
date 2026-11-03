@@ -11,18 +11,18 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Sparkles
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
-import { setCurrentUser, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
+import { setCurrentUser, setGraduationBatch } from '../services/storage';
 import { isCollegeEmail } from '../pages/AuthPortalPage';
 import PlacePrepLogo from './PlacePrepLogo';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
+import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
-  const [tab, setTab] = useState('login'); // 'login' | 'signup' | 'demo'
+  const [tab, setTab] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -36,7 +36,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     confirmPassword: '',
     college: '',
     branch: '',
-    graduationBatch: '2028'
+    graduationBatch: ''
   });
 
   if (!isOpen) return null;
@@ -48,7 +48,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     if (!formData.email || !formData.password) {
       setErrorMsg('Please enter both email and password.');
       return;
@@ -72,7 +72,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
       setTimeout(() => {
         onAuthSuccess?.(userObj);
         onClose();
-      }, 250);
+      }, 200);
     } catch (err) {
       setErrorMsg(err.message || 'Invalid email or password.');
     } finally {
@@ -82,7 +82,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email || !formData.password || !formData.branch) {
       setErrorMsg('Please fill in all mandatory fields.');
       return;
     }
@@ -102,74 +102,27 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setLoading(true);
     setErrorMsg('');
     try {
-      const nameTrim = formData.name.trim();
-      let userObj = {
-        id: `user-${Date.now()}`,
-        name: nameTrim,
-        fullName: nameTrim,
-        email: formData.email.trim().toLowerCase(),
-        role: 'student',
-        college: formData.college.trim() || '',
-        branch: formData.branch.trim() || '',
-        graduationBatch: formData.graduationBatch,
-        rollNumber: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: '',
-        currentAddress: '',
-        tenthPercentage: '',
-        twelfthPercentage: '',
-        authenticatedAt: new Date().toISOString()
-      };
+      const res = await AuthApi.register({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        college: formData.college.trim(),
+        branch: formData.branch.trim(),
+        graduationBatch: formData.graduationBatch
+      });
 
-      try {
-        const res = await AuthApi.register({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          college: userObj.college,
-          branch: userObj.branch,
-          graduationBatch: userObj.graduationBatch
-        });
-        if (res && res.user) {
-          userObj = { ...userObj, ...res.user, id: res.user.id || userObj.id };
-        }
-      } catch (authErr) {
-        if (authErr && authErr.message && authErr.message.toLowerCase().includes('already exists')) {
-          setErrorMsg(authErr.message);
-          setLoading(false);
-          return;
-        }
-        throw authErr;
+      if (!res?.user || String(res.user.role).toLowerCase() !== 'student') {
+        throw new Error('Student registration did not return a student account.');
       }
-
-      setCurrentUser(userObj);
+      setCurrentUser(res.user);
       setGraduationBatch(formData.graduationBatch);
       setSuccessMsg('Account created successfully! Welcome to PlacePrep.');
       setTimeout(() => {
-        onAuthSuccess?.(userObj);
+        onAuthSuccess?.(res.user);
         onClose();
       }, 250);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to register account.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async (role = 'student') => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const res = await AuthApi.demoLogin(role);
-      setCurrentUser(res.user);
-      setSuccessMsg(`Signed in as Demo ${role === 'admin' ? 'Placement Officer (Admin)' : 'Student'}!`);
-      setTimeout(() => {
-        onAuthSuccess?.(res.user);
-        onClose();
-      }, 500);
-    } catch (err) {
-      setErrorMsg(err.message || 'Failed to sign in with demo credentials.');
     } finally {
       setLoading(false);
     }
@@ -246,58 +199,60 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
           )}
 
           {tab === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-3.5">
-              <Input
-                label="Email Address"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="name@college.edu"
-                icon={Mail}
-                required
-              />
-              {formData.email && (
-                <div className="text-[11px] font-semibold flex items-center gap-1 mt-1 text-left">
-                  {isCollegeEmail(formData.email) ? (
-                    <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> College domain verified (.edu / .ac.in / .edu.in)</span>
-                  ) : (
-                    <span className="text-amber-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5 text-amber-500" /> College email recommended (.edu, .ac.in, .edu.in)</span>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-1.5 text-left">
-                <label className="block text-xs font-bold text-[#0F172A]">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-4 h-4" />
+            <div className="space-y-3.5">
+              <form onSubmit={handleLogin} className="space-y-3.5">
+                <Input
+                  label="Email Address"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="name@college.edu"
+                  icon={Mail}
+                  required
+                />
+                {formData.email && (
+                  <div className="text-[11px] font-semibold flex items-center gap-1 mt-1 text-left">
+                    {isCollegeEmail(formData.email) ? (
+                      <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> College domain verified (.edu / .ac.in / .edu.in)</span>
+                    ) : (
+                      <span className="text-amber-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5 text-amber-500" /> College email recommended (.edu, .ac.in, .edu.in)</span>
+                    )}
                   </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    required
-                    className="w-full pl-10 pr-10 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
+                )}
 
-              <div className="pt-2">
-                <Button type="submit" loading={loading} className="w-full">
-                  Sign In
-                </Button>
-              </div>
-            </form>
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-bold text-[#0F172A]">Password</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      required
+                      className="w-full pl-10 pr-10 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button type="submit" loading={loading} className="w-full">
+                    Sign In
+                  </Button>
+                </div>
+              </form>
+            </div>
           ) : (
             <form onSubmit={handleSignup} className="space-y-3">
               <Input
@@ -305,7 +260,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="e.g. Rahul Sharma"
+                placeholder="Enter full name"
                 icon={UserIcon}
                 required
               />
@@ -329,6 +284,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                   )}
                 </div>
               )}
+
+              <Select
+                label="Branch / specialization"
+                name="branch"
+                value={formData.branch}
+                onChange={handleChange}
+                options={[
+                  { value: '', label: 'Select your branch' },
+                  ...INITIAL_BRANCHES.map((branch) => ({ value: branch, label: branch }))
+                ]}
+                required
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <Input
@@ -396,32 +363,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
             </form>
           )}
 
-          {/* Quick Demo Access Bar */}
-          <div className="pt-3 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-[#64748B] text-center mb-2 uppercase tracking-wider">
-              1-Click Demo Evaluation Profiles
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => handleDemoLogin('student')}
-                className="w-full"
-              >
-                Demo Student
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => handleDemoLogin('admin')}
-                className="w-full"
-              >
-                Demo Admin
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -18,7 +18,7 @@ public class FeedbackWriteTool {
 
     @Tool(description = "Submit general PlacePrep feedback as the authenticated user.")
     public Object submitFeedback(Feedback feedback, ToolContext context) {
-        AiToolAuthorization.userId(context);
+        feedback.setUserId(AiToolAuthorization.userId(context));
         return EntityResponseMapper.toJsonSafe(feedbackService.submit(feedback));
     }
 

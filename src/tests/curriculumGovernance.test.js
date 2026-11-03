@@ -1,3 +1,4 @@
+import { seedTestRecords } from './fixtures/records.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -119,6 +120,7 @@ describe('PlacePrep AI — Task 1: Role-Specific Feature Filtering & Tile Visibi
 describe('PlacePrep AI — Task 2: HOD Curriculum & Syllabus Governance Engine', () => {
   beforeEach(() => {
     localStorage.clear();
+    seedTestRecords();
   });
 
   test('Authorization gate strictly permits HOD and Admin, and denies Teacher/Student', () => {

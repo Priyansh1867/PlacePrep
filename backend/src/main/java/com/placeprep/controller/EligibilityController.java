@@ -72,7 +72,7 @@ public class EligibilityController {
     @GetMapping("/check-drive/{driveId}")
     public ResponseEntity<?> checkDriveForStudent(
             @PathVariable String driveId,
-            @RequestParam(defaultValue = "user-demo-01") String studentId
+            @RequestParam String studentId
     ) {
         try {
             Map<String, Object> result = eligibilityService.checkDriveForStudent(driveId, studentId);

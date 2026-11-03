@@ -1,7 +1,7 @@
-import { getAuthToken } from './api';
+import { getAuthToken } from './api.js';
 
 
-function parseEvents(buffer, onText, onError) {
+export function parseEvents(buffer, onText, onError) {
   const events = buffer.split(/\r?\n\r?\n/);
   const remainder = events.pop() || '';
 
@@ -17,9 +17,14 @@ function parseEvents(buffer, onText, onError) {
     try {
       const payload = JSON.parse(data);
 
-      if (payload?.error) onError(payload.error);
-      else if (typeof payload?.content === 'string') onText(payload.content);
-      else if (typeof payload?.message === 'string') onText(payload.message);
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        if (payload.error) onError(payload.error);
+        else if (typeof payload.content === 'string') onText(payload.content);
+        else if (typeof payload.message === 'string') onText(payload.message);
+        else onText(data);
+      } else {
+        onText(typeof payload === 'string' ? payload : data);
+      }
     } catch {
       onText(data);
     }

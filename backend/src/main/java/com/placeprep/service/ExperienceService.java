@@ -40,4 +40,56 @@ public class ExperienceService {
     public EntityResponseDto create(InterviewExperience experience) {
         return EntityResponseMapper.toDto(interviewExperienceRepository.save(experience));
     }
+
+    @Transactional
+    public EntityResponseDto voteHelpful(String experienceId) {
+        InterviewExperience exp = interviewExperienceRepository.findByExperienceId(experienceId)
+                .orElseGet(() -> {
+                    try {
+                        return interviewExperienceRepository.findById(Long.parseLong(experienceId)).orElse(null);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                });
+        if (exp == null) {
+            throw new IllegalArgumentException("Experience not found: " + experienceId);
+        }
+        exp.setHelpfulVotes(exp.getHelpfulVotes() + 1);
+        return EntityResponseMapper.toDto(interviewExperienceRepository.save(exp));
+    }
+
+    @Transactional
+    public EntityResponseDto reportExperience(String experienceId, String reason) {
+        InterviewExperience exp = interviewExperienceRepository.findByExperienceId(experienceId)
+                .orElseGet(() -> {
+                    try {
+                        return interviewExperienceRepository.findById(Long.parseLong(experienceId)).orElse(null);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                });
+        if (exp == null) {
+            throw new IllegalArgumentException("Experience not found: " + experienceId);
+        }
+        exp.setReported(true);
+        exp.setReportReason(reason);
+        return EntityResponseMapper.toDto(interviewExperienceRepository.save(exp));
+    }
+
+    @Transactional
+    public EntityResponseDto moderateExperience(String experienceId, String status) {
+        InterviewExperience exp = interviewExperienceRepository.findByExperienceId(experienceId)
+                .orElseGet(() -> {
+                    try {
+                        return interviewExperienceRepository.findById(Long.parseLong(experienceId)).orElse(null);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                });
+        if (exp == null) {
+            throw new IllegalArgumentException("Experience not found: " + experienceId);
+        }
+        exp.setModerationStatus(status != null ? status : "APPROVED");
+        return EntityResponseMapper.toDto(interviewExperienceRepository.save(exp));
+    }
 }

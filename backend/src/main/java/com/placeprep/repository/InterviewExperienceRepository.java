@@ -9,4 +9,5 @@ import java.util.List;
 public interface InterviewExperienceRepository extends JpaRepository<InterviewExperience, Long> {
     List<InterviewExperience> findByCompanyId(String companyId);
     List<InterviewExperience> findByBatch(String batch);
+    java.util.Optional<InterviewExperience> findByExperienceId(String experienceId);
 }

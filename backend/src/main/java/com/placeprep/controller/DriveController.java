@@ -61,6 +61,29 @@ public class DriveController {
         return ResponseEntity.status(HttpStatus.CREATED).body(driveService.createDto(drive));
     }
 
+    @PutMapping("/{driveId}")
+    public ResponseEntity<?> updateDrive(@PathVariable String driveId, @RequestBody PlacementDrive drive) {
+        try {
+            return ResponseEntity.ok(driveService.updateDto(driveId, drive));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{driveId}")
+    public ResponseEntity<?> deleteDrive(@PathVariable String driveId) {
+        try {
+            driveService.delete(driveId);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Drive deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{driveId}/rounds")
     public ResponseEntity<?> updateDriveRounds(
             @PathVariable String driveId,

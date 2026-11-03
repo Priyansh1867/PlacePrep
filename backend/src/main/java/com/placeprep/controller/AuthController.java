@@ -85,9 +85,61 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(java.security.Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "Not authenticated"));
+        }
+        try {
+            User user = userService.getUserByEmail(principal.getName());
+            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/users")
-    public ResponseEntity<List<EntityResponseDto>> getAllUsers() {
-        return ResponseEntity.ok(EntityResponseMapper.toDtoList(userService.getAllUsers(null, null)));
+    public ResponseEntity<List<EntityResponseDto>> getAllUsers(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String role,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String search) {
+        return ResponseEntity.ok(userService.getAllUsers(role, search));
+    }
+
+    @PostMapping("/bulk-register")
+    public ResponseEntity<?> bulkRegister(@RequestBody List<Map<String, Object>> students) {
+        if (students == null || students.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "No students provided"));
+        }
+        int count = 0;
+        for (Map<String, Object> s : students) {
+            String email = s.get("email") != null ? String.valueOf(s.get("email")).trim().toLowerCase() : null;
+            if (email == null || email.isEmpty()) continue;
+            try {
+                try {
+                    userService.getUserByEmail(email);
+                    continue;
+                } catch (IllegalArgumentException notFound) {
+                    User newUser = new User();
+                    newUser.setEmail(email);
+                    String name = s.get("fullName") != null ? String.valueOf(s.get("fullName")) : (s.get("name") != null ? String.valueOf(s.get("name")) : email.split("@")[0]);
+                    newUser.setName(name);
+                    newUser.setPassword(s.get("password") != null ? String.valueOf(s.get("password")) : "PlacePrep@2026");
+                    newUser.setRole("student");
+                    if (s.get("rollNumber") != null) newUser.setRollNumber(String.valueOf(s.get("rollNumber")));
+                    if (s.get("college") != null) newUser.setCollege(String.valueOf(s.get("college")));
+                    if (s.get("branch") != null) newUser.setBranch(String.valueOf(s.get("branch")));
+                    if (s.get("graduationBatch") != null) newUser.setGraduationBatch(String.valueOf(s.get("graduationBatch")));
+                    userService.register(newUser);
+                    count++;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("registeredCount", count);
+        resp.put("total", students.size());
+        return ResponseEntity.ok(resp);
     }
 
     @GetMapping("/user/{id}")

@@ -168,18 +168,18 @@ HAVING COUNT(*) >= 2
 ORDER BY department;`;
 
     case 'java':
-      if (question?.sampleCode && question.sampleCode.includes('class') || question?.sampleCode?.includes('public static')) {
+      if (question?.sampleCode && (question.sampleCode.includes('class') || question.sampleCode.includes('public static'))) {
         return question.sampleCode;
       }
       return `import java.util.*;
 
-public class Main {
+class Solution {
     /**
      * Problem: ${question?.title || 'Algorithmic Problem'}
      * Difficulty: ${question?.difficulty || 'Medium'} | Company: ${question?.companyName || 'Campus'}
      */
     public static void main(String[] args) {
-        Main sol = new Main();
+        Solution sol = new Solution();
         // Test with sample inputs
         System.out.println("PlacePrep DSA Studio Runner initialized.");
     }

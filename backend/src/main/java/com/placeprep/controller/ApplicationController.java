@@ -39,6 +39,16 @@ public class ApplicationController {
         this.applicationService = applicationService;
     }
 
+    @PostMapping
+    public ResponseEntity<?> trackApplication(@RequestBody StudentApplication app) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.registerApplication(app));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> registerApplication(@RequestBody StudentApplication app) {
         try {
@@ -47,6 +57,22 @@ public class ApplicationController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
         }
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{applicationId}")
+    public ResponseEntity<?> withdrawApplication(@PathVariable String applicationId) {
+        try {
+            applicationService.deleteApplication(applicationId);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Application withdrawn successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats() {
+        return ResponseEntity.ok(applicationService.getApplicationStats());
     }
 
     @GetMapping("/my")

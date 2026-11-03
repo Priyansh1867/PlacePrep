@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -48,5 +49,34 @@ public class ExperienceController {
     @PostMapping
     public ResponseEntity<EntityResponseDto> createExperience(@RequestBody InterviewExperience experience) {
         return ResponseEntity.status(HttpStatus.CREATED).body(experienceService.create(experience));
+    }
+
+    @PostMapping("/{experienceId}/vote")
+    public ResponseEntity<?> voteHelpful(@PathVariable String experienceId) {
+        try {
+            return ResponseEntity.ok(experienceService.voteHelpful(experienceId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(java.util.Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{experienceId}/report")
+    public ResponseEntity<?> reportExperience(@PathVariable String experienceId, @RequestBody(required = false) java.util.Map<String, String> body) {
+        try {
+            String reason = body != null ? body.get("reason") : "Inappropriate content";
+            return ResponseEntity.ok(experienceService.reportExperience(experienceId, reason));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(java.util.Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{experienceId}/moderate")
+    public ResponseEntity<?> moderateExperience(@PathVariable String experienceId, @RequestBody(required = false) java.util.Map<String, String> body) {
+        try {
+            String status = body != null ? body.get("status") : "APPROVED";
+            return ResponseEntity.ok(experienceService.moderateExperience(experienceId, status));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(java.util.Collections.singletonMap("error", e.getMessage()));
+        }
     }
 }

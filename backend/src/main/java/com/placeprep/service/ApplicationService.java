@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -177,6 +178,44 @@ public class ApplicationService {
 
     public Optional<EntityResponseDto> getByApplicationId(String applicationId) {
         return EntityResponseMapper.toDtoOptional(applicationRepository.findByApplicationId(applicationId));
+    }
+
+    @Transactional
+    public void deleteApplication(String applicationId) {
+        Optional<StudentApplication> opt = applicationRepository.findByApplicationId(applicationId);
+        if (opt.isPresent()) {
+            applicationRepository.delete(opt.get());
+        } else {
+            try {
+                Long id = Long.parseLong(applicationId);
+                applicationRepository.findById(id).ifPresent(applicationRepository::delete);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getApplicationStats() {
+        List<StudentApplication> all = applicationRepository.findAll();
+        long total = all.size();
+        long shortlisted = all.stream().filter(a -> "SHORTLISTED".equalsIgnoreCase(a.getStatus()) || "ELIGIBILITY_PASSED".equalsIgnoreCase(a.getStatus())).count();
+        long interviews = all.stream().filter(a -> a.getStatus() != null && a.getStatus().toUpperCase().contains("INTERVIEW")).count();
+        long offers = all.stream().filter(a -> "OFFERED".equalsIgnoreCase(a.getStatus()) || "ACCEPTED".equalsIgnoreCase(a.getStatus()) || "PLACED".equalsIgnoreCase(a.getStatus())).count();
+        long rejected = all.stream().filter(a -> "REJECTED".equalsIgnoreCase(a.getStatus()) || "INELIGIBLE_REJECTED".equalsIgnoreCase(a.getStatus())).count();
+        long withdrawn = all.stream().filter(a -> "WITHDRAWN".equalsIgnoreCase(a.getStatus())).count();
+        long inProgress = total - offers - rejected - withdrawn;
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", total);
+        stats.put("applied", total);
+        stats.put("shortlisted", shortlisted);
+        stats.put("interviews", interviews);
+        stats.put("offers", offers);
+        stats.put("placed", offers);
+        stats.put("rejected", rejected);
+        stats.put("withdrawn", withdrawn);
+        stats.put("inProgress", inProgress >= 0 ? inProgress : 0);
+        return stats;
     }
 
     @Transactional

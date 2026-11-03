@@ -302,6 +302,29 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
     // 4. Fetch registered database users from Spring Boot
     refreshDatabaseUsers();
+
+    // 5. Fetch internships from Spring Boot
+    if (OpportunityApi?.getInternships) {
+      OpportunityApi.getInternships()
+        .then((liveInternships) => {
+          if (Array.isArray(liveInternships) && liveInternships.length > 0) {
+            setInternships(liveInternships);
+          }
+        })
+        .catch(() => {});
+    }
+
+    // 6. Fetch off-campus companies from Spring Boot
+    if (OpportunityApi?.getOffCampus) {
+      OpportunityApi.getOffCampus()
+        .then((res) => {
+          const comps = res?.companies || (Array.isArray(res) ? res : []);
+          if (Array.isArray(comps) && comps.length > 0) {
+            setOffCampusCompanies(comps);
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const getInitials = (name = 'User') => {

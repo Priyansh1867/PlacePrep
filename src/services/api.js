@@ -98,6 +98,36 @@ export async function request(endpoint, options = {}) {
 export const OpportunityApi = {
   getHackathons() {
     return request('/opportunities/hackathons');
+  },
+  createHackathon(hackathon) {
+    return request('/opportunities/hackathons', {
+      method: 'POST',
+      body: JSON.stringify(hackathon)
+    });
+  },
+  deleteHackathon(id) {
+    return request('/opportunities/hackathons/' + encodeURIComponent(id), {
+      method: 'DELETE'
+    });
+  },
+  getInternships(batch = null) {
+    const qs = batch && batch !== 'all' ? '?batch=' + encodeURIComponent(batch) : '';
+    return request('/opportunities/internships' + qs);
+  },
+  createInternship(internship) {
+    return request('/opportunities/internships', {
+      method: 'POST',
+      body: JSON.stringify(internship)
+    });
+  },
+  deleteInternship(id) {
+    return request('/opportunities/internships/' + encodeURIComponent(id), {
+      method: 'DELETE'
+    });
+  },
+  getOffCampus(studentEmailOrId = '') {
+    const qs = studentEmailOrId ? '?studentEmailOrId=' + encodeURIComponent(studentEmailOrId) : '';
+    return request('/opportunities/off-campus' + qs);
   }
 };
 

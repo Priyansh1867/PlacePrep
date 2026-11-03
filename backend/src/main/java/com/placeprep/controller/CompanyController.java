@@ -67,4 +67,15 @@ public class CompanyController {
                     .body(Collections.singletonMap("error", e.getMessage()));
         }
     }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{companyId}")
+    public ResponseEntity<?> deleteCompany(@PathVariable String companyId) {
+        try {
+            companyService.delete(companyId);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Company deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
 }

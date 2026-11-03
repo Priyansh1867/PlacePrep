@@ -67,6 +67,21 @@ public class ResumeAtsServiceTest {
     }
 
     @Test
+    void testAnalyzeWithoutCompanyProducesGeneralResult() {
+        String resume = "Java Spring Boot REST API SQL Docker";
+        String jd = "Backend Engineer needs Java Spring Boot REST API and SQL skills.";
+
+        ResumeAtsResponse withoutCompany = atsService.analyze(resume, null, "Backend Engineer", jd, "resume.pdf");
+        ResumeAtsResponse blankCompany = atsService.analyze(resume, "  ", "Backend Engineer", jd, "resume.pdf");
+
+        assertNull(withoutCompany.getCompany());
+        assertNull(blankCompany.getCompany());
+        assertTrue(withoutCompany.getSummary().contains("Backend Engineer"));
+        assertFalse(withoutCompany.getSummary().contains("Target Recruiter"));
+        assertEquals(withoutCompany.getMatchScore(), blankCompany.getMatchScore());
+    }
+
+    @Test
     void testAnalyzeLowMatchNeedsRevision() {
         String resume = "Finance graduate with basic Microsoft Excel and Accounting skills.";
         String jd = "Requires expert in Java, Spring Boot, REST API, Kubernetes, Docker, Microservices Architecture, and AWS Cloud.";

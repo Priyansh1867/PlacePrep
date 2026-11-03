@@ -37,6 +37,120 @@ public class UserController {
         this.userService = userService;
     }
 
+    private User getCurrentAuthenticatedUser(Principal principal) {
+        if (principal == null || principal.getName() == null || principal.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("User is not authenticated");
+        }
+        return userService.getUserByEmail(principal.getName().trim().toLowerCase());
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe(Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/me/batch")
+    public ResponseEntity<?> updateMyBatch(@RequestBody Map<String, String> body, Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            String batch = body != null ? body.get("batch") : null;
+            return ResponseEntity.ok(userService.updateBatch(user.getId(), batch));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/me/saved-questions")
+    public ResponseEntity<?> getMySavedQuestions(Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            List<String> savedQuestions = userService.getSavedQuestionIds(user.getId());
+            return ResponseEntity.ok(savedQuestions);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/me/toggle-saved-question/{questionId}")
+    public ResponseEntity<?> toggleMySavedQuestion(@PathVariable String questionId, Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            boolean saved = userService.toggleSavedQuestion(user.getId(), questionId);
+            return ResponseEntity.ok(Collections.singletonMap("saved", saved));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/me/toggle-practiced-question/{questionId}")
+    public ResponseEntity<?> toggleMyPracticedQuestion(@PathVariable String questionId, Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            boolean practiced = userService.togglePracticedQuestion(user.getId(), questionId);
+            return ResponseEntity.ok(Collections.singletonMap("practiced", practiced));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/me/toggle-revision-question/{questionId}")
+    public ResponseEntity<?> toggleMyRevisionQuestion(@PathVariable String questionId, Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            boolean revision = userService.toggleRevisionQuestion(user.getId(), questionId);
+            return ResponseEntity.ok(Collections.singletonMap("revision", revision));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/me/toggle-saved-company/{companyId}")
+    public ResponseEntity<?> toggleMySavedCompany(@PathVariable String companyId, Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            boolean saved = userService.toggleSavedCompany(user.getId(), companyId);
+            return ResponseEntity.ok(Collections.singletonMap("saved", saved));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/me/dashboard")
+    public ResponseEntity<?> getMyDashboardData(Principal principal) {
+        try {
+            User user = getCurrentAuthenticatedUser(principal);
+            Map<String, Object> dashboard = userService.getDashboardData(user.getId());
+            return ResponseEntity.ok(dashboard);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}/batch")
     public ResponseEntity<?> updateBatch(@PathVariable Long id, @RequestBody Map<String, String> body) {
         try {

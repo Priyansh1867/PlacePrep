@@ -53,6 +53,43 @@ public class QuestionController {
         }
     }
 
+    @GetMapping("/categories")
+    public ResponseEntity<List<String>> getCategories() {
+        return ResponseEntity.ok(questionService.getCategories());
+    }
+
+    @GetMapping("/company/{companyId}/round/{round}")
+    public ResponseEntity<List<EntityResponseDto>> getByCompanyAndRound(
+            @PathVariable String companyId,
+            @PathVariable String round) {
+        return ResponseEntity.ok(questionService.getByCompanyIdAndRound(companyId, round));
+    }
+
+    @PutMapping("/{questionId}")
+    public ResponseEntity<?> updateQuestion(
+            @PathVariable String questionId,
+            @RequestBody InterviewQuestion question) {
+        try {
+            return ResponseEntity.ok(questionService.update(questionId, question));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{questionId}")
+    public ResponseEntity<?> deleteQuestion(@PathVariable String questionId) {
+        try {
+            questionService.delete(questionId);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Question deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/{questionId}")
     public ResponseEntity<?> getQuestionById(@PathVariable String questionId) {
         try {

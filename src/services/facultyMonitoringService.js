@@ -46,8 +46,6 @@ export async function fetchFacultyOperations(params = {}, currentUser) {
     console.warn('Backend /api/hod/faculty-operations request failed:', err?.message || err);
   }
 
-  return [];
-
   // 2. Local Fallback - Aggregate genuine persistent records across faculty modules
   const activities = [];
 

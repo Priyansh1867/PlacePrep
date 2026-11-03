@@ -77,6 +77,7 @@ $env:MYSQL_USER = "placeprep"
 $env:MYSQL_PASSWORD = "your-local-password"
 mvn spring-boot:run
 ```
+`backend/.env` can also supply every backend property defined in `application.properties` and `application-mysql.properties`. The backend loads it on startup, while variables already set in the process take precedence. Keep real database and AI credentials in this Git-ignored file.
 * **Backend API Base**: `http://localhost:8082/api`
 
 ---
@@ -198,6 +199,7 @@ The corresponding placeholders are in `.env.example`. This template contains no 
 * Statistical historical intelligence grounded in genuine database records.
 * Platform overview metrics bar (8 recruiter hubs, 40+ vetted questions, verified student logs).
 * Dynamic recruiter hub selection with live recalculation and preparation priority matrix.
+* Resume ATS checks accept an optional target company. The form can analyze a resume against a role and job description without selecting one; the response leaves `company` null for a general review.
 
 ### 8. Admin Console & Candidate Workflow Pipeline (`#admin` & `#workflow`)
 * **Admin Control Panel**:
@@ -227,6 +229,7 @@ The corresponding placeholders are in `.env.example`. This template contains no 
 ### Placement Drives & Applications
 * `GET /api/drives?batch={batch}` — Catalog of upcoming drives with batch filtering.
 * `GET /api/drives/calendar` — Drive schedule calendar events.
+  Calendar responses and the AI calendar tool return materialized `eligibleBatches` and `rounds` lists, so their JSON remains valid after the database session closes.
 * `GET /api/drives/{id}` — Placement drive details.
 * `POST /api/drives` *(Admin)* — Announce a new placement drive.
 * `PUT /api/drives/{id}` *(Admin)* — Update drive properties.

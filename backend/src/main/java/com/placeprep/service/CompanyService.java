@@ -62,4 +62,18 @@ public class CompanyService {
         if (updatedData.getEligibleBatches() != null && !updatedData.getEligibleBatches().isEmpty()) existing.setEligibleBatches(updatedData.getEligibleBatches());
         return EntityResponseMapper.toDto(companyRepository.save(existing));
     }
+
+    @Transactional
+    public void delete(String companyId) {
+        Company existing = companyRepository.findByCompanyId(companyId).orElse(null);
+        if (existing != null) {
+            companyRepository.delete(existing);
+        } else {
+            try {
+                Long id = Long.parseLong(companyId);
+                companyRepository.findById(id).ifPresent(companyRepository::delete);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+    }
 }

@@ -16,7 +16,7 @@ public class ResumeAtsTool {
     @Tool(description = "Analyze resume text against a job description and return ATS matching results.")
     public Object analyzeResume(
             @ToolParam(description = "Plain text extracted from the resume") String resumeText,
-            @ToolParam(description = "Target company") String company,
+            @ToolParam(description = "Optional target company; omit for a general ATS review", required = false) String company,
             @ToolParam(description = "Target role") String role,
             @ToolParam(description = "Job description") String jobDescription
     ) {

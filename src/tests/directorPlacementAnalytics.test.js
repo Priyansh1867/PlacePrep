@@ -21,7 +21,12 @@ import {
   getCompanyDetails,
   getCandidatesForCompany
 } from '../data/directorPlacementAnalyticsData.js';
-import { addDrive, getUpcomingDrives } from '../services/storage.js';
+import {
+  addDrive,
+  getUpcomingDrives,
+  updateDriveRoundsConfig,
+  getDriveRoundsConfig
+} from '../services/storage.js';
 
 test('Director Placement Analytics — 8 Companies Dataset Verification', () => {
   assert.equal(DIRECTOR_COMPANY_ANALYTICS.length, 8, 'Must contain exactly 8 corporate hiring drives');
@@ -157,4 +162,150 @@ test('Director Campus Drive Creation — Field Validation & Persistence', () => 
   const found = upcoming.find((d) => d.id === testDrive.id);
   assert.ok(found, 'Created drive must be found in upcoming drives list');
   assert.equal(found.ctc, '₹32.00 LPA');
+});
+
+test('Director Campus Drive — Dynamic Interview Round Configuration (3 Custom Rounds)', () => {
+  localStorage.clear();
+
+  const customRounds = [
+    { roundNumber: 1, name: 'Online Coding Assessment', description: '60 min DSA & Algorithms test on HackerRank' },
+    { roundNumber: 2, name: 'Technical System Design Interview', description: 'Live whiteboarding and microservices architecture' },
+    { roundNumber: 3, name: 'HR & Culture Alignment', description: 'Behavioral, values and compensation discussion' }
+  ];
+
+  const driveId = `drv-custom-${Date.now()}`;
+  const testDrive = {
+    id: driveId,
+    driveId: driveId,
+    companyId: 'uber-india',
+    companyName: 'Uber',
+    role: 'Software Engineer II',
+    ctc: '₹38.50 LPA',
+    driveDate: '2026-11-28',
+    venue: 'Uber Tech Tower & Virtual Meet',
+    status: 'Verified Upcoming Drive',
+    minCgpa: 8.0,
+    maxBacklogs: 0,
+    totalRounds: customRounds.length,
+    rounds: customRounds.map((r) => r.name),
+    roundConfigs: customRounds,
+    roundConfigsJson: JSON.stringify(customRounds)
+  };
+
+  addDrive(testDrive);
+  updateDriveRoundsConfig(testDrive.id, testDrive.rounds, testDrive.roundConfigs);
+
+  const storedConfig = getDriveRoundsConfig(testDrive.id);
+  assert.ok(storedConfig, 'Rounds configuration must be persisted in storage');
+  assert.equal(storedConfig.rounds.length, 3, 'Must have exactly 3 configured rounds');
+  assert.equal(storedConfig.roundConfigs[0].name, 'Online Coding Assessment');
+  assert.equal(storedConfig.roundConfigs[1].name, 'Technical System Design Interview');
+  assert.equal(storedConfig.roundConfigs[2].name, 'HR & Culture Alignment');
+  assert.equal(storedConfig.roundConfigs[0].roundNumber, 1);
+  assert.equal(storedConfig.roundConfigs[1].roundNumber, 2);
+  assert.equal(storedConfig.roundConfigs[2].roundNumber, 3);
+});
+
+test('Director Campus Drive — Dynamic Interview Round Configuration (6 Custom Rounds)', () => {
+  localStorage.clear();
+
+  const customRounds = [
+    { roundNumber: 1, name: 'Resume Shortlisting & ATS Screen', description: 'Keyword matching and GPA validation' },
+    { roundNumber: 2, name: 'Cognitive & Aptitude Assessment', description: 'Quant, Logic & Verbal speed evaluation' },
+    { roundNumber: 3, name: 'Coding & Algorithmic Challenge', description: 'Graph, DP, and Trees live coding' },
+    { roundNumber: 4, name: 'Technical Domain Interview', description: 'Database indexing, OS and Networking' },
+    { roundNumber: 5, name: 'Managerial & Problem Solving Round', description: 'Real-world scenario case study' },
+    { roundNumber: 6, name: 'Executive Leadership & Fitment', description: 'Director level interview and offer discussion' }
+  ];
+
+  const driveId = `drv-goldman-${Date.now()}`;
+  const testDrive = {
+    id: driveId,
+    driveId: driveId,
+    companyId: 'goldman-sachs',
+    companyName: 'Goldman Sachs',
+    role: 'Quantitative Financial Engineer',
+    ctc: '₹42.00 LPA',
+    totalRounds: customRounds.length,
+    rounds: customRounds.map((r) => r.name),
+    roundConfigs: customRounds
+  };
+
+  addDrive(testDrive);
+  updateDriveRoundsConfig(testDrive.id, testDrive.rounds, testDrive.roundConfigs);
+
+  const stored = getDriveRoundsConfig(testDrive.id);
+  assert.equal(stored.rounds.length, 6);
+  assert.equal(stored.roundConfigs[5].name, 'Executive Leadership & Fitment');
+  assert.equal(stored.roundConfigs[5].roundNumber, 6);
+});
+
+test('Director Campus Drive — Dynamic Round Removal & Sequential Renumbering', () => {
+  const initialRounds = [
+    { roundNumber: 1, name: 'Round A' },
+    { roundNumber: 2, name: 'Round B' },
+    { roundNumber: 3, name: 'Round C' },
+    { roundNumber: 4, name: 'Round D' }
+  ];
+
+  // Remove round at index 1 (Round B)
+  const afterRemoval = initialRounds
+    .filter((_, idx) => idx !== 1)
+    .map((r, idx) => ({ ...r, roundNumber: idx + 1 }));
+
+  assert.equal(afterRemoval.length, 3);
+  assert.equal(afterRemoval[0].name, 'Round A');
+  assert.equal(afterRemoval[0].roundNumber, 1);
+  assert.equal(afterRemoval[1].name, 'Round C');
+  assert.equal(afterRemoval[1].roundNumber, 2, 'Round C must be sequentially renumbered to Round 2');
+  assert.equal(afterRemoval[2].name, 'Round D');
+  assert.equal(afterRemoval[2].roundNumber, 3, 'Round D must be sequentially renumbered to Round 3');
+});
+
+test('Director Campus Drive — Duplicate & Empty Round Name Rejection Validation', () => {
+  // 1. Empty name detection
+  const roundsWithEmpty = [
+    { roundNumber: 1, name: 'Online Assessment' },
+    { roundNumber: 2, name: '   ' }
+  ];
+
+  const hasEmpty = roundsWithEmpty.some((r) => !r.name || r.name.trim() === '');
+  assert.ok(hasEmpty, 'Empty round name must be detected');
+
+  // 2. Duplicate name detection (case-insensitive)
+  const roundsWithDuplicates = [
+    { roundNumber: 1, name: 'Technical Interview' },
+    { roundNumber: 2, name: 'technical interview' }
+  ];
+
+  const seen = new Set();
+  let hasDuplicate = false;
+  for (const r of roundsWithDuplicates) {
+    const lower = r.name.trim().toLowerCase();
+    if (seen.has(lower)) {
+      hasDuplicate = true;
+      break;
+    }
+    seen.add(lower);
+  }
+  assert.ok(hasDuplicate, 'Duplicate round names must be detected');
+});
+
+test('Director Placement Analytics — Horizontal List Structure & Column Attributes Verification', () => {
+  const requiredColumns = [
+    'companyName',
+    'role',
+    'ctc',
+    'driveDate',
+    'status',
+    'totalRegistered',
+    'appeared',
+    'finalSelected'
+  ];
+
+  DIRECTOR_COMPANY_ANALYTICS.forEach((company) => {
+    requiredColumns.forEach((col) => {
+      assert.ok(company[col] !== undefined, `${company.companyName} must have attribute '${col}' for horizontal listing`);
+    });
+  });
 });

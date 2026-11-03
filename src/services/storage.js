@@ -785,7 +785,7 @@ export function updateDriveRoundsConfig(driveId, roundsList, roundConfigs) {
     updatedAt: new Date().toISOString()
   };
   setStorageItem(STORAGE_KEYS.DRIVE_ROUNDS_CONFIG, customRounds);
-  window.dispatchEvent(new CustomEvent('drive-rounds-updated', { detail: { driveId, roundsList, roundConfigs } }));
+  dispatchSafeCustomEvent('drive-rounds-updated', { driveId, roundsList, roundConfigs });
   return customRounds[driveId];
 }
 

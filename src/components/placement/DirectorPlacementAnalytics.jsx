@@ -23,7 +23,8 @@ import {
   Calendar,
   AlertCircle,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  ArrowUpDown
 } from 'lucide-react';
 import {
   DIRECTOR_COMPANY_ANALYTICS,
@@ -32,11 +33,75 @@ import {
   getCompanyDetails
 } from '../../data/directorPlacementAnalyticsData';
 import { DirectorApi } from '../../services/api';
+import { getUpcomingDrives } from '../../services/storage';
+
+function mergeWithUpcomingDrives(baseCompanies) {
+  const list = [...baseCompanies];
+  try {
+    const storedDrives = getUpcomingDrives();
+    const existingIds = new Set(list.map((c) => c.id));
+    storedDrives.forEach((d) => {
+      const id = d.id || d.driveId;
+      if (id && !existingIds.has(id)) {
+        existingIds.add(id);
+        const customRounds = Array.isArray(d.roundConfigs) && d.roundConfigs.length > 0
+          ? d.roundConfigs.map((rc, idx) => ({
+              roundNumber: rc.roundNumber || idx + 1,
+              name: rc.name,
+              description: rc.description || '',
+              appeared: rc.appeared ?? d.appeared ?? 0,
+              selectedNextRound: rc.selectedNextRound ?? d.finalSelected ?? 0,
+              rejected: rc.rejected ?? 0,
+              pending: rc.pending ?? 0,
+              selectionRate: rc.selectionRate ?? (d.appeared > 0 ? Number(((d.finalSelected / d.appeared) * 100).toFixed(1)) : 0),
+              rejectionRate: rc.rejectionRate ?? 0
+            }))
+          : Array.isArray(d.rounds) && d.rounds.length > 0
+          ? d.rounds.map((r, idx) => ({
+              roundNumber: idx + 1,
+              name: typeof r === 'string' ? r : (r.name || `Round ${idx + 1}`),
+              description: typeof r === 'object' ? r.description || '' : '',
+              appeared: d.appeared ?? 0,
+              selectedNextRound: d.finalSelected ?? 0,
+              rejected: 0,
+              pending: 0,
+              selectionRate: 0,
+              rejectionRate: 0
+            }))
+          : [
+              { roundNumber: 1, name: 'Online Assessment', appeared: 0, selectedNextRound: 0, rejected: 0, pending: 0, selectionRate: 0, rejectionRate: 0 },
+              { roundNumber: 2, name: 'Technical Interview', appeared: 0, selectedNextRound: 0, rejected: 0, pending: 0, selectionRate: 0, rejectionRate: 0 },
+              { roundNumber: 3, name: 'HR / Final Selection', appeared: 0, selectedNextRound: 0, rejected: 0, pending: 0, selectionRate: 0, rejectionRate: 0 }
+            ];
+
+        list.push({
+          id,
+          companyName: d.companyName,
+          role: d.role,
+          ctc: d.ctc || '₹6.00 - ₹12.00 LPA',
+          batch: Array.isArray(d.eligibleBatches) ? d.eligibleBatches.join(', ') : (d.eligibleBatches || '2025, 2026'),
+          driveDate: d.driveDate || 'Upcoming',
+          status: d.status || 'Verified Upcoming',
+          totalRegistered: d.totalRegistered ?? 0,
+          appeared: d.appeared ?? 0,
+          selected: d.selected ?? 0,
+          rejected: d.rejected ?? 0,
+          inProcess: d.inProcess ?? 0,
+          finalSelected: d.finalSelected ?? 0,
+          rounds: customRounds
+        });
+      }
+    });
+  } catch (err) {
+    console.warn('Could not read upcoming drives:', err);
+  }
+  return list;
+}
 
 export default function DirectorPlacementAnalytics({ onNavigate }) {
   // Data states
   const [summary, setSummary] = useState(() => getDirectorAnalyticsSummary());
-  const [companies, setCompanies] = useState(() => DIRECTOR_COMPANY_ANALYTICS);
+  const [companies, setCompanies] = useState(() => mergeWithUpcomingDrives(DIRECTOR_COMPANY_ANALYTICS));
   const [candidates, setCandidates] = useState(() => ANALYTICS_CANDIDATE_DETAILS);
   const [isLoading, setIsLoading] = useState(false);
   const [dataSource, setDataSource] = useState('Local Analytical Cache');
@@ -45,6 +110,12 @@ export default function DirectorPlacementAnalytics({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
+
+  // Sorting & Pagination
+  const [sortField, setSortField] = useState('companyName');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // Modal drilldown state
   const [selectedCompanyForModal, setSelectedCompanyForModal] = useState(null);
@@ -59,20 +130,20 @@ export default function DirectorPlacementAnalytics({ onNavigate }) {
     try {
       const res = await DirectorApi.getPlacementAnalytics();
       if (res && res.companies && Array.isArray(res.companies) && res.companies.length > 0) {
-        setCompanies(res.companies);
+        setCompanies(mergeWithUpcomingDrives(res.companies));
         if (res.summary) setSummary(res.summary);
         if (res.candidates && Array.isArray(res.candidates)) setCandidates(res.candidates);
         setDataSource('TiDB Cloud Remote DB');
       } else {
         // Fallback to local verified data
-        setCompanies(DIRECTOR_COMPANY_ANALYTICS);
+        setCompanies(mergeWithUpcomingDrives(DIRECTOR_COMPANY_ANALYTICS));
         setSummary(getDirectorAnalyticsSummary());
         setCandidates(ANALYTICS_CANDIDATE_DETAILS);
         setDataSource('Local Analytical Engine');
       }
     } catch (err) {
       console.warn('Backend analytics fetch fallback:', err);
-      setCompanies(DIRECTOR_COMPANY_ANALYTICS);
+      setCompanies(mergeWithUpcomingDrives(DIRECTOR_COMPANY_ANALYTICS));
       setSummary(getDirectorAnalyticsSummary());
       setCandidates(ANALYTICS_CANDIDATE_DETAILS);
       setDataSource('Local Analytical Engine (Offline Active)');
@@ -84,6 +155,26 @@ export default function DirectorPlacementAnalytics({ onNavigate }) {
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  useEffect(() => {
+    const handleDriveUpdate = () => {
+      fetchAnalytics();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('drive-rounds-updated', handleDriveUpdate);
+      return () => window.removeEventListener('drive-rounds-updated', handleDriveUpdate);
+    }
+  }, []);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
 
   // Filtered companies based on search and filters
   const filteredCompanies = useMemo(() => {
@@ -103,6 +194,36 @@ export default function DirectorPlacementAnalytics({ onNavigate }) {
       return matchesSearch && matchesCompany && matchesStatus;
     });
   }, [companies, searchQuery, selectedCompanyFilter, selectedStatusFilter]);
+
+  // Sorted companies
+  const sortedCompanies = useMemo(() => {
+    const list = [...filteredCompanies];
+    list.sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+
+      // Handle numeric fields
+      if (['totalRegistered', 'appeared', 'finalSelected', 'rejected', 'inProcess'].includes(sortField)) {
+        aVal = Number(aVal || 0);
+        bVal = Number(bVal || 0);
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      // Handle string fields
+      aVal = String(aVal || '').toLowerCase();
+      bVal = String(bVal || '').toLowerCase();
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [filteredCompanies, sortField, sortDirection]);
+
+  const totalPages = Math.ceil(sortedCompanies.length / pageSize) || 1;
+  const paginatedCompanies = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedCompanies.slice(start, start + pageSize);
+  }, [sortedCompanies, currentPage, pageSize]);
 
   // Candidates for the drilldown modal
   const modalCandidates = useMemo(() => {
@@ -358,215 +479,279 @@ export default function DirectorPlacementAnalytics({ onNavigate }) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. COMPANY-WISE CARDS & FUNNEL PROGRESSION GRID (8 COMPANIES)             */}
+      {/* 4. HORIZONTAL LIST LAYOUT: COMPANY RECRUITMENT DRIVES TABLE              */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {filteredCompanies.map((company) => {
-          const selectionPercent = company.totalRegistered > 0
-            ? ((company.finalSelected / company.totalRegistered) * 100).toFixed(1)
-            : '0.0';
-          const rejectionPercent = company.totalRegistered > 0
-            ? ((company.rejected / company.totalRegistered) * 100).toFixed(1)
-            : '0.0';
-          const inProcessPercent = company.totalRegistered > 0
-            ? ((company.inProcess / company.totalRegistered) * 100).toFixed(1)
-            : '0.0';
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+        {/* Table Controls Header */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+          <div>
+            <h3 className="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <span>Campus Recruitment Drives & Offer Metrics</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Horizontal view of corporate recruitment drives. Click <strong>View Details</strong> for round-by-round selection funnels and candidate records.
+            </p>
+          </div>
 
-          return (
-            <div
-              key={company.id}
-              className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
-            >
-              <div>
-                {/* Header row: Company name, Role, Status badge */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-black text-slate-900 group-hover:text-indigo-600 transition">
-                        {company.companyName}
-                      </h3>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                          company.status === 'Completed'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : company.status === 'In Progress'
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {company.status}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
-                      <span className="font-bold text-slate-700">{company.role}</span>
-                      <span>•</span>
-                      <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        {company.ctc}
-                      </span>
-                      <span>•</span>
-                      <span>Drive: {company.driveDate}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedCompanyForModal(company);
-                      setModalActiveTab('rounds');
-                    }}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 border border-slate-200 transition shrink-0 cursor-pointer"
-                    title="View Detailed Analytics & Candidates"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Key Metrics Strip (6 stats) */}
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 my-4 p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-center">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Registered</span>
-                    <span className="text-xs font-black text-slate-800">{company.totalRegistered}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Appeared</span>
-                    <span className="text-xs font-black text-slate-800">{company.appeared}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-indigo-500 font-bold uppercase block">Prog. (S)</span>
-                    <span className="text-xs font-black text-indigo-600">{company.selected}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-rose-500 font-bold uppercase block">Rejected</span>
-                    <span className="text-xs font-black text-rose-600">{company.rejected}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-amber-500 font-bold uppercase block">In Process</span>
-                    <span className="text-xs font-black text-amber-600">{company.inProcess}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-emerald-600 font-bold uppercase block">Offers</span>
-                    <span className="text-xs font-black text-emerald-600">{company.finalSelected}</span>
-                  </div>
-                </div>
-
-                {/* Round-wise Funnel Progression Progress Bars */}
-                <div className="space-y-2 mt-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                      Round-wise Candidate Pool Progression
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-400">
-                      Funnel Drop-off: {company.appeared} → {company.finalSelected}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 bg-slate-50/60 p-3 rounded-2xl border border-slate-100 text-xs">
-                    {company.rounds.map((round) => {
-                      const widthPercent =
-                        company.appeared > 0
-                          ? Math.max(8, (round.appeared / company.appeared) * 100)
-                          : 0;
-
-                      return (
-                        <div key={round.roundNumber} className="space-y-0.5">
-                          <div className="flex justify-between items-center text-[11px]">
-                            <span className="text-slate-600 font-medium truncate max-w-[200px]">
-                              R{round.roundNumber}: {round.name}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-bold text-slate-900">{round.appeared} candidates</span>
-                              <span className="text-indigo-600 font-black text-[10px]">
-                                ({round.selectionRate}%)
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Multi-segment progression bar */}
-                          <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
-                            <div
-                              style={{ width: `${widthPercent}%` }}
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                round.roundNumber === 6
-                                  ? 'bg-emerald-500'
-                                  : round.roundNumber >= 4
-                                  ? 'bg-indigo-500'
-                                  : 'bg-blue-500'
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Selection vs Rejection Ratio Visual */}
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  <div className="flex justify-between items-center text-[11px] mb-1.5">
-                    <span className="text-slate-500 font-bold">Outcome Ratio</span>
-                    <div className="flex items-center gap-2.5 text-[10px] font-bold">
-                      <span className="text-emerald-700 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" /> Selected ({selectionPercent}%)
-                      </span>
-                      <span className="text-amber-700 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-amber-500" /> In Process ({inProcessPercent}%)
-                      </span>
-                      <span className="text-rose-700 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-rose-500" /> Rejected ({rejectionPercent}%)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                    <div
-                      style={{ width: `${selectionPercent}%` }}
-                      className="h-full bg-emerald-500 transition-all duration-500"
-                      title={`Selected: ${company.finalSelected}`}
-                    />
-                    <div
-                      style={{ width: `${inProcessPercent}%` }}
-                      className="h-full bg-amber-400 transition-all duration-500"
-                      title={`In Process: ${company.inProcess}`}
-                    />
-                    <div
-                      style={{ width: `${rejectionPercent}%` }}
-                      className="h-full bg-rose-400 transition-all duration-500"
-                      title={`Rejected: ${company.rejected}`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Action: Open Drilldown Modal */}
-              <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                <span className="text-xs text-slate-400">
-                  Final Offers: <strong className="text-slate-900 font-black">{company.finalSelected} students</strong>
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCompanyForModal(company);
-                    setModalActiveTab('rounds');
-                  }}
-                  className="px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span>Detailed Analytics & Candidates</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {filteredCompanies.length === 0 && (
-        <div className="p-12 text-center bg-white rounded-3xl border border-slate-200">
-          <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          <h4 className="font-bold text-slate-800 text-base">No hiring drives match your search</h4>
-          <p className="text-xs text-slate-500 mt-1">Try adjusting company or status filters.</p>
+          <div className="text-xs font-bold text-slate-500 shrink-0">
+            Showing <span className="text-slate-900 font-black">{sortedCompanies.length}</span> {sortedCompanies.length === 1 ? 'Company' : 'Companies'}
+          </div>
         </div>
-      )}
+
+        {/* Responsive Table Container */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse" role="table">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-600 font-bold">
+                <th scope="col" className="py-3.5 px-4 text-left whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('companyName')}
+                    className="flex items-center gap-1.5 hover:text-indigo-600 font-bold transition focus:outline-none"
+                    aria-label="Sort by Company"
+                  >
+                    <span>Company</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-left whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('role')}
+                    className="flex items-center gap-1.5 hover:text-indigo-600 font-bold transition focus:outline-none"
+                    aria-label="Sort by Job Role"
+                  >
+                    <span>Job Role</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-left whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('ctc')}
+                    className="flex items-center gap-1.5 hover:text-indigo-600 font-bold transition focus:outline-none"
+                    aria-label="Sort by CTC Package"
+                  >
+                    <span>CTC Package</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-left whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('driveDate')}
+                    className="flex items-center gap-1.5 hover:text-indigo-600 font-bold transition focus:outline-none"
+                    aria-label="Sort by Drive Date"
+                  >
+                    <span>Drive Date</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-left whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('status')}
+                    className="flex items-center gap-1.5 hover:text-indigo-600 font-bold transition focus:outline-none"
+                    aria-label="Sort by Status"
+                  >
+                    <span>Status</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('totalRegistered')}
+                    className="inline-flex items-center gap-1 hover:text-indigo-600 font-bold transition focus:outline-none ml-auto"
+                    aria-label="Sort by Registered Candidates"
+                  >
+                    <span>Registered</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('appeared')}
+                    className="inline-flex items-center gap-1 hover:text-indigo-600 font-bold transition focus:outline-none ml-auto"
+                    aria-label="Sort by Appeared Candidates"
+                  >
+                    <span>Appeared</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('finalSelected')}
+                    className="inline-flex items-center gap-1 hover:text-indigo-600 font-bold transition focus:outline-none ml-auto"
+                    aria-label="Sort by Offers Extended"
+                  >
+                    <span>Offers</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </button>
+                </th>
+                <th scope="col" className="py-3.5 px-4 text-center whitespace-nowrap font-bold">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedCompanies.map((company) => (
+                <tr
+                  key={company.id}
+                  className="hover:bg-slate-50/80 transition-colors group"
+                >
+                  {/* Company */}
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white font-black flex items-center justify-center text-xs shadow-xs shrink-0">
+                        {company.companyName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-black text-slate-900 group-hover:text-indigo-600 transition">
+                          {company.companyName}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          {company.batch ? `Batch ${company.batch}` : 'Campus Hiring Drive'}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Job Role */}
+                  <td className="py-3.5 px-3 whitespace-nowrap font-bold text-slate-800">
+                    {company.role}
+                  </td>
+
+                  {/* CTC Package */}
+                  <td className="py-3.5 px-3 whitespace-nowrap">
+                    <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/50 text-[11px]">
+                      {company.ctc}
+                    </span>
+                  </td>
+
+                  {/* Drive Date */}
+                  <td className="py-3.5 px-3 whitespace-nowrap text-slate-600 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{company.driveDate}</span>
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td className="py-3.5 px-3 whitespace-nowrap">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
+                        company.status === 'Completed'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : company.status === 'In Progress'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          company.status === 'Completed'
+                            ? 'bg-emerald-600'
+                            : company.status === 'In Progress'
+                            ? 'bg-indigo-600'
+                            : 'bg-amber-600'
+                        }`}
+                      />
+                      {company.status}
+                    </span>
+                  </td>
+
+                  {/* Registered */}
+                  <td className="py-3.5 px-3 text-right whitespace-nowrap font-bold text-slate-800">
+                    {company.totalRegistered.toLocaleString()}
+                  </td>
+
+                  {/* Appeared */}
+                  <td className="py-3.5 px-3 text-right whitespace-nowrap font-bold text-slate-800">
+                    {company.appeared.toLocaleString()}
+                  </td>
+
+                  {/* Offers */}
+                  <td className="py-3.5 px-3 text-right whitespace-nowrap font-black text-emerald-600">
+                    <span className="bg-emerald-50/80 text-emerald-700 px-2 py-0.5 rounded-md">
+                      {company.finalSelected}
+                    </span>
+                  </td>
+
+                  {/* Action */}
+                  <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCompanyForModal(company);
+                        setModalActiveTab('rounds');
+                      }}
+                      aria-label={`View detailed analytics and candidate progression for ${company.companyName}`}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-bold text-xs transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <span>View Details</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Empty State */}
+        {sortedCompanies.length === 0 && (
+          <div className="p-12 text-center bg-white">
+            <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+            <h4 className="font-bold text-slate-800 text-base">No hiring drives match your search</h4>
+            <p className="text-xs text-slate-500 mt-1 mb-4">Try adjusting company or status filters.</p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCompanyFilter('ALL');
+                setSelectedStatusFilter('ALL');
+              }}
+              className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs hover:bg-indigo-100 transition"
+            >
+              Reset All Filters
+            </button>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-50/40">
+            <span className="text-slate-500 font-medium">
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, sortedCompanies.length)} of {sortedCompanies.length} Companies
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                ← Previous
+              </button>
+              <span className="px-2 font-black text-slate-800">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ========================================================================= */}
       {/* 5. DETAILED COMPANY MODAL & CANDIDATE DRILLDOWN                           */}

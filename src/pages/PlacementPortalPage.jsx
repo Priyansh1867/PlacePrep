@@ -50,7 +50,8 @@ import {
   LogOut,
   Compass,
   Mail,
-  School
+  School,
+  Trash2
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -59,6 +60,8 @@ import {
   getGraduationBatch,
   getUpcomingDrives,
   addDrive,
+  updateDriveRoundsConfig,
+  getDriveRoundsConfig,
   getEligibilityMatrix,
   getLiveSessions,
   getLiveSessionsForStudent,
@@ -180,6 +183,84 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     eligibleBatches: '',
     allowedBranches: ''
   });
+
+  // Dynamic Interview Round Configuration State
+  const [numberOfRounds, setNumberOfRounds] = useState(4);
+  const [configuredRounds, setConfiguredRounds] = useState([
+    { roundNumber: 1, name: 'Online Assessment', description: 'Aptitude, Core CS & Coding Evaluation' },
+    { roundNumber: 2, name: 'Technical Interview – Round 1', description: 'Data Structures & Problem Solving' },
+    { roundNumber: 3, name: 'Technical Interview – Round 2', description: 'System Design & In-Depth Discussion' },
+    { roundNumber: 4, name: 'HR & Final Selection', description: 'Culture Fit, Behavioral & Offer Formalities' }
+  ]);
+
+  const handleNumberOfRoundsChange = (val) => {
+    const count = Math.max(1, Math.min(10, parseInt(val, 10) || 1));
+    setNumberOfRounds(count);
+    setConfiguredRounds((prev) => {
+      if (prev.length === count) return prev;
+      if (prev.length < count) {
+        const defaultNames = [
+          'Online Assessment',
+          'Technical Interview – Round 1',
+          'Technical Interview – Round 2',
+          'Technical Interview – Round 3',
+          'Managerial Interview',
+          'HR Interview',
+          'Executive Fitment',
+          'Final Selection',
+          'Onboarding & Offer Rollout',
+          'Specialist Evaluation'
+        ];
+        const updated = [...prev];
+        for (let i = prev.length; i < count; i++) {
+          updated.push({
+            roundNumber: i + 1,
+            name: defaultNames[i] || `Interview Round ${i + 1}`,
+            description: ''
+          });
+        }
+        return updated;
+      } else {
+        return prev.slice(0, count);
+      }
+    });
+  };
+
+  const handleAddRound = () => {
+    if (configuredRounds.length >= 10) {
+      showToast('Maximum 10 interview rounds allowed per drive.');
+      return;
+    }
+    const nextNum = configuredRounds.length + 1;
+    const updated = [
+      ...configuredRounds,
+      {
+        roundNumber: nextNum,
+        name: `Interview Round ${nextNum}`,
+        description: ''
+      }
+    ];
+    setConfiguredRounds(updated);
+    setNumberOfRounds(updated.length);
+  };
+
+  const handleRemoveRound = (idxToRemove) => {
+    if (configuredRounds.length <= 1) {
+      showToast('A hiring drive must have at least 1 interview round.');
+      return;
+    }
+    const updated = configuredRounds
+      .filter((_, idx) => idx !== idxToRemove)
+      .map((r, idx) => ({ ...r, roundNumber: idx + 1 }));
+    setConfiguredRounds(updated);
+    setNumberOfRounds(updated.length);
+  };
+
+  const handleRoundFieldChange = (index, field, value) => {
+    setConfiguredRounds((prev) =>
+      prev.map((r, idx) => (idx === index ? { ...r, [field]: value } : r))
+    );
+  };
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [broadcastForm, setBroadcastForm] = useState({
@@ -403,6 +484,36 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       return;
     }
 
+    // Validate interview rounds
+    if (!configuredRounds || configuredRounds.length === 0) {
+      showToast('Please configure at least 1 interview round.');
+      return;
+    }
+
+    const roundNamesSeen = new Set();
+    for (let i = 0; i < configuredRounds.length; i++) {
+      const r = configuredRounds[i];
+      const name = r.name?.trim();
+      if (!name) {
+        showToast(`Round ${i + 1} must have a valid name.`);
+        return;
+      }
+      const lower = name.toLowerCase();
+      if (roundNamesSeen.has(lower)) {
+        showToast(`Duplicate round name "${name}" detected. Round names must be distinct.`);
+        return;
+      }
+      roundNamesSeen.add(lower);
+    }
+
+    const finalRoundConfigs = configuredRounds.map((r, idx) => ({
+      roundNumber: idx + 1,
+      name: r.name.trim(),
+      description: r.description?.trim() || ''
+    }));
+    const finalRoundsList = finalRoundConfigs.map((r) => r.name);
+    const roundConfigsJson = JSON.stringify(finalRoundConfigs);
+
     const newDrive = {
       id: `drv-${Date.now()}`,
       driveId: `drv-${Date.now()}`,
@@ -423,12 +534,18 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
-      isRegistered: false
+      isRegistered: false,
+      totalRounds: finalRoundConfigs.length,
+      rounds: finalRoundsList,
+      roundConfigs: finalRoundConfigs,
+      roundConfigsJson: roundConfigsJson
     };
 
     // Save locally via storage helper
     try {
       addDrive(newDrive);
+      updateDriveRoundsConfig(newDrive.id, finalRoundsList, finalRoundConfigs);
+      updateDriveRoundsConfig(newDrive.companyId, finalRoundsList, finalRoundConfigs);
     } catch (err) {
       console.warn('Local storage addDrive error:', err);
     }
@@ -455,8 +572,15 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       eligibleBatches: '',
       allowedBranches: ''
     });
+    setNumberOfRounds(4);
+    setConfiguredRounds([
+      { roundNumber: 1, name: 'Online Assessment', description: 'Aptitude, Core CS & Coding Evaluation' },
+      { roundNumber: 2, name: 'Technical Interview – Round 1', description: 'Data Structures & Problem Solving' },
+      { roundNumber: 3, name: 'Technical Interview – Round 2', description: 'System Design & In-Depth Discussion' },
+      { roundNumber: 4, name: 'HR & Final Selection', description: 'Culture Fit, Behavioral & Offer Formalities' }
+    ]);
     setIsDriveModalOpen(false);
-    showToast(`Campus hiring drive for ${newDrive.companyName} created successfully!`);
+    showToast(`Campus hiring drive for ${newDrive.companyName} with ${finalRoundConfigs.length} interview rounds created successfully!`);
   };
 
   const handleCreateInternship = (e) => {
@@ -968,6 +1092,11 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
                           Package: {drive.ctc}
                         </span>
+                        {drive.rounds && drive.rounds.length > 0 && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {drive.rounds.length} Interview Rounds
+                          </span>
+                        )}
                       </div>
 
                       <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-3">
@@ -1897,13 +2026,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       />
 
       {/* ========================================================================= */}
-      {/* MODAL: CREATE CAMPUS DRIVE (TPO / COORDINATOR)                            */}
+      {/* MODAL: CREATE CAMPUS DRIVE (TPO / COORDINATOR / DIRECTOR)                  */}
       {/* ========================================================================= */}
       {isDriveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-slate-200 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-black text-slate-900 mb-1">Create New Campus Hiring Drive</h3>
-            <p className="text-xs text-slate-500 mb-4">Publish a verified recruitment drive with packages and eligibility.</p>
+            <p className="text-xs text-slate-500 mb-4">Publish a verified recruitment drive with packages, cutoffs, and customizable interview rounds.</p>
 
             <form onSubmit={handleCreateDrive} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
@@ -1983,6 +2112,111 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     onChange={(e) => setDriveForm({ ...driveForm, maxBacklogs: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   />
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* NEW SECTION: INTERVIEW ROUND CONFIGURATION                                */}
+              {/* ========================================================================= */}
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Interview Round Configuration</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Configure recruitment rounds with custom names and optional evaluation descriptions.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                    <label htmlFor="num-rounds-input" className="text-[11px] font-bold text-slate-700 whitespace-nowrap">
+                      Number of Rounds:
+                    </label>
+                    <input
+                      id="num-rounds-input"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={numberOfRounds}
+                      onChange={(e) => handleNumberOfRoundsChange(e.target.value)}
+                      className="w-14 bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-800 text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Dynamically Generated Round Fields */}
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                  {configuredRounds.map((round, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 hover:border-emerald-300 transition"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800">
+                          Round {round.roundNumber}
+                        </span>
+
+                        {configuredRounds.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRound(idx)}
+                            className="text-slate-400 hover:text-rose-600 transition p-1 rounded-md text-[11px] flex items-center gap-1 cursor-pointer"
+                            title="Remove this round"
+                            aria-label={`Remove Round ${round.roundNumber}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span className="text-[10px] font-semibold hidden sm:inline">Remove</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
+                            Round Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={round.name}
+                            onChange={(e) => handleRoundFieldChange(idx, 'name', e.target.value)}
+                            placeholder="e.g. Technical Interview – Round 1"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
+                            Description / Focus (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={round.description || ''}
+                            onChange={(e) => handleRoundFieldChange(idx, 'description', e.target.value)}
+                            placeholder="e.g. DSA, System Design & Live Coding"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={handleAddRound}
+                    disabled={configuredRounds.length >= 10}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-40 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Round</span>
+                  </button>
+                  <span className="text-[10px] font-medium text-slate-400">
+                    {configuredRounds.length} rounds configured
+                  </span>
                 </div>
               </div>
 

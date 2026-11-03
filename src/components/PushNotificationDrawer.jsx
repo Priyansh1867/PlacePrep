@@ -8,12 +8,18 @@ import {
   ArrowRight,
   ExternalLink,
   Trash2,
-  Check
+  Check,
+  Video,
+  Calendar,
+  Building2,
+  Briefcase
 } from 'lucide-react';
-import { getPushNotifications, markNotificationAsRead } from '../services/storage';
+import { getPushNotifications, markNotificationAsRead, getCurrentUser } from '../services/storage';
 
 export default function PushNotificationDrawer({ isOpen, onClose, onNavigate }) {
   const [notifications, setNotifications] = useState(getPushNotifications());
+  const currentUser = getCurrentUser() || {};
+  const isStudent = (currentUser?.role || 'student').toLowerCase() === 'student';
 
   useEffect(() => {
     const handleBroadcast = (e) => {
@@ -32,6 +38,14 @@ export default function PushNotificationDrawer({ isOpen, onClose, onNavigate }) 
     const updated = notifications.map(n => ({ ...n, read: true }));
     setNotifications(updated);
   };
+
+  // Filter out live session notifications if student is ineligible
+  const visibleNotifications = notifications.filter(notif => {
+    if (isStudent && notif.targetStudentEmails && Array.isArray(notif.targetStudentEmails) && notif.targetStudentEmails.length > 0) {
+      return notif.targetStudentEmails.includes(currentUser?.email);
+    }
+    return true;
+  });
 
   if (!isOpen) return null;
 
@@ -69,13 +83,13 @@ export default function PushNotificationDrawer({ isOpen, onClose, onNavigate }) 
 
         {/* Notifications List */}
         <div className="p-4 flex-1 overflow-y-auto space-y-3">
-          {notifications.length === 0 ? (
+          {visibleNotifications.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-xs">No active push notifications</p>
             </div>
           ) : (
-            notifications.map(notif => (
+            visibleNotifications.map(notif => (
               <div
                 key={notif.id}
                 className={`p-4 rounded-2xl border transition relative ${
@@ -83,31 +97,76 @@ export default function PushNotificationDrawer({ isOpen, onClose, onNavigate }) 
                 }`}
               >
                 <div className="flex items-start justify-between gap-3 mb-1">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    notif.priority === 'Urgent' ? 'bg-rose-100 text-rose-800' :
-                    notif.priority === 'High' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'
-                  }`}>
-                    {notif.category}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      notif.priority === 'Urgent' ? 'bg-rose-100 text-rose-800' :
+                      notif.priority === 'High' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {notif.category}
+                    </span>
+                    {notif.platform && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                        {notif.platform}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
                 </div>
 
-                <h4 className="font-bold text-xs text-slate-900">{notif.title}</h4>
+                <h4 className="font-bold text-xs text-slate-900 mt-1">{notif.title}</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">{notif.message}</p>
 
-                <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
-                  {notif.actionRoute && (
-                    <button
-                      onClick={() => {
-                        onClose();
-                        onNavigate(notif.actionRoute);
-                      }}
-                      className="font-bold text-indigo-600 hover:underline flex items-center gap-1"
-                    >
-                      <span>Open View</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                {/* Live Session Specific Details */}
+                {notif.joinUrl && (
+                  <div className="my-2.5 p-2.5 rounded-xl bg-white border border-slate-200 text-xs space-y-1 shadow-2xs">
+                    {notif.date && notif.time && (
+                      <div className="flex items-center gap-1.5 text-slate-700 font-medium">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>{notif.date} • {notif.time}</span>
+                      </div>
+                    )}
+                    {notif.associatedDrive && (
+                      <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
+                        <Briefcase className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>Drive: <strong>{notif.associatedDrive}</strong></span>
+                      </div>
+                    )}
+                    {notif.agenda && (
+                      <p className="text-[11px] text-slate-500 italic mt-0.5 line-clamp-2">
+                        "{notif.agenda}"
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs gap-2">
+                  <div className="flex items-center gap-2">
+                    {notif.joinUrl && (
+                      <a
+                        href={notif.joinUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Join Meeting</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+
+                    {notif.actionRoute && (
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onNavigate(notif.actionRoute);
+                        }}
+                        className="font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                      >
+                        <span>Open View</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
                   {!notif.read && (
                     <button

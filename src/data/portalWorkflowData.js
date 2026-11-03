@@ -48,10 +48,138 @@ export const INITIAL_OFF_CAMPUS_COMPANIES = [];
 export const INITIAL_ELIGIBILITY_CRITERIA_MATRIX = [];
 
 // 9. Live Pre-Placement & Corporate Sessions (Placement Pillar)
-export const INITIAL_LIVE_SESSIONS = [];
+export const INITIAL_LIVE_SESSIONS = [
+  {
+    id: 'live-seed-tcs-001',
+    sessionId: 'live-seed-tcs-001',
+    companyName: 'Tata Consultancy Services',
+    title: 'TCS Digital & Prime Engineering Culture & System Design Expectations',
+    driveId: 'tcs',
+    driveTitle: 'TCS Ninja & Digital SDE Drive',
+    sessionType: 'Pre-Placement Talk',
+    platform: 'Google Meet',
+    joinUrl: 'https://meet.google.com/tcs-ppt-2026',
+    date: '2026-11-15',
+    startTime: '11:00 AM',
+    endTime: '12:00 PM',
+    time: '11:00 AM – 12:00 PM',
+    speaker: 'Karthik Ramanathan (Principal Engineering Director)',
+    agenda: 'Overview of TCS Digital recruitment, compensation bands, coding evaluation criteria, and cloud rotation programs.',
+    instructions: 'Join 5 minutes prior. Keep your college ID roll number ready for attendance.',
+    status: 'Published',
+    eligibleStudentsCount: 250,
+    notifiedCount: 250,
+    rsvpsCount: 148,
+    hasRsvp: false,
+    isLiveNow: false,
+    createdBy: 'Director (Dr. Vikramaditya Sen)',
+    createdAt: '2026-11-01 09:30',
+    updatedAt: '2026-11-01 09:30',
+    auditTrail: [
+      {
+        action: 'CREATED_AND_PUBLISHED',
+        timestamp: '2026-11-01 09:30',
+        actor: 'Director (Dr. Vikramaditya Sen)',
+        details: 'Published Pre-Placement Talk for Tata Consultancy Services. Dispatched smart notifications to 250 eligible candidates.'
+      }
+    ]
+  },
+  {
+    id: 'live-seed-inf-002',
+    sessionId: 'live-seed-inf-002',
+    companyName: 'Infosys',
+    title: 'Specialist Programmer Track & Cloud Microservices Orientation',
+    driveId: 'infosys',
+    driveTitle: 'Infosys Specialist Programmer (₹9.5 LPA)',
+    sessionType: 'Company Webinar',
+    platform: 'Microsoft Teams',
+    joinUrl: 'https://teams.microsoft.com/l/meetup-join/inf-ppt-2026',
+    date: '2026-11-18',
+    startTime: '02:30 PM',
+    endTime: '03:45 PM',
+    time: '02:30 PM – 03:45 PM',
+    speaker: 'Megha Sen (Head of University Talent Engagement)',
+    agenda: 'Interactive demonstration of advanced coding questions, system design interview format, and InfyTQ bridge.',
+    instructions: 'Please ensure a stable broadband connection. Q&A session will open in the last 20 minutes.',
+    status: 'Published',
+    eligibleStudentsCount: 180,
+    notifiedCount: 180,
+    rsvpsCount: 115,
+    hasRsvp: false,
+    isLiveNow: false,
+    createdBy: 'Director (Dr. Vikramaditya Sen)',
+    createdAt: '2026-11-02 10:15',
+    updatedAt: '2026-11-02 10:15',
+    auditTrail: [
+      {
+        action: 'CREATED_AND_PUBLISHED',
+        timestamp: '2026-11-02 10:15',
+        actor: 'Director (Dr. Vikramaditya Sen)',
+        details: 'Published Company Webinar for Infosys. Dispatched smart notifications to 180 eligible candidates.'
+      }
+    ]
+  },
+  {
+    id: 'live-seed-acc-003',
+    sessionId: 'live-seed-acc-003',
+    companyName: 'Accenture',
+    title: 'Advanced App Engineering Analyst Recruitment Walkthrough',
+    driveId: 'accenture',
+    driveTitle: 'Accenture Advanced App Engineering Analyst (₹6.5 LPA)',
+    sessionType: 'Recruitment Orientation',
+    platform: 'Zoom',
+    joinUrl: 'https://zoom.us/j/9283746152',
+    date: '2026-11-22',
+    startTime: '10:00 AM',
+    endTime: '11:15 AM',
+    time: '10:00 AM – 11:15 AM',
+    speaker: 'Siddharth Roy (Senior Managing Director, Campus Hiring)',
+    agenda: 'Full stack engineering expectations, agile development at Accenture Technology, and case study round preparation.',
+    instructions: 'Join via desktop client for live coding demonstration.',
+    status: 'Published',
+    eligibleStudentsCount: 240,
+    notifiedCount: 240,
+    rsvpsCount: 192,
+    hasRsvp: false,
+    isLiveNow: false,
+    createdBy: 'Director (Dr. Vikramaditya Sen)',
+    createdAt: '2026-11-02 14:00',
+    updatedAt: '2026-11-02 14:00',
+    auditTrail: [
+      {
+        action: 'CREATED_AND_PUBLISHED',
+        timestamp: '2026-11-02 14:00',
+        actor: 'Director (Dr. Vikramaditya Sen)',
+        details: 'Published Recruitment Orientation for Accenture. Dispatched smart notifications to 240 eligible candidates.'
+      }
+    ]
+  }
+];
 
 // 10. Push Notifications System (Placement & TPO broadcast)
-export const INITIAL_PUSH_NOTIFICATIONS = [];
+export const INITIAL_PUSH_NOTIFICATIONS = [
+  {
+    id: 'notif-tcs-ppt-001',
+    type: 'LIVE_SESSION_INVITE',
+    category: 'Pre-Placement Talk',
+    priority: 'High',
+    companyName: 'TCS',
+    sessionTitle: 'TCS Digital & Prime Engineering Culture & System Design Expectations',
+    sessionType: 'Pre-Placement Talk',
+    title: 'TCS – Pre-Placement Talk',
+    message: 'TCS is conducting a Pre-Placement Talk for eligible candidates.',
+    date: '15 November 2026',
+    time: '11:00 AM – 12:00 PM',
+    platform: 'Google Meet',
+    joinUrl: 'https://meet.google.com/tcs-ppt-2026',
+    agenda: 'Overview of TCS Digital recruitment, compensation bands, and coding evaluation criteria.',
+    associatedDrive: 'TCS Ninja & Digital SDE Drive',
+    driveId: 'tcs',
+    timestamp: 'Just now',
+    read: false,
+    actionRoute: 'live-sessions'
+  }
+];
 
 // 11. Feedback Loop (Student -> TPO -> Company)
 export const INITIAL_FEEDBACK_LOOP = [];

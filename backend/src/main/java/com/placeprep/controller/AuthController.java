@@ -1,6 +1,8 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.User;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -42,7 +44,7 @@ public class AuthController {
     private Map<String, Object> buildAuthResponse(User user, String token) {
         Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("token", token);
-        resp.put("user", user);
+        resp.put("user", EntityResponseMapper.toDto(user));
         resp.put("id", user.getId());
         resp.put("name", user.getName());
         resp.put("email", user.getEmail());
@@ -84,15 +86,15 @@ public class AuthController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers(null, null));
+    public ResponseEntity<List<EntityResponseDto>> getAllUsers() {
+        return ResponseEntity.ok(EntityResponseMapper.toDtoList(userService.getAllUsers(null, null)));
     }
 
     @GetMapping("/user/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         try {
             User user = userService.getUserById(id);
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -103,19 +105,9 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
-        try {
-            String email = body != null ? body.get("email") : null;
-            String token = userService.generatePasswordResetToken(email);
-            Map<String, Object> resp = new java.util.HashMap<>();
-            resp.put("message", "Password reset token generated successfully");
-            resp.put("resetToken", token);
-            return ResponseEntity.ok(resp);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", "Error: " + e.getMessage()));
-        }
+        // Reset tokens must never be returned to a requester. Re-enable only with a delivery channel.
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Collections.singletonMap("error", "Password recovery is temporarily unavailable."));
     }
 
     @PostMapping("/reset-password")

@@ -2,6 +2,7 @@ package com.placeprep.controller;
 
 import com.placeprep.model.Feedback;
 import com.placeprep.service.FeedbackService;
+import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,28 +31,26 @@ public class FeedbackController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Feedback>> getAllFeedback() {
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getAllFeedback() {
         return ResponseEntity.ok(feedbackService.getAll());
     }
 
     @PostMapping
-    public ResponseEntity<Feedback> submitFeedback(@RequestBody Feedback feedback) {
-        Feedback created = feedbackService.submit(feedback);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<com.placeprep.dto.EntityResponseDto> submitFeedback(@RequestBody Feedback feedback) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(feedbackService.submit(feedback));
     }
 
     @PostMapping("/recruiter")
     public ResponseEntity<?> submitRecruiterFeedback(@RequestBody com.placeprep.model.RecruiterFeedback feedback) {
         try {
-            com.placeprep.model.RecruiterFeedback created = feedbackService.submitRecruiterFeedback(feedback);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(feedbackService.submitRecruiterFeedback(feedback));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", e.getMessage()));
         }
     }
 
     @GetMapping("/recruiter")
-    public ResponseEntity<List<com.placeprep.model.RecruiterFeedback>> getRecruiterFeedback(
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getRecruiterFeedback(
             @org.springframework.web.bind.annotation.RequestParam(required = false) String driveId
     ) {
         return ResponseEntity.ok(feedbackService.getAllRecruiterFeedback(driveId));

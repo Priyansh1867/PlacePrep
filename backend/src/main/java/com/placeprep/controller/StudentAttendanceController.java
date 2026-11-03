@@ -231,8 +231,8 @@ public class StudentAttendanceController {
      * Returns all subjects relevant to the authenticated student with attendance statistics.
      */
     @GetMapping("/subjects")
-    public ResponseEntity<?> getEnrolledSubjects(Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getEnrolledSubjects(Principal principal) {
+        String email = principal.getName();
         List<Map<String, Object>> subjects = attendanceService.getEnrolledSubjectsWithSummary(email);
         return ResponseEntity.ok(subjects);
     }
@@ -242,8 +242,8 @@ public class StudentAttendanceController {
      * Returns subject details and all scheduled/completed/open lectures for this student.
      */
     @GetMapping("/subjects/{subjectCode}")
-    public ResponseEntity<?> getSubjectDetails(@PathVariable String subjectCode, Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getSubjectDetails(@PathVariable String subjectCode, Principal principal) {
+        String email = principal.getName();
         Map<String, Object> details = attendanceService.getSubjectDetailsWithLectures(subjectCode, email);
         return ResponseEntity.ok(details);
     }
@@ -253,8 +253,8 @@ public class StudentAttendanceController {
      * Returns all scheduled lectures for a subject.
      */
     @GetMapping("/subjects/{subjectCode}/lectures")
-    public ResponseEntity<?> getSubjectLectures(@PathVariable String subjectCode, Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getSubjectLectures(@PathVariable String subjectCode, Principal principal) {
+        String email = principal.getName();
         Map<String, Object> details = attendanceService.getSubjectDetailsWithLectures(subjectCode, email);
         return ResponseEntity.ok(details.get("lectures"));
     }
@@ -311,8 +311,8 @@ public class StudentAttendanceController {
      * Returns full lecture-wise attendance history of the authenticated student across all subjects.
      */
     @GetMapping("/history")
-    public ResponseEntity<?> getAttendanceHistory(Principal principal, @RequestParam(required = false) String studentEmail) {
-        String email = principal != null ? principal.getName() : (studentEmail != null ? studentEmail : "priyansh.jain@example.edu");
+    public ResponseEntity<?> getAttendanceHistory(Principal principal) {
+        String email = principal.getName();
         List<Map<String, Object>> history = attendanceService.getStudentAttendanceHistory(email);
         return ResponseEntity.ok(history);
     }

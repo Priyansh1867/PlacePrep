@@ -33,97 +33,6 @@ const rolesByPortal = {
 
 const defaultRoleFor = (portal) => (portal === 'placement' ? 'tpo' : 'student');
 
-export const HARDCODED_ACCOUNTS = [
-  {
-    role: 'student',
-    portal: 'institute',
-    label: 'Student',
-    icon: GraduationCap,
-    email: 'priyansh.jain@example.edu',
-    password: 'password123',
-    name: 'Priyansh Jain',
-    badge: 'Student',
-    accent: 'bg-blue-50 text-blue-800 border-blue-200/90 hover:bg-blue-600 hover:text-white',
-  },
-  {
-    role: 'tpo',
-    portal: 'placement',
-    label: 'TPO Officer',
-    icon: Building2,
-    email: 'tpo@placeprep.edu',
-    password: 'password123',
-    name: 'Prof. Rajesh Raman',
-    badge: 'TPO Cell',
-    accent: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-600 hover:text-white',
-  },
-  {
-    role: 'management',
-    portal: 'management',
-    label: 'Management',
-    icon: ShieldCheck,
-    email: 'management@placeprep.com',
-    password: 'password123',
-    name: 'Dr. Ramesh Gupta',
-    badge: 'Operations',
-    accent: 'bg-teal-50 text-teal-800 border-teal-200/90 hover:bg-teal-600 hover:text-white',
-  },
-  {
-    role: 'hr',
-    portal: 'placement',
-    label: 'Recruiter',
-    icon: Briefcase,
-    email: 'recruiter@placeprep.com',
-    password: 'password123',
-    name: 'Sarah Jenkins',
-    badge: 'Google',
-    accent: 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-600 hover:text-white',
-  },
-  {
-    role: 'teacher',
-    portal: 'institute',
-    label: 'Faculty',
-    icon: BookOpen,
-    email: 'teacher@placeprep.com',
-    password: 'password123',
-    name: 'Dr. Neha Sharma',
-    badge: 'CSE Faculty',
-    accent: 'bg-violet-50 text-violet-800 border-violet-200/90 hover:bg-violet-600 hover:text-white',
-  },
-  {
-    role: 'hod',
-    portal: 'institute',
-    label: 'HOD',
-    icon: Award,
-    email: 'hod@placeprep.com',
-    password: 'password123',
-    name: 'Prof. Alok Verma',
-    badge: 'HOD CSE',
-    accent: 'bg-rose-50 text-rose-800 border-rose-200/90 hover:bg-rose-600 hover:text-white',
-  },
-  {
-    role: 'coordinator',
-    portal: 'placement',
-    label: 'Coordinator',
-    icon: Users,
-    email: 'coordinator@placeprep.com',
-    password: 'password123',
-    name: 'Prof. Ananya Gupta',
-    badge: 'Logistics',
-    accent: 'bg-cyan-50 text-cyan-800 border-cyan-200/90 hover:bg-cyan-600 hover:text-white',
-  },
-  {
-    role: 'director',
-    portal: 'placement',
-    label: 'Director',
-    icon: ShieldCheck,
-    email: 'director@placeprep.com',
-    password: 'password123',
-    name: 'Dr. Vikramaditya Sen',
-    badge: 'Executive',
-    accent: 'bg-indigo-50 text-indigo-800 border-indigo-200/90 hover:bg-indigo-600 hover:text-white',
-  },
-];
-
 export const isCollegeEmail = (email) => {
   if (!email || typeof email !== 'string') return false;
   const lower = email.trim().toLowerCase();
@@ -147,10 +56,6 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const defaultAcc = useMemo(() => {
-    return HARDCODED_ACCOUNTS.find((a) => a.role === defaultRoleFor(safeInitialPortal)) || HARDCODED_ACCOUNTS[0];
-  }, [safeInitialPortal]);
-
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', rollNumber: '',
     college: '', branch: '', batch: '2028',
@@ -164,104 +69,21 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const handleRoleSelect = (roleId) => {
     setSelectedRole(roleId);
     setErrorMsg('');
-    const acc = HARDCODED_ACCOUNTS.find((a) => a.role === roleId);
-    if (acc) {
-      setFormData((prev) => ({
-        ...prev,
-        email: acc.email,
-        password: acc.password,
-        confirmPassword: acc.password,
-        fullName: acc.name,
-        designation: acc.badge,
-      }));
-    }
+    setAuthMode('login');
+    setFormData((prev) => ({ ...prev, email: '', password: '', confirmPassword: '' }));
   };
 
   const changePortal = (branch) => {
     setPortalBranch(branch);
-    const targetRole = defaultRoleFor(branch);
-    setSelectedRole(targetRole);
+    setSelectedRole(defaultRoleFor(branch));
+    setAuthMode('login');
     setErrorMsg('');
     setSuccessMsg('');
-    const acc = HARDCODED_ACCOUNTS.find((a) => a.role === targetRole);
-    if (acc) {
-      setFormData((prev) => ({
-        ...prev,
-        email: acc.email,
-        password: acc.password,
-        confirmPassword: acc.password,
-        fullName: acc.name,
-        designation: acc.badge,
-      }));
-    }
+    setFormData((prev) => ({ ...prev, email: '', password: '', confirmPassword: '' }));
   };
-
-  const handleAutofill = (acc) => {
-    setSelectedRole(acc.role);
-    if (acc.portal && acc.portal !== 'management') {
-      setPortalBranch(acc.portal);
-    }
-    setFormData((prev) => ({
-      ...prev,
-      email: acc.email,
-      password: acc.password,
-      confirmPassword: acc.password,
-      fullName: acc.name,
-      designation: acc.badge,
-    }));
-    setErrorMsg('');
-    setSuccessMsg(`Autofilled credentials for ${acc.label} (${acc.email})`);
-  };
-
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleQuickLogin = async (acc) => {
-    setErrorMsg('');
-    setIsSubmitting(true);
-    try {
-      const destinationPortal = acc.role === 'management' ? 'management' : (acc.portal || portalBranch);
-      let user = null;
-      try {
-        const response = await AuthApi.login({ email: acc.email, password: acc.password });
-        if (response?.user) {
-          user = response.user;
-          if (response.token) localStorage.setItem('placeprep_token', response.token);
-        }
-      } catch (e) {
-        console.warn('API login skipped, using guaranteed hardcoded login:', e);
-      }
-
-      if (!user) {
-        user = {
-          id: Math.floor(Math.random() * 9000) + 1000,
-          name: acc.name,
-          email: acc.email,
-          role: acc.role,
-          branch: acc.role === 'student' ? 'Computer Science & Engineering' : acc.badge,
-          college: 'Indian Institute of Technology',
-          rollNumber: acc.role === 'student' ? '2024/CSE/084' : undefined,
-          graduationBatch: acc.role === 'student' ? '2026' : undefined,
-          status: 'ACTIVE',
-          onboardingCompleted: true,
-        };
-      }
-
-      setCurrentUser(user);
-      setPortalMode(destinationPortal);
-      setPortalRole(user.role);
-      if (user.graduationBatch) setGraduationBatch(user.graduationBatch);
-      setSuccessMsg(`Logged in as ${user.name} (${acc.label})`);
-      setTimeout(() => {
-        onAuthSuccess(user, destinationPortal);
-      }, 150);
-    } catch (err) {
-      setErrorMsg(err.message || 'Login failed');
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleSubmit = async (event) => {
@@ -563,7 +385,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
               {/* Mode Tabs */}
               <div className="mb-3.5 flex items-center justify-between border-b border-slate-100">
                 <div className="flex gap-4">
-                  {['login', 'register'].map((mode) => (
+                  {(selectedRole === 'student' ? ['login', 'register'] : ['login']).map((mode) => (
                     <button
                       key={mode}
                       type="button"
@@ -628,20 +450,6 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   label={
                     <span className="flex items-center justify-between">
                       <span>Email address</span>
-                      {authMode === 'login' && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            const acc = HARDCODED_ACCOUNTS.find((a) => a.role === selectedRole) || HARDCODED_ACCOUNTS[0];
-                            handleAutofill(acc);
-                          }}
-                          className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 cursor-pointer"
-                        >
-                          <Sparkles className="w-3 h-3 text-orange-500" />
-                          <span>Autofill {roleOptions.find((r) => r.id === selectedRole)?.label || 'Credentials'}</span>
-                        </button>
-                      )}
                     </span>
                   }
                   icon={Mail}

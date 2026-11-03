@@ -7,6 +7,7 @@ import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import com.placeprep.repository.UserRepository;
 import com.placeprep.service.AuditLogService;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -50,11 +51,11 @@ public class AdminController {
     private StudentApplicationRepository applicationRepository;
 
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getAllUsers(
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getAllUsers(
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String search
     ) {
-        return ResponseEntity.ok(userService.getAllUsers(role, search));
+        return ResponseEntity.ok(EntityResponseMapper.toDtoList(userService.getAllUsers(role, search)));
     }
 
     @PutMapping("/users/{id}/role")
@@ -65,7 +66,7 @@ public class AdminController {
     ) {
         try {
             String newRole = body != null ? body.get("role") : null;
-            User updated = userService.updateUserRole(id, newRole);
+            com.placeprep.dto.EntityResponseDto updated = userService.updateUserRole(id, newRole);
             auditLogService.logAction(
                     "USER_ROLE_UPDATED",
                     adminEmail,
@@ -90,7 +91,7 @@ public class AdminController {
     ) {
         try {
             String newStatus = body != null ? body.get("status") : null;
-            User updated = userService.updateUserStatus(id, newStatus);
+            com.placeprep.dto.EntityResponseDto updated = userService.updateUserStatus(id, newStatus);
             auditLogService.logAction(
                     "USER_STATUS_UPDATED",
                     adminEmail,
@@ -151,7 +152,7 @@ public class AdminController {
     }
 
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<AuditLog>> getAuditLogs() {
-        return ResponseEntity.ok(auditLogService.getRecentLogs());
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getAuditLogs() {
+        return ResponseEntity.ok(EntityResponseMapper.toDtoList(auditLogService.getRecentLogs()));
     }
 }

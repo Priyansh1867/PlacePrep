@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Sparkles
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
 import { setCurrentUser, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
@@ -31,13 +30,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
   // Form State
   const [formData, setFormData] = useState({
-    name: 'Priyansh Jain',
-    email: 'priyansh.jain@example.edu',
-    password: 'password123',
-    confirmPassword: 'password123',
-    college: 'Indian Institute of Technology',
-    branch: 'Computer Science & Engineering',
-    graduationBatch: '2026'
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    college: '',
+    branch: '',
+    graduationBatch: ''
   });
 
   if (!isOpen) return null;
@@ -46,59 +45,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrorMsg('');
     setSuccessMsg('');
-  };
-
-  const handleAutofillModal = (acc) => {
-    setFormData((prev) => ({
-      ...prev,
-      email: acc.email,
-      password: acc.password,
-      name: acc.name,
-      branch: acc.badge,
-    }));
-    setErrorMsg('');
-    setSuccessMsg(`Autofilled credentials for ${acc.label} (${acc.email})`);
-  };
-
-  const handleDemoLogin = (role = 'student') => {
-    const acc = HARDCODED_ACCOUNTS.find(a => a.role === role) || HARDCODED_ACCOUNTS[0];
-    handleQuickModalLogin(acc);
-  };
-
-  const handleQuickModalLogin = async (acc) => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      let user = null;
-      try {
-        const res = await AuthApi.login({ email: acc.email, password: acc.password });
-        if (res?.user) user = res.user;
-      } catch (err) {
-        console.warn('API login skipped in modal, using guaranteed hardcoded login:', err);
-      }
-      if (!user) {
-        user = {
-          id: Math.floor(Math.random() * 9000) + 1000,
-          name: acc.name,
-          email: acc.email,
-          role: acc.role,
-          branch: acc.badge,
-          college: 'Indian Institute of Technology',
-          rollNumber: acc.role === 'student' ? '2024/CSE/084' : undefined,
-          graduationBatch: acc.role === 'student' ? '2026' : undefined,
-          status: 'ACTIVE',
-          onboardingCompleted: true,
-        };
-      }
-      setCurrentUser(user);
-      setSuccessMsg(`Welcome, ${user.name}!`);
-      setTimeout(() => {
-        onAuthSuccess?.(user);
-        onClose();
-      }, 150);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleLogin = async (e) => {
@@ -142,7 +88,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
       saveRegisteredUser(userObj);
       setSuccessMsg(`Welcome back, ${userObj.name}!`);
       setTimeout(() => {
-        onAuthSuccess?.(user);
+        onAuthSuccess?.(userObj);
         onClose();
       }, 250);
     } catch (err) {
@@ -320,39 +266,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
           {tab === 'login' ? (
             <div className="space-y-3.5">
-              {/* Autofill Demo Credentials Bar */}
-              <div className="p-2.5 rounded-xl bg-gradient-to-r from-orange-50 via-slate-50 to-indigo-50/60 border border-orange-200/70">
-                <div className="flex items-center justify-between mb-1.5 px-0.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                    <Sparkles className="w-3.5 h-3.5 text-orange-500 animate-pulse" />
-                    <span>Autofill Demo Credentials</span>
-                  </div>
-                  <span className="text-[9.5px] font-semibold text-orange-700 bg-orange-100/80 px-1.5 py-0.5 rounded-full">
-                    Click to Autofill
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {HARDCODED_ACCOUNTS.map((acc) => {
-                    const AccIcon = acc.icon;
-                    return (
-                      <button
-                        key={acc.role}
-                        type="button"
-                        onClick={() => handleAutofillModal(acc)}
-                        title={`Autofill credentials for ${acc.name} (${acc.email})`}
-                        className="p-1.5 rounded-lg bg-white border border-slate-200/90 hover:border-orange-500 text-left cursor-pointer transition shadow-2xs flex items-center justify-between group"
-                      >
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <AccIcon className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                          <span className="text-[11px] font-bold text-slate-800 group-hover:text-orange-600 truncate">{acc.label}</span>
-                        </div>
-                        <span className="text-[9px] text-slate-400 truncate ml-1">{acc.badge}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <form onSubmit={handleLogin} className="space-y-3.5">
                 <Input
                   label="Email Address"
@@ -516,32 +429,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
             </form>
           )}
 
-          {/* Quick Demo Access Bar */}
-          <div className="pt-3 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-[#64748B] text-center mb-2 uppercase tracking-wider">
-              1-Click Demo Evaluation Profiles
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => handleDemoLogin('student')}
-                className="w-full"
-              >
-                Demo Student
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => handleDemoLogin('management')}
-                className="w-full"
-              >
-                Demo Admin
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

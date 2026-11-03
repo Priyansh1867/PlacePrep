@@ -4,12 +4,15 @@ import com.placeprep.model.Hackathon;
 import com.placeprep.model.Internship;
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.User;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.HackathonRepository;
 import com.placeprep.repository.InternshipRepository;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,12 +40,14 @@ public class OpportunityService {
 
     // --- HACKATHONS ---
 
-    public List<Hackathon> getAllHackathons() {
-        return hackathonRepository.findAllByOrderByEventDateAsc();
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getAllHackathons() {
+        return EntityResponseMapper.toDtoList(hackathonRepository.findAllByOrderByEventDateAsc());
     }
 
-    public Hackathon createHackathon(Hackathon hackathon) {
-        return hackathonRepository.save(hackathon);
+    @Transactional
+    public EntityResponseDto createHackathon(Hackathon hackathon) {
+        return EntityResponseMapper.toDto(hackathonRepository.save(hackathon));
     }
 
     public void deleteHackathon(Long id) {
@@ -51,18 +56,20 @@ public class OpportunityService {
 
     // --- INTERNSHIPS ---
 
-    public List<Internship> getAllInternships(String batch) {
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getAllInternships(String batch) {
         List<Internship> all = internshipRepository.findAllByOrderByDeadlineAsc();
         if (batch == null || batch.trim().isEmpty()) {
-            return all;
+            return EntityResponseMapper.toDtoList(all);
         }
-        return all.stream()
+        return EntityResponseMapper.toDtoList(all.stream()
                 .filter(i -> i.getEligibleBatches() == null || i.getEligibleBatches().contains(batch))
-                .toList();
+                .toList());
     }
 
-    public Internship createInternship(Internship internship) {
-        return internshipRepository.save(internship);
+    @Transactional
+    public EntityResponseDto createInternship(Internship internship) {
+        return EntityResponseMapper.toDto(internshipRepository.save(internship));
     }
 
     public void deleteInternship(Long id) {
@@ -71,6 +78,7 @@ public class OpportunityService {
 
     // --- OFF CAMPUS OPPORTUNITIES (STRICTLY GATED FOR FINAL YEAR STUDENTS) ---
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getOffCampusOpportunitiesForStudent(String studentEmailOrId) {
         Map<String, Object> response = new HashMap<>();
 
@@ -101,7 +109,7 @@ public class OpportunityService {
 
         response.put("status", "ACCESS_GRANTED");
         response.put("message", "Off-campus drives unlocked for final-year students.");
-        response.put("opportunities", offCampusDrives);
+        response.put("opportunities", EntityResponseMapper.toDtoList(offCampusDrives));
         return response;
     }
 }

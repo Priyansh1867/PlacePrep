@@ -1,9 +1,12 @@
 package com.placeprep.service;
 
 import com.placeprep.model.Notification;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,7 +20,8 @@ public class NotificationService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    public Notification broadcast(Notification notification) {
+    @Transactional
+    public EntityResponseDto broadcast(Notification notification) {
         if (notification.getCreatedAt() == null) {
             notification.setCreatedAt(LocalDateTime.now().format(TS));
         }
@@ -27,13 +31,14 @@ public class NotificationService {
         if (notification.getType() == null || notification.getType().trim().isEmpty()) {
             notification.setType("GENERAL_ANNOUNCEMENT");
         }
-        return notificationRepository.save(notification);
+        return EntityResponseMapper.toDto(notificationRepository.save(notification));
     }
 
-    public List<Notification> getNotificationsForUser(String role, String batch) {
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getNotificationsForUser(String role, String batch) {
         List<Notification> all = notificationRepository.findAllByOrderByCreatedAtDesc();
 
-        return all.stream()
+        return EntityResponseMapper.toDtoList(all.stream()
                 .filter(n -> {
                     String target = n.getTargetRole();
                     if ("ALL".equalsIgnoreCase(target)) {
@@ -54,7 +59,7 @@ public class NotificationService {
                     }
                     return false;
                 })
-                .toList();
+                .toList());
     }
 
     public void deleteNotification(Long id) {

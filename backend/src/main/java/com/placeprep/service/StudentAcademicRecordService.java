@@ -1,6 +1,8 @@
 package com.placeprep.service;
 
 import com.placeprep.model.StudentAcademicRecord;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.model.User;
 import com.placeprep.repository.StudentAcademicRecordRepository;
 import com.placeprep.repository.UserRepository;
@@ -31,11 +33,18 @@ public class StudentAcademicRecordService {
     @Autowired
     private UserRepository userRepository;
 
-    public List<StudentAcademicRecord> findAllRecords() {
-        return recordRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> findAllRecords() {
+        return EntityResponseMapper.toDtoList(recordRepository.findAll());
     }
 
-    public Optional<StudentAcademicRecord> findForStudent(String studentEmailOrId) {
+    @Transactional(readOnly = true)
+    public Optional<EntityResponseDto> findForStudent(String studentEmailOrId) {
+        return EntityResponseMapper.toDtoOptional(findForStudentEntity(studentEmailOrId));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<StudentAcademicRecord> findForStudentEntity(String studentEmailOrId) {
         Optional<StudentAcademicRecord> byEmail = recordRepository.findByEmail(studentEmailOrId);
         if (byEmail.isPresent()) {
             return byEmail;
@@ -43,14 +52,15 @@ public class StudentAcademicRecordService {
         return recordRepository.findByStudentId(studentEmailOrId);
     }
 
-    public StudentAcademicRecord saveRecord(StudentAcademicRecord record) {
+    @Transactional
+    public EntityResponseDto saveRecord(StudentAcademicRecord record) {
         if (record.getEmail() == null || record.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("email is required");
         }
         if (record.getStudentId() == null || record.getStudentId().trim().isEmpty()) {
             record.setStudentId(record.getEmail());
         }
-        return recordRepository.save(record);
+        return EntityResponseMapper.toDto(recordRepository.save(record));
     }
 
     @Transactional
@@ -249,7 +259,7 @@ public class StudentAcademicRecordService {
     }
 
     public void applyVerifiedAcademicsToUser(User user) {
-        findForStudent(user.getEmail()).ifPresent(record -> {
+        findForStudentEntity(user.getEmail()).ifPresent(record -> {
             if (record.isVerified()) {
                 copyToUser(user, record);
             }

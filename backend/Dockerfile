@@ -10,11 +10,11 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime with Java 23
-FROM eclipse-temurin:23-jre-jammy
+FROM eclipse-temurin:23-jre
 WORKDIR /app
 
 # Copy executable jar from build stage
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/app.jar app.jar
 
 ENV PORT=8082
 EXPOSE 8082

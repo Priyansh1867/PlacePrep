@@ -10,10 +10,10 @@ COPY backend/src ./src
 RUN mvn clean package -DskipTests -B
 
 # Runtime stage with Java 23
-FROM eclipse-temurin:23-jre-jammy
+FROM eclipse-temurin:23-jre
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/app.jar app.jar
 
 ENV PORT=8082
 EXPOSE 8082

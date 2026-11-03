@@ -67,12 +67,12 @@ export default function CompanyHubPage({
           if (data && data.length > 0) {
             setAllCompanyQuestions(data);
           } else {
-            setAllCompanyQuestions([]);
+            setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === targetId));
           }
         }
       } catch (e) {
         if (isMounted) {
-          setAllCompanyQuestions([]);
+          setAllCompanyQuestions(getInterviewQuestions().filter(q => q.companyId === targetId));
         }
       } finally {
         if (isMounted) setLoadingQuestions(false);

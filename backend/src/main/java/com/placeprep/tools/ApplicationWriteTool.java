@@ -2,7 +2,6 @@ package com.placeprep.tools;
 
 import com.placeprep.model.StudentApplication;
 import com.placeprep.service.ApplicationService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
@@ -17,17 +16,9 @@ public class ApplicationWriteTool {
 
     @Tool(description = "Register the authenticated student for a placement drive. The student identity must come from the authenticated session.")
     public Object registerForDrive(StudentApplication application, ToolContext context) {
-        if (!"STUDENT".equalsIgnoreCase(String.valueOf(context.getContext().get("role")))) {
-            throw new SecurityException("Only students can register for a placement drive");
-        }
         String userId = AiToolAuthorization.userId(context);
-        Object email = context.getContext().get("userEmail");
-        if (email == null || String.valueOf(email).isBlank()) {
-            throw new IllegalStateException("Authenticated email context is missing");
-        }
         application.setStudentId(userId);
-        application.setStudentEmail(String.valueOf(email));
-        return EntityResponseMapper.toJsonSafe(applicationService.registerApplication(application));
+        return applicationService.registerApplication(application);
     }
 
     @Tool(description = "Update placement application status. Requires placement staff permission.")
@@ -35,7 +26,7 @@ public class ApplicationWriteTool {
                                           String scheduledDate, String scheduledTime, String scheduledEndTime,
                                           String venue, String instructions, ToolContext context) {
         AiToolAuthorization.requirePlacementStaff(context);
-        return EntityResponseMapper.toJsonSafe(applicationService.updateStatus(applicationId, status, currentRound, scheduledDate,
-                scheduledTime, scheduledEndTime, venue, instructions));
+        return applicationService.updateStatus(applicationId, status, currentRound, scheduledDate,
+                scheduledTime, scheduledEndTime, venue, instructions);
     }
 }

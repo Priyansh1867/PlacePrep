@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.InterviewExperience;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.ExperienceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -33,7 +31,7 @@ public class ExperienceController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EntityResponseDto>> getExperiences(
+    public ResponseEntity<List<InterviewExperience>> getExperiences(
             @RequestParam(required = false) String companyId,
             @RequestParam(required = false) String batch) {
         if (companyId != null && !companyId.trim().isEmpty()) {
@@ -46,7 +44,8 @@ public class ExperienceController {
     }
 
     @PostMapping
-    public ResponseEntity<EntityResponseDto> createExperience(@RequestBody InterviewExperience experience) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(experienceService.create(experience));
+    public ResponseEntity<InterviewExperience> createExperience(@RequestBody InterviewExperience experience) {
+        InterviewExperience created = experienceService.create(experience);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 }

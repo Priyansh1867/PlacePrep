@@ -55,39 +55,8 @@ const STORAGE_KEYS = {
   FULL_STUDENT_PROFILE: 'placeprep_student_full_profile'
 };
 
-// Temporary integration mode: API responses are the only source of application data.
-// Authentication and small UI/session preferences remain local so a refresh keeps the session.
-const BACKEND_ONLY = true;
-const LOCAL_SESSION_KEYS = new Set([
-  STORAGE_KEYS.CURRENT_USER,
-  STORAGE_KEYS.GRADUATION_BATCH,
-  STORAGE_KEYS.ONBOARDING_DONE,
-  STORAGE_KEYS.PORTAL_MODE,
-  STORAGE_KEYS.PORTAL_ROLE
-]);
-const LEGACY_DATA_KEYS = Object.values(STORAGE_KEYS).filter((key) => !LOCAL_SESSION_KEYS.has(key));
-
-if (BACKEND_ONLY && typeof localStorage !== 'undefined') {
-  LEGACY_DATA_KEYS.forEach((key) => {
-    try {
-      localStorage.removeItem(key);
-    } catch (err) {
-      console.warn(`Unable to clear local mock data (${key}):`, err);
-    }
-  });
-}
-
-function emptyValue(defaultValue) {
-  if (Array.isArray(defaultValue)) return [];
-  if (defaultValue && typeof defaultValue === 'object') return {};
-  return null;
-}
-
 // Safe JSON parser
 function getStorageItem(key, defaultValue) {
-  if (BACKEND_ONLY && !LOCAL_SESSION_KEYS.has(key)) {
-    return emptyValue(defaultValue);
-  }
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
@@ -98,7 +67,6 @@ function getStorageItem(key, defaultValue) {
 }
 
 function setStorageItem(key, value) {
-  if (BACKEND_ONLY && !LOCAL_SESSION_KEYS.has(key)) return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
@@ -351,7 +319,7 @@ export function setOnboardingCompleted(completed) {
 // Companies
 export function getCompanies() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_COMPANIES, []);
-  return BACKEND_ONLY ? custom : [...INITIAL_COMPANIES, ...custom];
+  return [...INITIAL_COMPANIES, ...custom];
 }
 
 export const getInitialCompanies = getCompanies;
@@ -371,7 +339,7 @@ export function addCompany(newCompany) {
 // Placement Drives
 export function getUpcomingDrives() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_DRIVES, []);
-  return BACKEND_ONLY ? custom : [...INITIAL_UPCOMING_DRIVES, ...custom];
+  return [...INITIAL_UPCOMING_DRIVES, ...custom];
 }
 
 export function addDrive(newDrive) {
@@ -384,7 +352,7 @@ export function addDrive(newDrive) {
 // Interview Questions
 export function getInterviewQuestions() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_QUESTIONS, []);
-  return BACKEND_ONLY ? custom : [...INITIAL_QUESTIONS, ...custom];
+  return [...INITIAL_QUESTIONS, ...custom];
 }
 
 export function addInterviewQuestion(newQuestion) {
@@ -466,7 +434,7 @@ export function toggleSavedCompany(companyId) {
 // Interview Experiences
 export function getInterviewExperiences() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, []);
-  return BACKEND_ONLY ? custom : [...custom, ...INITIAL_EXPERIENCES];
+  return [...custom, ...INITIAL_EXPERIENCES];
 }
 
 export function addInterviewExperience(newExp) {

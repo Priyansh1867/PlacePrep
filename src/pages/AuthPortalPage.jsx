@@ -325,8 +325,16 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           rollNumber: formData.rollNumber || (selectedRole === 'student' ? '2024/CSE/084' : undefined),
           graduationBatch: formData.batch || '2026',
           status: 'ACTIVE',
-          onboardingCompleted: true,
+          onboardingCompleted: authMode === 'register' && selectedRole === 'student' ? false : true,
+          currentOnboardingStep: authMode === 'register' && selectedRole === 'student' ? 1 : 7,
+          onboardingStatus: authMode === 'register' && selectedRole === 'student' ? 'PENDING' : 'COMPLETED',
         };
+      }
+
+      if (authMode === 'register' && selectedRole === 'student') {
+        user.onboardingCompleted = false;
+        user.currentOnboardingStep = 1;
+        user.onboardingStatus = 'PENDING';
       }
 
       if (user.role === 'management') destinationPortal = 'management';
@@ -334,7 +342,19 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       setPortalMode(destinationPortal);
       setPortalRole(user.role);
       if (user.graduationBatch) setGraduationBatch(user.graduationBatch);
-      onAuthSuccess(user, destinationPortal);
+
+      // Determine redirect target strictly for Student in Placement Portal
+      let targetRoute = null;
+      if (destinationPortal === 'placement' && (selectedRole === 'student' || user.role === 'student')) {
+        const isProfileComplete = user.onboardingCompleted === true && user.onboardingStatus === 'COMPLETED';
+        if (authMode === 'register' || !isProfileComplete) {
+          targetRoute = 'student-onboarding';
+        } else {
+          targetRoute = 'placement-portal';
+        }
+      }
+
+      onAuthSuccess(user, destinationPortal, targetRoute);
     } catch (error) {
       setErrorMsg(error.message || 'Unable to sign in. Please try again.');
     } finally {

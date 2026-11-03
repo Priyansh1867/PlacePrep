@@ -64,9 +64,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/companies/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/companies/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/companies/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/drives/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/drives/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/drives/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.PUT, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.DELETE, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.POST, "/api/questions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/questions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasRole("ADMIN")
@@ -98,6 +98,9 @@ public class SecurityConfig {
 
                         // HOD Faculty Operations Monitoring - restricted strictly to HOD & ADMIN
                         .requestMatchers("/api/hod/**").hasAnyRole("HOD", "ADMIN")
+
+                        // Director Placement Analytics - restricted to DIRECTOR, ADMIN, & TPO
+                        .requestMatchers("/api/director/**").hasAnyRole("DIRECTOR", "ADMIN", "TPO")
 
                         // Attendance Portal Role Authorization:
                         // Marking class attendance requires TEACHER, HOD, or ADMIN role

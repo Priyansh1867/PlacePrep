@@ -1015,3 +1015,15 @@ export const MasterTimetableApi = {
     return await request(`/management/timetables/student/active${qs}`);
   }
 };
+
+// 27. Director Placement Analytics API
+export const DirectorApi = {
+  async getPlacementAnalytics(companyId = null, status = null) {
+    const params = new URLSearchParams();
+    if (companyId && companyId !== 'ALL') params.set('companyId', companyId);
+    if (status && status !== 'ALL') params.set('status', status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return await request(`/director/placement-analytics${qs}`);
+  }
+};
+

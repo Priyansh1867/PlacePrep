@@ -179,14 +179,16 @@ public class Main {
      * Difficulty: ${question?.difficulty || 'Medium'} | Company: ${question?.companyName || 'Campus'}
      */
     public static void main(String[] args) {
-        Main sol = new Main();
+        Solution sol = new Solution();
         // Test with sample inputs
         System.out.println("PlacePrep DSA Studio Runner initialized.");
     }
 
-    public void ${methodName}() {
-        // Write your solution here
-        
+    static class Solution {
+        public void ${methodName}() {
+            // Write your solution here
+            
+        }
     }
 }`;
 

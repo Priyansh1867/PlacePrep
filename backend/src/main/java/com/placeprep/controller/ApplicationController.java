@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.StudentApplication;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -42,7 +40,8 @@ public class ApplicationController {
     @PostMapping("/register")
     public ResponseEntity<?> registerApplication(@RequestBody StudentApplication app) {
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.registerApplication(app));
+            StudentApplication saved = applicationService.registerApplication(app);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -50,7 +49,7 @@ public class ApplicationController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<EntityResponseDto>> getMyApplications(
+    public ResponseEntity<List<StudentApplication>> getMyApplications(
             @AuthenticationPrincipal UserDetails userDetails,
             Principal principal,
             @RequestParam(required = false) String studentId,
@@ -74,17 +73,17 @@ public class ApplicationController {
     }
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<EntityResponseDto>> getByStudent(@PathVariable String studentId) {
+    public ResponseEntity<List<StudentApplication>> getByStudent(@PathVariable String studentId) {
         return ResponseEntity.ok(applicationService.getStudentApplications(studentId));
     }
 
     @GetMapping("/drive/{driveId}")
-    public ResponseEntity<List<EntityResponseDto>> getByDrive(@PathVariable String driveId) {
+    public ResponseEntity<List<StudentApplication>> getByDrive(@PathVariable String driveId) {
         return ResponseEntity.ok(applicationService.getDriveApplications(driveId));
     }
 
     @GetMapping
-    public ResponseEntity<List<EntityResponseDto>> getAll() {
+    public ResponseEntity<List<StudentApplication>> getAll() {
         return ResponseEntity.ok(applicationService.getAllApplications());
     }
 
@@ -94,7 +93,7 @@ public class ApplicationController {
             @RequestBody Map<String, String> payload
     ) {
         try {
-            return ResponseEntity.ok(applicationService.updateStatus(
+            StudentApplication updated = applicationService.updateStatus(
                     applicationId,
                     payload.get("status"),
                     payload.get("currentRound"),
@@ -103,7 +102,8 @@ public class ApplicationController {
                     payload.get("scheduledEndTime"),
                     payload.get("venue"),
                     payload.get("candidateInstructions")
-            ));
+            );
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", e.getMessage()));

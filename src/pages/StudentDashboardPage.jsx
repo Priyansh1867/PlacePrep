@@ -92,7 +92,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
     setLoading(true);
     setError(null);
     try {
-      // Parallel fetch from the backend only
+      // Parallel fetch from API with fallback to storage
       const [compsRes, drivesRes, questionsRes, userRes] = await Promise.all([
         CompanyApi.getAll(currentBatch).catch(() => []),
         DriveApi.getAll(currentBatch).catch(() => []),
@@ -100,22 +100,22 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         UserApi.getMe().catch(() => null)
       ]);
 
-      const resolvedCompanies = Array.isArray(compsRes) ? compsRes : [];
-      const resolvedDrives = Array.isArray(drivesRes) ? drivesRes : [];
-      const resolvedQuestions = Array.isArray(questionsRes) ? questionsRes : [];
+      const resolvedCompanies = (compsRes && compsRes.length > 0) ? compsRes : getCompanies();
+      const resolvedDrives = (drivesRes && drivesRes.length > 0) ? drivesRes : getUpcomingDrives(currentBatch);
+      const resolvedQuestions = (questionsRes && questionsRes.length > 0) ? questionsRes : getInterviewQuestions();
 
       setCompanies(resolvedCompanies);
       setDrives(resolvedDrives);
       setQuestions(resolvedQuestions);
 
-      const currentUser = userRes;
+      const currentUser = userRes || getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
         setDashboardMetrics({
-          savedCount: currentUser.savedQuestionIds?.length || 0,
-          practicedCount: currentUser.practicedQuestionIds?.length || 0,
-          revisionCount: currentUser.revisionQuestionIds?.length || 0,
-          savedCompaniesCount: currentUser.savedCompanyIds?.length || 0
+          savedCount: currentUser.savedQuestionIds?.length || getSavedQuestions().length,
+          practicedCount: currentUser.practicedQuestionIds?.length || getPracticedQuestions().length,
+          revisionCount: currentUser.revisionQuestionIds?.length || getRevisionList().length,
+          savedCompaniesCount: currentUser.savedCompanyIds?.length || getSavedCompanies().length
         });
 
         // Load applications & mock sessions for logged in student
@@ -124,24 +124,24 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           MockSessionApi.getMySessions().catch(() => [])
         ]);
 
-        const resolvedApps = Array.isArray(appsRes) ? appsRes : [];
-        const resolvedMocks = Array.isArray(mocksRes) ? mocksRes : [];
+        const resolvedApps = (appsRes && appsRes.length > 0) ? appsRes : getStudentApplications();
+        const resolvedMocks = (mocksRes && mocksRes.length > 0) ? mocksRes : getMockSessions();
 
         setMyApplications(resolvedApps || []);
         setMockSessions(resolvedMocks || []);
       } else {
-        setMyApplications([]);
-        setMockSessions([]);
+        setMyApplications(getStudentApplications());
+        setMockSessions(getMockSessions());
       }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      setCompanies([]);
-      setDrives([]);
-      setQuestions([]);
-      setMyApplications([]);
-      setMockSessions([]);
-      setUser(null);
-      setError('Unable to load dashboard data from the backend.');
+      // Fall back to local storage gracefully
+      setCompanies(getCompanies());
+      setDrives(getUpcomingDrives(currentBatch));
+      setQuestions(getInterviewQuestions());
+      setMyApplications(getStudentApplications());
+      setMockSessions(getMockSessions());
+      setUser(getCurrentUser());
     } finally {
       setLoading(false);
     }

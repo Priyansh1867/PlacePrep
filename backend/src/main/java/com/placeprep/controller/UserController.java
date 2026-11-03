@@ -2,7 +2,6 @@ package com.placeprep.controller;
 
 import com.placeprep.model.User;
 import com.placeprep.service.UserService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +40,8 @@ public class UserController {
     public ResponseEntity<?> updateBatch(@PathVariable Long id, @RequestBody Map<String, String> body) {
         try {
             String batch = body != null ? body.get("batch") : null;
-            return ResponseEntity.ok(userService.updateBatch(id, batch));
+            User updated = userService.updateBatch(id, batch);
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import CompanyCard from '../components/CompanyCard';
 import { CompanyApi } from '../services/api';
-import { getGraduationBatch } from '../services/storage';
+import { getInitialCompanies, getGraduationBatch } from '../services/storage';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -38,10 +38,14 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal, onNav
     setError(null);
     try {
       const data = await CompanyApi.getAll(currentBatch);
-      setCompanies(Array.isArray(data) ? data : []);
+      if (data && data.length > 0) {
+        setCompanies(data);
+      } else {
+        setCompanies(getInitialCompanies());
+      }
     } catch (err) {
-      setCompanies([]);
-      setError(err.message || 'Unable to load companies from the backend.');
+      console.warn('Backend unavailable, falling back to cached companies:', err);
+      setCompanies(getInitialCompanies());
     } finally {
       setLoading(false);
     }

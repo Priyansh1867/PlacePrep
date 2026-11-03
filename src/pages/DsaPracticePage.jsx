@@ -91,8 +91,9 @@ export default function DsaPracticePage({ onNavigate, onSelectGlobalQuestion }) 
       setQuestions(dsaQuestions.length > 0 ? dsaQuestions : normalized);
     } catch (err) {
       console.error('Failed to load DSA problems:', err);
-      setError('Failed to load DSA question repository from the backend.');
-      setQuestions([]);
+      setError('Failed to load DSA question repository. Using fallback offline dataset.');
+      const fallback = (getInterviewQuestions() || []).map((q, idx) => normalizeDsaQuestion(q, idx));
+      setQuestions(fallback);
     } finally {
       setLoading(false);
     }

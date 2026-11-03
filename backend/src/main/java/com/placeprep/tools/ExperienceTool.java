@@ -1,7 +1,6 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.ExperienceService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -19,12 +18,8 @@ public class ExperienceTool {
             @ToolParam(description = "Company identifier, or blank") String companyId,
             @ToolParam(description = "Graduation batch, or blank") String batch
     ) {
-        if (companyId != null && !companyId.isBlank()) {
-            return EntityResponseMapper.toJsonSafe(experienceService.getByCompanyId(companyId));
-        }
-        if (batch != null && !batch.isBlank()) {
-            return EntityResponseMapper.toJsonSafe(experienceService.getByBatch(batch));
-        }
-        return EntityResponseMapper.toJsonSafe(experienceService.getAll());
+        if (companyId != null && !companyId.isBlank()) return experienceService.getByCompanyId(companyId);
+        if (batch != null && !batch.isBlank()) return experienceService.getByBatch(batch);
+        return experienceService.getAll();
     }
 }

@@ -1,7 +1,6 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.QuestionService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -20,19 +19,15 @@ public class QuestionTool {
             @ToolParam(description = "Interview round, or blank for any round") String round
     ) {
         if (companyId != null && !companyId.isBlank() && round != null && !round.isBlank()) {
-            return EntityResponseMapper.toJsonSafe(questionService.getByCompanyIdAndRound(companyId, round));
+            return questionService.getByCompanyIdAndRound(companyId, round);
         }
-        if (companyId != null && !companyId.isBlank()) {
-            return EntityResponseMapper.toJsonSafe(questionService.getByCompanyId(companyId));
-        }
-        if (round != null && !round.isBlank()) {
-            return EntityResponseMapper.toJsonSafe(questionService.getByRound(round));
-        }
-        return EntityResponseMapper.toJsonSafe(questionService.getAll());
+        if (companyId != null && !companyId.isBlank()) return questionService.getByCompanyId(companyId);
+        if (round != null && !round.isBlank()) return questionService.getByRound(round);
+        return questionService.getAll();
     }
 
     @Tool(description = "Get one interview question by identifier.")
     public Object getQuestion(@ToolParam(description = "Question identifier") String questionId) {
-        return EntityResponseMapper.toJsonSafe(questionService.getByQuestionId(questionId));
+        return questionService.getByQuestionId(questionId);
     }
 }

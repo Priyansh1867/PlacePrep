@@ -43,10 +43,9 @@ export async function fetchFacultyOperations(params = {}, currentUser) {
       return backendData;
     }
   } catch (err) {
-    console.warn('Backend /api/hod/faculty-operations request failed:', err?.message || err);
+    // Backend offline / network fallback
+    console.warn('Backend /api/hod/faculty-operations fallback to local store:', err?.message || err);
   }
-
-  return [];
 
   // 2. Local Fallback - Aggregate genuine persistent records across faculty modules
   const activities = [];

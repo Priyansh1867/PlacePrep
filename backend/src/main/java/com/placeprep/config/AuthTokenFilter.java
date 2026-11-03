@@ -1,6 +1,5 @@
 package com.placeprep.config;
 
-import com.placeprep.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,9 +21,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     @Autowired
     private TokenService tokenService;
 
-    @Autowired
-    private UserRepository userRepository;
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -33,22 +29,20 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
         if (token != null) {
             TokenService.TokenData tokenData = tokenService.validateToken(token);
-            var currentUser = tokenData == null ? java.util.Optional.<com.placeprep.model.User>empty()
-                    : userRepository.findById(tokenData.getUserId());
-            if (currentUser.isPresent() && !"SUSPENDED".equalsIgnoreCase(currentUser.get().getStatus())) {
-                String role = currentUser.get().getRole() != null ? currentUser.get().getRole().toUpperCase() : "STUDENT";
+            if (tokenData != null) {
+                String role = tokenData.getRole() != null ? tokenData.getRole().toUpperCase() : "STUDENT";
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        currentUser.get().getEmail(),
+                        tokenData.getEmail(),
                         null,
                         Collections.singletonList(authority)
                 );
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 request.setAttribute("currentUserId", tokenData.getUserId());
-                request.setAttribute("currentUserEmail", currentUser.get().getEmail());
-                request.setAttribute("currentUserRole", currentUser.get().getRole());
+                request.setAttribute("currentUserEmail", tokenData.getEmail());
+                request.setAttribute("currentUserRole", tokenData.getRole());
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }

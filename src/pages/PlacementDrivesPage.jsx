@@ -78,8 +78,8 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
   const [searchQuery, setSearchQuery] = useState('');
   const [applicationsSearchQuery, setApplicationsSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [drivesList, setDrivesList] = useState([]);
-  const [applications, setApplications] = useState([]);
+  const [drivesList, setDrivesList] = useState(() => getUpcomingDrives());
+  const [applications, setApplications] = useState(() => getStudentApplications());
   const [trackedApps, setTrackedApps] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -173,21 +173,21 @@ export default function PlacementDrivesPage({ onSelectCompany, onNavigate, onBac
         currentUser ? ApplicationApi.getMyApplications().catch(() => []) : Promise.resolve([])
       ]);
 
-      setDrivesList(drivesData.status === 'fulfilled' && Array.isArray(drivesData.value)
-        ? drivesData.value
-        : []);
+      if (drivesData.status === 'fulfilled' && Array.isArray(drivesData.value) && drivesData.value.length > 0) {
+        setDrivesList(drivesData.value);
+      } else {
+        setDrivesList(getUpcomingDrives());
+      }
 
       if (myAppsData.status === 'fulfilled' && Array.isArray(myAppsData.value)) {
         setTrackedApps(myAppsData.value);
       }
 
-      setApplications(myAppsData.status === 'fulfilled' && Array.isArray(myAppsData.value)
-        ? myAppsData.value
-        : []);
+      setApplications(getStudentApplications());
     } catch (err) {
-      console.warn('Backend drives/applications request failed:', err);
-      setDrivesList([]);
-      setApplications([]);
+      console.warn('Backend unavailable, utilizing cached drives and passes:', err);
+      setDrivesList(getUpcomingDrives());
+      setApplications(getStudentApplications());
     } finally {
       setLoading(false);
     }

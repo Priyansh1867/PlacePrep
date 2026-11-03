@@ -4,10 +4,7 @@ import com.placeprep.model.ClassAttendanceRecord;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.CrtAttendanceRecord;
 import com.placeprep.model.CrtTrainingSession;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.AttendanceService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +37,8 @@ public class AttendanceController {
     @PostMapping("/class/sessions")
     public ResponseEntity<?> createClassSession(@RequestBody ClassAttendanceSession session) {
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(attendanceService.createClassSessionDto(session));
+            ClassAttendanceSession created = attendanceService.createClassSession(session);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -48,11 +46,11 @@ public class AttendanceController {
     }
 
     @GetMapping("/class/sessions")
-    public ResponseEntity<List<EntityResponseDto>> listClassSessions(
+    public ResponseEntity<List<ClassAttendanceSession>> listClassSessions(
             @RequestParam(required = false) String department,
             @RequestParam(required = false) String semester
     ) {
-        return ResponseEntity.ok(attendanceService.getClassSessionsDto(department, semester));
+        return ResponseEntity.ok(attendanceService.getClassSessions(department, semester));
     }
 
     @PostMapping("/class/sessions/{sessionId}/mark")
@@ -61,7 +59,8 @@ public class AttendanceController {
             @RequestBody List<ClassAttendanceRecord> records
     ) {
         try {
-            return ResponseEntity.ok(attendanceService.markClassAttendanceDto(sessionId, records));
+            List<ClassAttendanceRecord> saved = attendanceService.markClassAttendance(sessionId, records);
+            return ResponseEntity.ok(saved);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -73,15 +72,16 @@ public class AttendanceController {
     @PostMapping("/class/sessions/find-or-create")
     public ResponseEntity<?> findOrCreateClassSession(@RequestBody ClassAttendanceSession session) {
         try {
-            return ResponseEntity.ok(attendanceService.findOrCreateClassSessionDto(session));
+            ClassAttendanceSession res = attendanceService.findOrCreateClassSession(session);
+            return ResponseEntity.ok(res);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 
     @GetMapping("/class/sessions/{sessionId}/records")
-    public ResponseEntity<List<EntityResponseDto>> getSessionRecords(@PathVariable Long sessionId) {
-        return ResponseEntity.ok(attendanceService.getSessionRecordsDto(sessionId));
+    public ResponseEntity<List<ClassAttendanceRecord>> getSessionRecords(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(attendanceService.getSessionRecords(sessionId));
     }
 
     @GetMapping("/class/report")
@@ -109,14 +109,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/student/{studentId}/summary")
-    public ResponseEntity<?> getStudentAttendanceSummary(@PathVariable String studentId, HttpServletRequest request) {
-        Object currentUserId = request.getAttribute("currentUserId");
-        Object currentUserEmail = request.getAttribute("currentUserEmail");
-        if (currentUserId == null || (!studentId.equals(String.valueOf(currentUserId))
-                && !studentId.equalsIgnoreCase(String.valueOf(currentUserEmail)))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Collections.singletonMap("error", "You can only view your own attendance summary."));
-        }
+    public ResponseEntity<?> getStudentAttendanceSummary(@PathVariable String studentId) {
         try {
             Map<String, Object> summary = attendanceService.getStudentAttendanceSummary(studentId);
             return ResponseEntity.ok(summary);
@@ -134,7 +127,8 @@ public class AttendanceController {
             if (principal != null && session.getCreatedBy() == null) {
                 session.setCreatedBy(principal.getName());
             }
-            return ResponseEntity.status(HttpStatus.CREATED).body(attendanceService.createCrtSessionDto(session));
+            CrtTrainingSession created = attendanceService.createCrtSession(session);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -144,17 +138,17 @@ public class AttendanceController {
     }
 
     @GetMapping("/crt/sessions")
-    public ResponseEntity<List<EntityResponseDto>> listCrtSessions(
+    public ResponseEntity<List<CrtTrainingSession>> listCrtSessions(
             @RequestParam(required = false) String targetBatch,
             @RequestParam(required = false) String department,
             @RequestParam(required = false) String status
     ) {
-        return ResponseEntity.ok(attendanceService.getCrtSessionsDto(targetBatch, department, status));
+        return ResponseEntity.ok(attendanceService.getCrtSessions(targetBatch, department, status));
     }
 
     @GetMapping("/crt/sessions/{id}")
     public ResponseEntity<?> getCrtSession(@PathVariable Long id) {
-        return attendanceService.getCrtSessionByIdDto(id)
+        return attendanceService.getCrtSessionById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -162,7 +156,8 @@ public class AttendanceController {
     @PutMapping("/crt/sessions/{id}")
     public ResponseEntity<?> updateCrtSession(@PathVariable Long id, @RequestBody CrtTrainingSession session) {
         try {
-            return ResponseEntity.ok(attendanceService.updateCrtSessionDto(id, session));
+            CrtTrainingSession updated = attendanceService.updateCrtSession(id, session);
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -178,7 +173,8 @@ public class AttendanceController {
             if (status == null) {
                 return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Status field is required"));
             }
-            return ResponseEntity.ok(attendanceService.updateCrtSessionStatusDto(id, status));
+            CrtTrainingSession updated = attendanceService.updateCrtSessionStatus(id, status);
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -208,7 +204,8 @@ public class AttendanceController {
     ) {
         try {
             String recordedBy = principal != null ? principal.getName() : "Faculty Coordinator";
-            return ResponseEntity.ok(attendanceService.markCrtAttendanceDto(sessionId, records, recordedBy));
+            List<CrtAttendanceRecord> saved = attendanceService.markCrtAttendance(sessionId, records, recordedBy);
+            return ResponseEntity.ok(saved);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -218,8 +215,8 @@ public class AttendanceController {
     }
 
     @GetMapping("/crt/sessions/{sessionId}/records")
-    public ResponseEntity<List<EntityResponseDto>> getCrtSessionRecords(@PathVariable Long sessionId) {
-        return ResponseEntity.ok(attendanceService.getCrtSessionRecordsDto(sessionId));
+    public ResponseEntity<List<CrtAttendanceRecord>> getCrtSessionRecords(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(attendanceService.getCrtSessionRecords(sessionId));
     }
 
     @GetMapping("/crt/report/session/{sessionId}")

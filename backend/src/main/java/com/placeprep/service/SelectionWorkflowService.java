@@ -93,7 +93,7 @@ public class SelectionWorkflowService {
                 continue;
             }
             StudentApplication app = appOpt.get();
-            CandidateEvaluation latest = evaluationService.getLatestEvaluationEntity(
+            CandidateEvaluation latest = evaluationService.getLatestEvaluation(
                     app.getApplicationId(),
                     roundNumber
             ).orElse(null);
@@ -138,7 +138,7 @@ public class SelectionWorkflowService {
 
         for (SelectionResult sr : candidates) {
             Optional<CandidateEvaluation> evalOpt =
-                    evaluationService.getLatestEvaluationEntity(sr.getApplicationId(), roundNumber);
+                    evaluationService.getLatestEvaluation(sr.getApplicationId(), roundNumber);
 
             Decision decision = decide(evalOpt.orElse(null), cutoff, useVerdict);
 

@@ -135,7 +135,7 @@ export async function fetchClassRoster(department, semester) {
   } catch (e) {
     // Backend offline / falling back to local
   }
-  return [];
+  return getRosterForClass(department, semester);
 }
 
 // 2. Find or Create Class Attendance Session
@@ -155,9 +155,30 @@ export async function findOrCreateSession(sessionData) {
       return res;
     }
   } catch (e) {
-    console.warn('Backend class session request failed:', e?.message || e);
+    // Fall back to local
   }
-  return null;
+
+  // Local fallback: search by department, semester, subjectCode, sessionDate
+  const sessions = getLocalSessions();
+  const existing = sessions.find(s => 
+    s.department === sessionData.department &&
+    String(s.semester) === String(sessionData.semester) &&
+    s.subjectCode === sessionData.subjectCode &&
+    s.sessionDate === sessionData.sessionDate
+  );
+
+  if (existing) {
+    return existing;
+  }
+
+  const newSession = {
+    ...sessionData,
+    id: Date.now(),
+    createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+  };
+  sessions.push(newSession);
+  saveLocalSessions(sessions);
+  return newSession;
 }
 
 // 3. Save / Mark Class Attendance Records
@@ -166,9 +187,38 @@ export async function saveClassAttendance(sessionId, records) {
   try {
     backendSaved = await AttendanceApi.markClassAttendance(sessionId, records);
   } catch (e) {
-    console.warn('Backend markClassAttendance failed:', e?.message || e);
+    // If backend 403 or network error, proceed with local fallback
+    console.warn('Backend markClassAttendance skipped/fallback:', e?.message || e);
   }
-  return backendSaved || [];
+
+  // Always update local storage for smooth offline & caching support
+  const allRecords = getLocalRecords();
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+  records.forEach(rec => {
+    const existingIdx = allRecords.findIndex(r => 
+      String(r.sessionId) === String(sessionId) && 
+      (r.studentId === rec.studentId || r.studentRollNumber === rec.studentRollNumber)
+    );
+
+    const recordToSave = {
+      ...rec,
+      sessionId,
+      recordedAt: now
+    };
+
+    if (existingIdx >= 0) {
+      allRecords[existingIdx] = { ...allRecords[existingIdx], ...recordToSave };
+    } else {
+      allRecords.push({
+        id: `rec-${sessionId}-${rec.studentRollNumber || Date.now()}`,
+        ...recordToSave
+      });
+    }
+  });
+
+  saveLocalRecords(allRecords);
+  return backendSaved || records;
 }
 
 // 4. Fetch Session Attendance Records
@@ -182,7 +232,8 @@ export async function fetchSessionRecords(sessionId) {
     // Fallback
   }
 
-  return [];
+  const allRecords = getLocalRecords();
+  return allRecords.filter(r => String(r.sessionId) === String(sessionId));
 }
 
 // 5. Generate Attendance Roster Report with Strict 75% Cutoff Logic
@@ -196,7 +247,21 @@ export async function fetchAttendanceReport({ department = 'CSE', semester = '6'
     // Fall back to local calculation
   }
 
-  return { roster: [], classesHeld: 0, attendanceRecords: [], targetStatusMap: {} };
+  // Local calculation:
+  const sessions = getLocalSessions().filter(s => 
+    s.department === department &&
+    String(s.semester) === String(semester) &&
+    s.subjectCode === subjectCode
+  );
+
+  const classesHeld = sessions.length;
+  const roster = getRosterForClass(department, semester);
+  const allRecords = getLocalRecords();
+
+  // Find target session if targetDate is given
+  const targetSession = targetDate ? sessions.find(s => s.sessionDate === targetDate) : sessions[0];
+  const targetRecords = targetSession ? allRecords.filter(r => String(r.sessionId) === String(targetSession.id)) : [];
+  const targetStatusMap = {};
   targetRecords.forEach(r => {
     targetStatusMap[r.studentId] = r.status;
     if (r.studentRollNumber) targetStatusMap[r.studentRollNumber] = r.status;

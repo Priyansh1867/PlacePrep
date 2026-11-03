@@ -1,12 +1,9 @@
 package com.placeprep.service;
 
 import com.placeprep.model.PlacementDrive;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.PlacementDriveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,31 +27,6 @@ public class DriveService {
 
     public List<PlacementDrive> getAll() {
         return placementDriveRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getAllDtos(String batch) {
-        return EntityResponseMapper.toDtoList(getAll(batch));
-    }
-
-    @Transactional(readOnly = true)
-    public EntityResponseDto getByDriveIdDto(String driveId) {
-        return EntityResponseMapper.toDto(getByDriveId(driveId));
-    }
-
-    @Transactional
-    public EntityResponseDto createDto(PlacementDrive drive) {
-        return EntityResponseMapper.toDto(create(drive));
-    }
-
-    @Transactional
-    public EntityResponseDto updateRoundsDto(String driveId, List<String> rounds, String roundConfigsJson) {
-        return EntityResponseMapper.toDto(updateRounds(driveId, rounds, roundConfigsJson));
-    }
-
-    @Transactional
-    public EntityResponseDto updateInstructionsDto(String driveId, String venue, String reportingTime, String instructions) {
-        return EntityResponseMapper.toDto(updateInstructions(driveId, venue, reportingTime, instructions));
     }
 
     public List<PlacementDrive> getAll(String batch) {

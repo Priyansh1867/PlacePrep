@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.PlacementDrive;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.DriveService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,8 +35,8 @@ public class DriveController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EntityResponseDto>> getDrives(@RequestParam(required = false) String batch) {
-        return ResponseEntity.ok(driveService.getAllDtos(batch));
+    public ResponseEntity<List<PlacementDrive>> getDrives(@RequestParam(required = false) String batch) {
+        return ResponseEntity.ok(driveService.getAll(batch));
     }
 
     @GetMapping("/calendar")
@@ -48,7 +46,7 @@ public class DriveController {
 
     @GetMapping("/{driveId}")
     public ResponseEntity<?> getDriveById(@PathVariable String driveId) {
-        com.placeprep.dto.EntityResponseDto drive = driveService.getByDriveIdDto(driveId);
+        PlacementDrive drive = driveService.getByDriveId(driveId);
         if (drive == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", "Drive not found for id: " + driveId));
@@ -57,8 +55,9 @@ public class DriveController {
     }
 
     @PostMapping
-    public ResponseEntity<EntityResponseDto> createDrive(@RequestBody PlacementDrive drive) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(driveService.createDto(drive));
+    public ResponseEntity<PlacementDrive> createDrive(@RequestBody PlacementDrive drive) {
+        PlacementDrive created = driveService.create(drive);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{driveId}/rounds")
@@ -71,7 +70,8 @@ public class DriveController {
             List<String> rounds = (List<String>) payload.get("rounds");
             String roundConfigsJson = (String) payload.get("roundConfigsJson");
 
-            return ResponseEntity.ok(driveService.updateRoundsDto(driveId, rounds, roundConfigsJson));
+            PlacementDrive updated = driveService.updateRounds(driveId, rounds, roundConfigsJson);
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -87,12 +87,13 @@ public class DriveController {
             @RequestBody Map<String, String> payload
     ) {
         try {
-            return ResponseEntity.ok(driveService.updateInstructionsDto(
+            PlacementDrive updated = driveService.updateInstructions(
                     driveId,
                     payload.get("venue"),
                     payload.get("reportingTime"),
                     payload.get("instructions")
-            ));
+            );
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", e.getMessage()));

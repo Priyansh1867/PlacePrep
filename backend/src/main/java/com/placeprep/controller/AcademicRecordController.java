@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.StudentAcademicRecord;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.StudentAcademicRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -33,14 +31,14 @@ public class AcademicRecordController {
     private StudentAcademicRecordService academicRecordService;
 
     @GetMapping({"/students", "/student", "/all"})
-    public ResponseEntity<List<EntityResponseDto>> getAllStudentRecords() {
+    public ResponseEntity<List<StudentAcademicRecord>> getAllStudentRecords() {
         return ResponseEntity.ok(academicRecordService.findAllRecords());
     }
 
     @GetMapping({"/students/{emailOrId}", "/student/{emailOrId}"})
     public ResponseEntity<?> getStudentRecord(@PathVariable String emailOrId) {
         return academicRecordService.findForStudent(emailOrId)
-                .<ResponseEntity<?>>map(entity -> ResponseEntity.ok(entity))
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Collections.singletonMap("error", "Academic record not found for: " + emailOrId)));
     }
@@ -48,7 +46,8 @@ public class AcademicRecordController {
     @PostMapping({"/students", "/student"})
     public ResponseEntity<?> saveStudentRecord(@RequestBody StudentAcademicRecord record) {
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(academicRecordService.saveRecord(record));
+            StudentAcademicRecord saved = academicRecordService.saveRecord(record);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {

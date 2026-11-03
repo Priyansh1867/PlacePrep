@@ -13,7 +13,7 @@ export default function PageHeader({
   className = ''
 }) {
   return (
-    <div className={`space-y-3 pb-2 ${className}`}>
+    <div className={`pp-page-header space-y-3 pb-2 ${className}`}>
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="Breadcrumb" className="flex items-center space-x-1.5 text-xs text-[#64748B]">
           {breadcrumbs.map((crumb, idx) => {

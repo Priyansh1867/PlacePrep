@@ -108,6 +108,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
       setErrorMsg('Password should be at least 6 characters.');
       return;
     }
+    if (!isCollegeEmail(formData.email)) {
+      setErrorMsg('Please enter an official college email address (.edu, .ac.in, or .edu.in).');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       setErrorMsg('Passwords do not match.');
       return;
@@ -272,6 +276,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                 icon={Mail}
                 required
               />
+              {formData.email && (
+                <div className="text-[11px] font-semibold flex items-center gap-1 mt-1 text-left">
+                  {isCollegeEmail(formData.email) ? (
+                    <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> College domain verified (.edu / .ac.in / .edu.in)</span>
+                  ) : (
+                    <span className="text-amber-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5 text-amber-500" /> College email recommended (.edu, .ac.in, .edu.in)</span>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-1.5 text-left">
                 <label className="block text-xs font-bold text-[#0F172A]">Password</label>
@@ -326,6 +339,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                 icon={Mail}
                 required
               />
+              {formData.email && (
+                <div className="text-[11px] font-semibold flex items-center gap-1 mt-1 text-left">
+                  {isCollegeEmail(formData.email) ? (
+                    <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> College domain verified (.edu / .ac.in / .edu.in)</span>
+                  ) : (
+                    <span className="text-rose-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5 text-rose-500" /> College email required (.edu, .ac.in, .edu.in)</span>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <Input

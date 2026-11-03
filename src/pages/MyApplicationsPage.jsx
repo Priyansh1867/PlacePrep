@@ -19,7 +19,7 @@ import {
   Bot
 } from 'lucide-react';
 import { ApplicationApi } from '../services/api';
-import { getCurrentUser } from '../services/storage';
+import { getCurrentUser, getStudentApplications } from '../services/storage';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';

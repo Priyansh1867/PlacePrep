@@ -17,7 +17,7 @@ export default function Button({
 }) {
   const Icon = icon || leftIcon || rightIcon;
   const resolvedIconPosition = rightIcon ? 'right' : iconPosition;
-  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
+  const baseStyles = 'pp-button inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
 
   const sizeStyles = {
     sm: 'text-xs px-3 py-1.5 gap-1.5',
@@ -37,6 +37,8 @@ export default function Button({
   return (
     <button
       type={type}
+      data-variant={variant}
+      aria-busy={loading || undefined}
       disabled={disabled || loading}
       onClick={onClick}
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}

@@ -78,6 +78,7 @@ import ReportsExporterPage from './ReportsExporterPage';
 import UserProfileModal from '../components/profile/UserProfileModal';
 import PlacementStudentSection from '../components/placement/PlacementStudentSection';
 import PlacementSevenStepWizard from '../components/placement/PlacementSevenStepWizard';
+import placementWorkflowHero from '../assets/images/placement-workflow-hero.png';
 
 // Standard Role Metadata for labels
 const ROLE_METAS = {
@@ -577,25 +578,32 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         </div>
       </div>
 
-      {/* 1. TOP HEADER BANNER WITH RIGHT-HAND PROFILE CARD */}
+      {/* 1. TOP HEADER BANNER WITH RIGHT-HAND PROFILE CARD (Dark + Light + Enhanced Triad Palette) */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-[#111439] via-[#0E2829] to-[#162740] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative z-30">
-          <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-            <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-          </div>
+        <div className="dashboard-hero dashboard-hero--placement bg-gradient-to-br from-[#070B19] via-[#0F172A] to-[#0A1828] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative backdrop-blur-xl">
+          <img
+            src={placementWorkflowHero}
+            alt=""
+            className="dashboard-hero__art"
+          />
+          <span className="dashboard-hero__wash" />
+          {/* Tri-Color Ambient Lighting Orbs */}
+          <div className="absolute -right-16 -top-16 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute right-1/4 -bottom-16 w-72 h-72 bg-amber-500/12 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-16 -bottom-16 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Row: Workspace Heading & Right-side User Profile */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-40">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
-                <Briefcase className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3 shadow-xs backdrop-blur-md">
+                <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Placement Portal • {roleMeta.label} Workspace</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-white">
+              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-sm">
                 Corporate Hiring & Placement Control Center
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-200 mt-1 max-w-2xl">
-                Logged in as <strong className="text-white">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-100 font-bold uppercase text-[11px]">{roleMeta.label}</span> • Placement Season 2026-2027
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl font-medium">
+                Logged in as <strong className="text-white font-extrabold">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 font-bold uppercase text-[11px]">{roleMeta.label}</span> • Placement Season 2026-2027
               </p>
             </div>
 
@@ -603,20 +611,22 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
             <div className="flex items-center gap-3 shrink-0">
               {isStudent && (
                 <button
+                  type="button"
                   onClick={() => setIsFeedbackModalOpen(true)}
-                  className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition items-center gap-1.5 border border-emerald-400/30"
+                  className="hidden sm:flex px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 transition cursor-pointer items-center gap-1.5 border border-emerald-300/40 active:scale-95"
                 >
-                  <MessageSquare className="w-3.5 h-3.5" />
+                  <MessageSquare className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Submit Drive Feedback</span>
                 </button>
               )}
 
               {(isTPO || isCoordinator) && (
                 <button
+                  type="button"
                   onClick={() => setIsDriveModalOpen(true)}
-                  className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition items-center gap-1.5 border border-emerald-400/30"
+                  className="hidden sm:flex px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-black text-xs shadow-lg shadow-indigo-500/25 transition cursor-pointer items-center gap-1.5 border border-indigo-300/40 active:scale-95"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>New Campus Drive</span>
                 </button>
               )}
@@ -626,10 +636,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md transition shadow-md group text-left cursor-pointer"
+                  className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition shadow-md group text-left cursor-pointer"
                   aria-label="User profile menu"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0 border border-white/20">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-emerald-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0 border border-white/25">
                     {getInitials(currentUser.name)}
                   </div>
                   <div className="min-w-0">
@@ -650,7 +660,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
                       <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-emerald-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
                           {getInitials(currentUser.name)}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -719,7 +729,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         <button
                           type="button"
                           onClick={() => { setIsProfileDropdownOpen(false); onNavigate('gateway'); }}
-                          className="w-full flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold transition text-left"
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold transition text-left cursor-pointer"
                         >
                           <Compass className="w-4 h-4 text-indigo-600" />
                           <span>Switch Portal</span>
@@ -727,7 +737,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         <button
                           type="button"
                           onClick={() => { setIsProfileDropdownOpen(false); handleSignOut(); }}
-                          className="w-full flex items-center gap-2 p-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold transition text-left"
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold transition text-left cursor-pointer"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Sign Out</span>
@@ -740,89 +750,107 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
             </div>
           </div>
 
-          {/* Quick Metrics Bar Adapting to Active User Role */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-emerald-800/60 text-xs relative z-0">
+          {/* Quick Metrics Bar Adapting to Active User Role (Triad Bento Mini-Cards) */}
+          <div className="pp-hero-stats relative z-0 grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-6 pt-5 border-t border-white/10 text-xs">
             {isStudent ? (
               <>
-                <div>
-                  <span className="text-emerald-300 block">Eligible Drives:</span>
-                  <span className="font-black text-base text-white">{displayedDrives.length} Ready to Apply</span>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider block">Eligible Drives</span>
+                  <span className="font-black text-base sm:text-lg text-white mt-0.5 block">{displayedDrives.length} Ready to Apply</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">Active verified cutoffs</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">My Shortlists:</span>
-                  <span className="font-black text-base text-emerald-400">1 Advanced (HCLTech)</span>
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-md">
+                  <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider block">My Shortlists</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">1 Advanced (HCLTech)</span>
+                  <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Round 2 scheduled</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Off-Campus Tracked:</span>
-                  <span className="font-black text-base text-amber-300">{studentOffCampusList.length} In Progress</span>
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
+                  <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Off-Campus Tracked</span>
+                  <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">{studentOffCampusList.length} In Progress</span>
+                  <span className="text-[11px] text-amber-400/80 mt-0.5 block">External applications</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Verified Status:</span>
-                  <span className="font-black text-base text-white">CGPA 8.4 • 0 Backlogs</span>
+                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
+                  <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Verified Status</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">CGPA 8.4 • 0 Backlogs</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">All cutoffs satisfied</span>
+                </div>
                 </div>
               </>
             ) : isDirector ? (
               <>
-                <div>
-                  <span className="text-emerald-300 block">Institutional Placement:</span>
-                  <span className="font-black text-base text-white">88.4% Placed</span>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider block">Placement Rate</span>
+                  <span className="font-black text-base sm:text-lg text-white mt-0.5 block">88.4% Placed</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">Batch of 2026</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Average Package:</span>
-                  <span className="font-black text-base text-emerald-400">₹8.60 LPA</span>
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-md">
+                  <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider block">Average Package</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">₹8.60 LPA</span>
+                  <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Across all branches</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Highest Package:</span>
-                  <span className="font-black text-base text-amber-300">₹44.0 LPA (Microsoft)</span>
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
+                  <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Highest Package</span>
+                  <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">₹44.0 LPA</span>
+                  <span className="text-[11px] text-amber-400/80 mt-0.5 block">Microsoft Redmond</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Corporate Partners:</span>
-                  <span className="font-black text-base text-white">52 Companies</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
+                  <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Corporate Partners</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">52 Companies</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Tier-1 & Core employers</span>
                 </div>
               </>
             ) : isRecruiter ? (
               <>
-                <div>
-                  <span className="text-emerald-300 block">Assigned Drives:</span>
-                  <span className="font-black text-base text-white">{displayedDrives.length} Company Drives</span>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider block">Assigned Drives</span>
+                  <span className="font-black text-base sm:text-lg text-white mt-0.5 block">{displayedDrives.length} Company Drives</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">Active on campus</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Candidates in Pipeline:</span>
-                  <span className="font-black text-base text-emerald-400">{displayedCandidates.length} Shortlisted</span>
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-md">
+                  <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider block">Candidates</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">{displayedCandidates.length} Shortlisted</span>
+                  <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Advancing to next stage</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Data Privacy Mode:</span>
-                  <span className="font-black text-base text-amber-300">Sensitive PII Masked</span>
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
+                  <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Data Privacy</span>
+                  <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">PII Masked</span>
+                  <span className="text-[11px] text-amber-400/80 mt-0.5 block">Compliance enforced</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Interviews Scheduled:</span>
-                  <span className="font-black text-base text-white">Round 2 Active</span>
+                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
+                  <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">Interviews</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">Round 2 Active</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Live video evaluation</span>
                 </div>
               </>
             ) : (
               <>
-                <div>
-                  <span className="text-emerald-300 block">Upcoming Drives:</span>
-                  <span className="font-black text-base text-white">{drives.length} Companies Scheduled</span>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider block">Upcoming Drives</span>
+                  <span className="font-black text-base sm:text-lg text-white mt-0.5 block">{drives.length} Companies</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">Scheduled drives</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Live PPT Sessions:</span>
-                  <span className="font-black text-base text-emerald-400">{liveSessions.length} Corporate Webinars</span>
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-md">
+                  <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider block">Live Webinars</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-300 mt-0.5 block">{liveSessions.length} PPT Sessions</span>
+                  <span className="text-[11px] text-emerald-400/80 mt-0.5 block">Interactive talks</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">Shortlisted Candidates:</span>
-                  <span className="font-black text-base text-amber-300">{candidates.length} In Active Pipeline</span>
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
+                  <span className="text-amber-300 text-[11px] font-bold uppercase tracking-wider block">Candidates</span>
+                  <span className="font-black text-base sm:text-lg text-amber-300 mt-0.5 block">{candidates.length} In Pipeline</span>
+                  <span className="text-[11px] text-amber-400/80 mt-0.5 block">Shortlist funnel</span>
                 </div>
-                <div>
-                  <span className="text-emerald-300 block">TPO-Company Loops:</span>
-                  <span className="font-black text-base text-white">{feedbackLoop.length} Reviews Logged</span>
+                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 backdrop-blur-md">
+                  <span className="text-indigo-300 text-[11px] font-bold uppercase tracking-wider block">TPO-Company Loops</span>
+                  <span className="font-black text-base sm:text-lg text-indigo-200 mt-0.5 block">{feedbackLoop.length} Reviews</span>
+                  <span className="text-[11px] text-indigo-300/80 mt-0.5 block">Continuous feedback</span>
                 </div>
               </>
             )}
           </div>
         </div>
 
-        {/* Toast / Notification feedback */}
+      {/* Toast / Notification feedback */}
         {toastMessage && (
           <div className="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-sm animate-fade-in">
             <div className="flex items-center gap-2">

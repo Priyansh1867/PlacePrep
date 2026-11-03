@@ -40,20 +40,36 @@ export default function QuestionPrepPage({
   onNavigateToMock
 }) {
   const allQuestions = getInterviewQuestions();
-  
-  // Filter questions by company and/or round if specified
-  const pool = allQuestions.filter(q => {
+  const [filterCompany, setFilterCompany] = useState(companyId || 'all');
+  const [filterCategory, setFilterCategory] = useState('all');
+
+  const companiesList = getCompanies();
+
+  // Dynamically filter active pool
+  const dynamicPool = allQuestions.filter(q => {
     let matchComp = true;
+    let matchCat = true;
     let matchRound = true;
-    if (companyId) matchComp = q.companyId === companyId;
-    if (roundType) matchRound = q.round === roundType;
-    return matchComp && matchRound;
+
+    if (filterCompany !== 'all') {
+      matchComp = q.companyId === filterCompany;
+    }
+    if (filterCategory !== 'all') {
+      const qCat = (q.category || '').toLowerCase();
+      if (filterCategory === 'DSA') matchCat = qCat.includes('data structure') || qCat.includes('algorithm') || qCat.includes('programming');
+      else if (filterCategory === 'OOP') matchCat = qCat.includes('object') || qCat.includes('oop') || qCat.includes('java');
+      else if (filterCategory === 'DBMS') matchCat = qCat.includes('dbms') || qCat.includes('sql') || qCat.includes('database');
+      else if (filterCategory === 'OS') matchCat = qCat.includes('operating') || qCat.includes('memory') || qCat.includes('system');
+      else if (filterCategory === 'HR') matchCat = q.round === 'hr' || qCat.includes('hr') || qCat.includes('behavioral');
+    }
+    if (roundType && filterCompany === 'all' && filterCategory === 'all') {
+      matchRound = q.round === roundType;
+    }
+    return matchComp && matchCat && matchRound;
   });
 
-  const activePool = pool.length > 0 ? pool : allQuestions;
-  const initialIndex = initialQuestion ? Math.max(0, activePool.findIndex(q => q.id === initialQuestion.id)) : 0;
-
-  const [currentIndex, setCurrentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
+  const activePool = dynamicPool.length > 0 ? dynamicPool : allQuestions;
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -170,6 +186,61 @@ export default function QuestionPrepPage({
       </div>
 
       {/* Main Question Card */}
+      {/* COMPANY & CATEGORY FILTER HUBS */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+        {/* Company Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1.5 shrink-0">Company:</span>
+          {[
+            { id: 'all', name: 'All Companies' },
+            { id: 'tcs', name: 'TCS' },
+            { id: 'infosys', name: 'Infosys' },
+            { id: 'hcltech', name: 'HCLTech' },
+            { id: 'accenture', name: 'Accenture' },
+            { id: 'amazon', name: 'Amazon' }
+          ].map(c => (
+            <button
+              key={c.id}
+              onClick={() => {
+                setFilterCompany(c.id);
+                setCurrentIndex(0);
+              }}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+                filterCompany === c.id
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-t border-slate-100 pt-2.5">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1.5 shrink-0">Topic:</span>
+          {['all', 'DSA', 'OOP', 'DBMS', 'OS', 'HR'].map(cat => (
+            <button
+              key={cat}
+              onClick={() => {
+                setFilterCategory(cat);
+                setCurrentIndex(0);
+              }}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+                filterCategory === cat
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100'
+              }`}
+            >
+              {cat === 'all' ? 'All Categories' : cat === 'HR' ? 'HR / Behavioral' : cat}
+            </button>
+          ))}
+          <span className="text-[11px] text-slate-400 font-medium ml-auto hidden sm:inline shrink-0">
+            {activePool.length} Questions Available
+          </span>
+        </div>
+      </div>
+
       <div className="bg-white surface-card overflow-hidden">
         
         {/* Card Header */}
@@ -243,30 +314,31 @@ export default function QuestionPrepPage({
               <span>{isPracticed ? 'Practiced ✓' : 'Mark as Practiced'}</span>
             </button>
 
-            {/* Save Question */}
+            {/* Star / Bookmark */}
             <button
               onClick={handleToggleSave}
-              className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-1.5 border transition-all ${
+              className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
                 isSaved
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                  ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'
               }`}
+              title="Star and bookmark this question"
             >
-              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-indigo-600' : ''}`} />
-              <span>{isSaved ? 'Saved' : 'Save Question'}</span>
+              <Star className={`w-4 h-4 ${isSaved ? 'fill-amber-500 text-amber-500' : 'text-slate-400'}`} />
+              <span>{isSaved ? 'Starred ★' : 'Star / Bookmark'}</span>
             </button>
 
-            {/* Add to Revision List */}
+            {/* Save for Revision */}
             <button
               onClick={handleToggleRevision}
-              className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-1.5 border transition-all ${
+              className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
                 isRevision
-                  ? 'bg-purple-50 border-purple-200 text-purple-700 font-bold'
+                  ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
               }`}
             >
               <RotateCcw className="w-4 h-4" />
-              <span>{isRevision ? 'In Revision List' : 'Add to Revision List'}</span>
+              <span>{isRevision ? 'In Revision Queue ✓' : 'Save for Revision'}</span>
             </button>
           </div>
 

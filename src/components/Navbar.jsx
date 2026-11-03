@@ -91,19 +91,21 @@ export default function Navbar({
   };
 
   const moreModules = [
+    { id: 'applications', label: 'Selection Round Tracker', desc: 'Live candidate pipeline: Applied → Aptitude → Technical → HR', icon: ClipboardCheck, isNew: true },
+    { id: 'academic-profile', label: 'Academic Profile & SGPA', desc: 'Roll number, branch, semester marksheets & backlog status', icon: GraduationCap, isNew: true },
+    { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles },
     { id: 'resume-ats', label: 'ATS Resume Checker', desc: 'Score compatibility, match keywords & audit against JD', icon: FileCheck, isNew: true },
     { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', desc: 'HOD department syllabus delivery, labs & internal assessments', icon: GraduationCap, isNew: true },
     { id: 'reports-exporter', label: 'Reports Exporter', desc: 'Download Drive Eligibility, Placed Students & Attendance', icon: FileSpreadsheet, isNew: true },
     { id: 'attendance', label: 'Daily Class Attendance', desc: 'Teacher & HOD speed attendance marking portal', icon: UserCheck, isNew: true },
     { id: 'crt-attendance', label: 'CRT Training Attendance', desc: 'Pre-placement training, attendance & certificate eligibility', icon: Award, isNew: true },
-    { id: 'landing', label: 'AI Manager Landing Page', desc: 'Dark theme Remii-inspired product landing page', icon: Sparkles, isNew: true },
     { id: 'workflow', label: 'Selection Workflow', desc: '4-Round candidate pipeline & evaluator rubrics', icon: ClipboardCheck },
     { id: 'academic-records', label: 'Academic Records', desc: 'Semester marksheets, CGPA & backlogs', icon: GraduationCap },
     { id: 'dsa-studio', label: 'DSA & Coding Practice', desc: 'Pattern-based coding studio, live editor & tracking', icon: Code2, studentOnly: true },
     { id: 'drives', label: 'Placement Drives', desc: 'Campus drive schedules, packages & criteria', icon: Briefcase },
     { id: 'prep', label: 'Question Bank', desc: 'Technical, Aptitude & Company rounds', icon: BookOpen },
-    { id: 'experiences', label: 'Interview Experiences', desc: 'Senior student placement debriefs', icon: MessageSquare },
     { id: 'mock-interview', label: 'AI Mock Interview', desc: 'Real-time voice & text interview simulation', icon: Bot, isNew: true },
+    { id: 'experiences', label: 'Interview Experiences', desc: 'Senior student placement debriefs', icon: MessageSquare },
   ];
 
   const userRole = (user?.role || 'student').toLowerCase();
@@ -113,7 +115,7 @@ export default function Navbar({
   });
 
   return (
-    <header className="sticky top-3 z-50 px-3 sm:px-6 max-w-6xl mx-auto w-full transition-all">
+    <header className="pp-navbar sticky top-3 z-50 px-3 sm:px-6 max-w-6xl mx-auto w-full transition-all">
       {/* Remii-Style Floating Glass Island Navbar */}
       <div className="rounded-2xl border border-black/[0.07] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(17,20,57,0.06),0_2px_8px_rgba(17,20,57,0.03)] px-4 py-2.5 flex items-center justify-between">
         
@@ -313,7 +315,7 @@ export default function Navbar({
                         </div>
                       </div>
 
-                      {/* Student Details */}
+{/* Student Details */}
                       <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
                         <div className="flex justify-between text-slate-500">
                           <span>Institute:</span>

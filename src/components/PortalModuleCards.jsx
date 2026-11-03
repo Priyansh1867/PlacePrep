@@ -1,157 +1,169 @@
 import React from 'react';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import cardDrives from '../assets/images/card_drives.jpg';
-import cardReports from '../assets/images/card_reports.jpg';
-import cardEligibility from '../assets/images/card_eligibility.jpg';
-import cardLive from '../assets/images/card_live.jpg';
-import cardShortlists from '../assets/images/card_shortlists.jpg';
-import cardInternships from '../assets/images/card_internships.jpg';
-import cardFeedback from '../assets/images/card_feedback.jpg';
-import cardOffcampus from '../assets/images/card_offcampus.jpg';
-import cardNotifications from '../assets/images/card_notifications.jpg';
+import artDrives from '../assets/images/module-illustrations/drives-v1.png';
+import artQuestionBank from '../assets/images/module-illustrations/question-bank-v1.png';
+import artDsaStudio from '../assets/images/module-illustrations/dsa-studio-v1.png';
+import artCrtAttendance from '../assets/images/module-illustrations/crt-attendance-v1.png';
+import artClassAttendance from '../assets/images/module-illustrations/class-attendance-v1.png';
+import artResumeAts from '../assets/images/module-illustrations/resume-ats-v1.png';
+import artReportsExporter from '../assets/images/module-illustrations/reports-exporter-v1.png';
+import artEligibilityCriteria from '../assets/images/module-illustrations/eligibility-criteria-v1.png';
+import artLiveSessions from '../assets/images/module-illustrations/live-sessions-v1.png';
+import artShortlisted from '../assets/images/module-illustrations/shortlisted-v1.png';
+import artInternships from '../assets/images/module-illustrations/internships-v1.png';
+import artFeedbackLoop from '../assets/images/module-illustrations/feedback-loop-v1.png';
+import artOffCampus from '../assets/images/module-illustrations/off-campus-v1.png';
+import artPushNotifications from '../assets/images/module-illustrations/push-notifications-v1.png';
+import artStudentData from '../assets/images/module-illustrations/student-data-v1.png';
+import artCurriculumGovernance from '../assets/images/module-illustrations/curriculum-governance-v1.png';
+import artRoundDetails from '../assets/images/module-illustrations/round-details-v1.png';
+import artHackathons from '../assets/images/module-illustrations/hackathons-v1.png';
+import artFacultyMonitoring from '../assets/images/module-illustrations/faculty-monitoring-v1.png';
 
 const CARD_IMAGE_MAP = {
-  // Placement Portal mappings
-  'drives': cardDrives,
-  'reports-exporter': cardReports,
-  'eligibility-criteria': cardEligibility,
-  'live-sessions': cardLive,
-  'shortlisted': cardShortlists,
-  'internships': cardInternships,
-  'feedback-loop': cardFeedback,
-  'off-campus': cardOffcampus,
-  'push-notifications': cardNotifications,
-  'faculty-monitoring': cardReports,
-
-  // Institute Portal mappings
-  'student-data': cardShortlists,
-  'curriculum-governance': cardReports,
-  'upcoming-drives': cardDrives,
-  'question-bank': cardEligibility,
-  'crt-attendance': cardFeedback,
-  'class-attendance': cardLive,
-  'resume-ats': cardInternships,
-  'round-details': cardNotifications,
-  'hackathons': cardEligibility
+  'drives': artDrives,
+  'question-bank': artQuestionBank,
+  'dsa-studio': artDsaStudio,
+  'crt-attendance': artCrtAttendance,
+  'class-attendance': artClassAttendance,
+  'resume-ats': artResumeAts,
+  'reports-exporter': artReportsExporter,
+  'eligibility-criteria': artEligibilityCriteria,
+  'live-sessions': artLiveSessions,
+  'shortlisted': artShortlisted,
+  'internships': artInternships,
+  'feedback-loop': artFeedbackLoop,
+  'off-campus': artOffCampus,
+  'push-notifications': artPushNotifications,
+  'student-data': artStudentData,
+  'curriculum-governance': artCurriculumGovernance,
+  'round-details': artRoundDetails,
+  'hackathons': artHackathons,
+  'faculty-monitoring': artFacultyMonitoring,
+  'upcoming-drives': artDrives,
 };
 
-export default function PortalModuleCards({ items, activeId, onSelect, tone = 'emerald' }) {
+const CARD_TONES = {
+  drives: { accent: '#2563eb', rgb: '37, 99, 235', soft: '#eff6ff' },
+  'reports-exporter': { accent: '#7c3aed', rgb: '124, 58, 237', soft: '#f5f3ff' },
+  'eligibility-criteria': { accent: '#059669', rgb: '5, 150, 105', soft: '#ecfdf5' },
+  'live-sessions': { accent: '#ea580c', rgb: '234, 88, 12', soft: '#fff7ed' },
+  shortlisted: { accent: '#db2777', rgb: '219, 39, 119', soft: '#fdf2f8' },
+  internships: { accent: '#0f766e', rgb: '15, 118, 110', soft: '#f0fdfa' },
+  'feedback-loop': { accent: '#e11d48', rgb: '225, 29, 72', soft: '#fff1f2' },
+  'off-campus': { accent: '#4f46e5', rgb: '79, 70, 229', soft: '#eef2ff' },
+  'push-notifications': { accent: '#ca8a04', rgb: '202, 138, 4', soft: '#fefce8' },
+  'student-data': { accent: '#4f46e5', rgb: '79, 70, 229', soft: '#eef2ff' },
+  'curriculum-governance': { accent: '#7c3aed', rgb: '124, 58, 237', soft: '#f5f3ff' },
+  'upcoming-drives': { accent: '#2563eb', rgb: '37, 99, 235', soft: '#eff6ff' },
+  'question-bank': { accent: '#0891b2', rgb: '8, 145, 178', soft: '#ecfeff' },
+  'dsa-studio': { accent: '#9333ea', rgb: '147, 51, 234', soft: '#faf5ff' },
+  'crt-attendance': { accent: '#ea580c', rgb: '234, 88, 12', soft: '#fff7ed' },
+  'class-attendance': { accent: '#059669', rgb: '5, 150, 105', soft: '#ecfdf5' },
+  'resume-ats': { accent: '#0f766e', rgb: '15, 118, 110', soft: '#f0fdfa' },
+  'round-details': { accent: '#db2777', rgb: '219, 39, 119', soft: '#fdf2f8' },
+  hackathons: { accent: '#c2410c', rgb: '194, 65, 12', soft: '#fff7ed' },
+};
+
+const PORTAL_DEFAULTS = {
+  emerald: { accent: '#059669', rgb: '5, 150, 105', soft: '#ecfdf5' },
+  indigo: { accent: '#4f46e5', rgb: '79, 70, 229', soft: '#eef2ff' },
+  teal: { accent: '#0f766e', rgb: '15, 118, 110', soft: '#f0fdfa' },
+};
+
+export default function PortalModuleCards({ items, activeId, onSelect, tone = 'indigo' }) {
   const handleClick = (itemId) => {
     if (onSelect) {
       onSelect(itemId);
     }
   };
 
-  const isIndigo = tone === 'indigo';
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
+    <section className="portal-module-section">
+      <div className="portal-module-section__lead">
+        <div>
+          <p className="portal-module-section__eyebrow">Workspace shortcuts</p>
+          <p className="portal-module-section__copy">Your most relevant actions, each with a distinct visual status.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = activeId === item.id;
-        const cardImg = item.image || CARD_IMAGE_MAP[item.id] || cardDrives;
+        const cardImg = CARD_IMAGE_MAP[item.id] || item.image || artDrives;
+        const cardTone = CARD_TONES[item.id] || PORTAL_DEFAULTS[tone] || PORTAL_DEFAULTS.indigo;
 
         return (
           <button
             key={item.id}
             type="button"
             onClick={() => handleClick(item.id)}
-            className={`group relative text-left w-full h-48 sm:h-52 rounded-3xl overflow-hidden border transition-all duration-300 transform hover:-translate-y-1.5 focus:outline-none cursor-pointer shadow-md hover:shadow-xl ${
-              isActive
-                ? isIndigo
-                  ? 'border-indigo-400 ring-2 ring-indigo-400/50 shadow-xl shadow-indigo-950/30'
-                  : 'border-emerald-400 ring-2 ring-emerald-400/50 shadow-xl shadow-emerald-950/30'
-                : isIndigo
-                  ? 'border-slate-200/80 hover:border-indigo-400/80'
-                  : 'border-slate-200/80 hover:border-emerald-400/80'
-            }`}
+            aria-current={isActive ? 'page' : undefined}
+            className={`portal-workspace-card group ${isActive ? 'is-active' : ''}`}
+            style={{
+              '--portal-accent': cardTone.accent,
+              '--portal-accent-rgb': cardTone.rgb,
+              '--portal-soft': cardTone.soft,
+            }}
           >
-            {/* Background 3D Themed Graphic Image */}
             <img
               src={cardImg}
-              alt={item.label}
-              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-108"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              width={1536}
+              height={1024}
+              className="portal-workspace-card__image"
             />
 
-            {/* Gradient Overlays for High Legibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/70 to-slate-900/30 transition-opacity duration-300" />
-            <div className={`absolute inset-0 transition-opacity duration-300 ${
-              isActive
-                ? isIndigo
-                  ? 'bg-indigo-950/30 border-2 border-indigo-400/80 rounded-3xl'
-                  : 'bg-emerald-950/30 border-2 border-emerald-400/80 rounded-3xl'
-                : isIndigo
-                  ? 'bg-transparent group-hover:bg-indigo-950/15'
-                  : 'bg-transparent group-hover:bg-emerald-950/15'
-            }`} />
+            <span className="portal-workspace-card__veil" />
+            <span className="portal-workspace-card__orb" />
 
-            {/* Content Container */}
-            <div className="relative z-10 h-full p-5 flex flex-col justify-between text-white">
-              {/* Top Row: Icon Box and Status Pill */}
-              <div className="flex items-center justify-between">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur-md border transition-colors ${
-                  isActive
-                    ? isIndigo
-                      ? 'bg-indigo-600 text-white border-indigo-300 shadow-md'
-                      : 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-md'
-                    : isIndigo
-                      ? 'bg-white/15 text-indigo-300 border-white/20 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-300'
-                      : 'bg-white/15 text-emerald-300 border-white/20 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:border-emerald-300'
-                }`}>
-                  <Icon className="w-5 h-5" />
-                </div>
+            <span className="portal-workspace-card__content">
+              <span className="portal-workspace-card__topline">
+                <span className="portal-workspace-card__icon">
+                  <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                </span>
 
-                <div className="flex items-center gap-1.5">
+                <span className="portal-workspace-card__badges">
                   {isActive && (
-                    <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-sm ${
-                      isIndigo ? 'bg-indigo-600 text-white' : 'bg-emerald-500 text-slate-950'
-                    }`}>
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="portal-workspace-card__active-badge">
+                      <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
                       <span>Active</span>
                     </span>
                   )}
                   {item.badge !== undefined && item.badge !== null && item.badge !== '' && (
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-md border ${
+                    <span className={`portal-workspace-card__badge ${
                       String(item.badge).includes('Restricted') || String(item.badge).includes('❌')
-                        ? 'bg-rose-500/30 text-rose-200 border-rose-400/40'
-                        : 'bg-white/15 text-white border-white/20'
+                        ? 'is-restricted'
+                        : ''
                     }`}>
                       {item.badge}
                     </span>
                   )}
-                </div>
-              </div>
+                </span>
+              </span>
 
-              {/* Bottom Row: Title, Description & Arrow */}
-              <div>
-                <div className="flex items-end justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className={`text-base sm:text-lg font-black tracking-tight text-white transition-colors drop-shadow-sm truncate ${
-                      isIndigo ? 'group-hover:text-indigo-300' : 'group-hover:text-emerald-300'
-                    }`}>
+              <span className="portal-workspace-card__bottom">
+                <span className="portal-workspace-card__copy">
+                    <span className="portal-workspace-card__eyebrow">Workspace module</span>
+                    <h4 className="portal-workspace-card__title">
                       {item.label}
                     </h4>
-                    <p className="text-xs text-slate-300 line-clamp-1 mt-0.5 font-medium">
+                    <span className="portal-workspace-card__description">
                       {item.description || (item.badge ? `Status: ${item.badge}` : 'Click to jump to section')}
-                    </p>
-                  </div>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 ${
-                    isActive
-                      ? isIndigo
-                        ? 'bg-indigo-500 text-white scale-110'
-                        : 'bg-emerald-400 text-slate-950 scale-110'
-                      : isIndigo
-                        ? 'bg-white/10 text-slate-200 group-hover:bg-indigo-500 group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5'
-                        : 'bg-white/10 text-slate-200 group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:translate-x-0.5 group-hover:-translate-y-0.5'
-                  }`}>
-                    <ArrowUpRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
+                    </span>
+                </span>
+                <span className="portal-workspace-card__arrow">
+                    <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+                </span>
+              </span>
+            </span>
           </button>
         );
       })}
-    </div>
+      </div>
+    </section>
   );
 }

@@ -3,7 +3,7 @@ import { ArrowRight, BriefcaseBusiness, Building2, CheckCircle2, GraduationCap, 
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import instituteImage from '../assets/images/institute_hero.jpg';
 import placementImage from '../assets/images/placement_hero.jpg';
-import collegeBg from '../assets/images/college_campus_main.webp';
+import collegeBg from '../assets/images/university-campus-background.png';
 import Institute3DAnimation from '../components/animations/Institute3DAnimation';
 import Placement3DAnimation from '../components/animations/Placement3DAnimation';
 
@@ -38,20 +38,20 @@ const portals = [
 
 export default function PortalGatewayPage({ onNavigateAuth }) {
   return (
-    <div className="relative w-full min-h-screen text-white flex flex-col justify-between select-none py-3 sm:py-5 lg:py-6">
+    <div className="gateway-page relative w-full min-h-screen text-white select-none">
       
-      {/* 1. Main College Campus Photo Background (User's Brick University Image) */}
+      {/* User-provided university campus background */}
       <img
         src={collegeBg}
         alt="University Campus"
-        className="absolute inset-0 w-full h-full object-cover object-center z-0 scale-105 pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover object-center z-0 pointer-events-none"
       />
 
       {/* Cinematic Deep Dark Gradient & Blur Overlay for Pristine Contrast */}
       <div className="absolute inset-0 z-[1] bg-gradient-to-b from-slate-950/85 via-slate-900/75 to-slate-950/92 backdrop-blur-[1.5px]" />
 
       {/* Foreground Content Container - Exactly Fits Screen Height */}
-      <div className="relative z-10 w-full max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-between flex-1 gap-4">
+      <div className="gateway-frame relative z-10 w-full max-w-[1340px] mx-auto">
         
         {/* Header Bar */}
         <header className="flex items-center justify-between px-1 shrink-0 py-1">
@@ -73,7 +73,7 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
         </header>
 
         {/* Main Hero Header */}
-        <main className="flex-1 flex flex-col justify-center py-0.5 text-center my-auto">
+        <section aria-label="Select your workspace" className="gateway-main text-center">
           
           {/* Badge Pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/20 backdrop-blur-md px-3 py-0.5 text-[10px] font-bold tracking-[0.12em] text-indigo-200 shadow-sm mx-auto">
@@ -92,7 +92,7 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
           </p>
 
           {/* 2 Portal Cards: Institute vs Placement */}
-          <div className="mx-auto grid max-w-4xl gap-4 text-left lg:grid-cols-2 lg:gap-5 w-full">
+          <div className="gateway-grid mx-auto grid max-w-4xl gap-4 text-left w-full">
             {portals.map((portal) => {
               const Icon = portal.icon;
               const Animation = portal.AnimationComponent;
@@ -128,7 +128,7 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
                     </span>
 
                     {/* 3D Animated Visual tailored to each card */}
-                    <Animation />
+                    <div className="gateway-visual" aria-hidden="true"><Animation /></div>
 
                     {/* Feature points */}
                     <span className="gateway-portal-card__list">
@@ -150,7 +150,7 @@ export default function PortalGatewayPage({ onNavigateAuth }) {
               );
             })}
           </div>
-        </main>
+        </section>
 
         {/* Footer note */}
         <p className="flex items-center justify-center gap-1.5 text-center text-[10px] font-medium text-slate-300/80 py-1 shrink-0">

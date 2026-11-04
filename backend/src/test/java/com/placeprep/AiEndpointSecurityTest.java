@@ -38,5 +38,13 @@ class AiEndpointSecurityTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/auth/users").header("Authorization", "Bearer " + registered.path("token").asText()))
                 .andExpect(status().isForbidden());
+        mvc.perform(post("/api/live-sessions")
+                        .header("Authorization", "Bearer " + registered.path("token").asText())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/drives")
+                        .header("Authorization", "Bearer " + registered.path("token").asText())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
     }
 }

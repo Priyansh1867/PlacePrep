@@ -1,6 +1,6 @@
 import ProfilePopover from '../components/profile/ProfilePopover';
 import { getProfileMetrics, displayValue } from '../services/profileMetrics';
-import { DriveApi, WorkflowApi, CompanyApi, ApplicationApi, request } from '../services/api';
+import { DriveApi, WorkflowApi, CompanyApi, ApplicationApi, UserApi, request } from '../services/api';
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   Briefcase,
@@ -50,7 +50,8 @@ import {
   LogOut,
   Compass,
   Mail,
-  School
+  School,
+  Trash2
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -58,8 +59,12 @@ import {
   setPortalRole,
   getGraduationBatch,
   getUpcomingDrives,
+  addDrive,
+  updateDriveRoundsConfig,
+  getDriveRoundsConfig,
   getEligibilityMatrix,
   getLiveSessions,
+  getLiveSessionsForStudent,
   addLiveSession,
   rsvpLiveSession,
   getOffCampusCompanies,
@@ -77,6 +82,8 @@ import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import ReportsExporterPage from './ReportsExporterPage';
 import UserProfileModal from '../components/profile/UserProfileModal';
+import DirectorPlacementAnalytics from '../components/placement/DirectorPlacementAnalytics';
+import DirectorLiveSessionsView from '../components/placement/DirectorLiveSessionsView';
 import placementWorkflowHero from '../assets/images/placement-workflow-hero.png';
 
 // Standard Role Metadata for labels
@@ -121,12 +128,43 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
 
-  // Keep currentUser synced when profile is saved
+  // Keep currentUser synced when profile is saved or updated remotely
   useEffect(() => {
     const handleProfileUpdate = () => {
       setCurrentUserState(getCurrentUser());
     };
     window.addEventListener('profile-updated', handleProfileUpdate);
+
+    // Fetch freshest student profile from backend database
+    const user = getCurrentUser();
+    if (user?.email && user?.role === 'student') {
+      UserApi.getStudentFullProfile(user.email).then((remoteData) => {
+        if (!remoteData) return;
+        let parsed = remoteData;
+        if (typeof remoteData === 'string') {
+          try { parsed = JSON.parse(remoteData); } catch {}
+        }
+        if (parsed?.user) {
+          const merged = { ...user, ...parsed.user };
+          setCurrentUserState(merged);
+          setCurrentUser(merged);
+        } else if (parsed?.basicDetails) {
+          const merged = {
+            ...user,
+            name: parsed.basicDetails.fullName || user.name,
+            phone: parsed.basicDetails.phone || user.phone,
+            branch: parsed.educationDetails?.branch || user.branch,
+            college: parsed.educationDetails?.college || user.college,
+            rollNumber: parsed.educationDetails?.rollNumber || user.rollNumber,
+            graduationBatch: parsed.educationDetails?.graduationBatch || user.graduationBatch,
+            cgpa: parsed.educationDetails?.cgpa !== undefined ? parsed.educationDetails.cgpa : user.cgpa,
+          };
+          setCurrentUserState(merged);
+          setCurrentUser(merged);
+        }
+      }).catch(() => {});
+    }
+
     return () => window.removeEventListener('profile-updated', handleProfileUpdate);
   }, []);
 
@@ -176,6 +214,84 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     eligibleBatches: '',
     allowedBranches: ''
   });
+
+  // Dynamic Interview Round Configuration State
+  const [numberOfRounds, setNumberOfRounds] = useState(4);
+  const [configuredRounds, setConfiguredRounds] = useState([
+    { roundNumber: 1, name: 'Online Assessment', description: 'Aptitude, Core CS & Coding Evaluation' },
+    { roundNumber: 2, name: 'Technical Interview – Round 1', description: 'Data Structures & Problem Solving' },
+    { roundNumber: 3, name: 'Technical Interview – Round 2', description: 'System Design & In-Depth Discussion' },
+    { roundNumber: 4, name: 'HR & Final Selection', description: 'Culture Fit, Behavioral & Offer Formalities' }
+  ]);
+
+  const handleNumberOfRoundsChange = (val) => {
+    const count = Math.max(1, Math.min(10, parseInt(val, 10) || 1));
+    setNumberOfRounds(count);
+    setConfiguredRounds((prev) => {
+      if (prev.length === count) return prev;
+      if (prev.length < count) {
+        const defaultNames = [
+          'Online Assessment',
+          'Technical Interview – Round 1',
+          'Technical Interview – Round 2',
+          'Technical Interview – Round 3',
+          'Managerial Interview',
+          'HR Interview',
+          'Executive Fitment',
+          'Final Selection',
+          'Onboarding & Offer Rollout',
+          'Specialist Evaluation'
+        ];
+        const updated = [...prev];
+        for (let i = prev.length; i < count; i++) {
+          updated.push({
+            roundNumber: i + 1,
+            name: defaultNames[i] || `Interview Round ${i + 1}`,
+            description: ''
+          });
+        }
+        return updated;
+      } else {
+        return prev.slice(0, count);
+      }
+    });
+  };
+
+  const handleAddRound = () => {
+    if (configuredRounds.length >= 10) {
+      showToast('Maximum 10 interview rounds allowed per drive.');
+      return;
+    }
+    const nextNum = configuredRounds.length + 1;
+    const updated = [
+      ...configuredRounds,
+      {
+        roundNumber: nextNum,
+        name: `Interview Round ${nextNum}`,
+        description: ''
+      }
+    ];
+    setConfiguredRounds(updated);
+    setNumberOfRounds(updated.length);
+  };
+
+  const handleRemoveRound = (idxToRemove) => {
+    if (configuredRounds.length <= 1) {
+      showToast('A hiring drive must have at least 1 interview round.');
+      return;
+    }
+    const updated = configuredRounds
+      .filter((_, idx) => idx !== idxToRemove)
+      .map((r, idx) => ({ ...r, roundNumber: idx + 1 }));
+    setConfiguredRounds(updated);
+    setNumberOfRounds(updated.length);
+  };
+
+  const handleRoundFieldChange = (index, field, value) => {
+    setConfiguredRounds((prev) =>
+      prev.map((r, idx) => (idx === index ? { ...r, [field]: value } : r))
+    );
+  };
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [broadcastForm, setBroadcastForm] = useState({
@@ -279,17 +395,25 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     },
     {
       id: 'live-sessions',
-      label: '4. Live Sessions',
+      label: isDirector ? '4. Live Sessions & Webinars' : '4. Live Sessions',
       icon: Video,
       badge: `${liveSessions.length} Webinars`,
-      description: isStudent ? 'Attend corporate pre-placement talks & live webinars' : 'Schedule interactive pre-placement talks and video rooms'
+      description: isDirector
+        ? 'Executive scheduling of PPTs & webinars with smart student notifications'
+        : isStudent
+        ? 'Attend corporate pre-placement talks & live webinars'
+        : 'Schedule interactive pre-placement talks and video rooms'
     },
     {
       id: 'shortlisted',
-      label: isStudent ? '5. My Shortlist Status' : '5. Shortlisted Students',
+      label: isStudent ? '5. My Shortlist Status' : isDirector ? '5. Placement Round Analytics' : '5. Shortlisted Students',
       icon: Users,
-      badge: isStudent ? 'Pipeline' : `${candidates.length} Candidates`,
-      description: isStudent ? 'Round-wise interview progress and evaluation scores' : 'Multi-round candidate evaluation and advancement funnel'
+      badge: isStudent ? 'Pipeline' : isDirector ? '8 Drives Analytics' : `${candidates.length} Candidates`,
+      description: isStudent
+        ? 'Round-wise interview progress and evaluation scores'
+        : isDirector
+        ? 'Company-wise & round-wise student selection analytics'
+        : 'Multi-round candidate evaluation and advancement funnel'
     },
     {
       id: 'internships',
@@ -372,26 +496,122 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     showToast(`Live session "${liveForm.title}" published!`);
   };
 
-  const handleCreateDrive = (e) => {
+  const handleCreateDrive = async (e) => {
     e.preventDefault();
-    if (!driveForm.companyName || !driveForm.role) return;
+    if (!driveForm.companyName?.trim() || !driveForm.role?.trim()) {
+      showToast('Please specify both Company Name and Role Title.');
+      return;
+    }
+
+    // Check duplicate drive submissions
+    const isDuplicate = drives.some(
+      (d) =>
+        d.companyName?.trim().toLowerCase() === driveForm.companyName.trim().toLowerCase() &&
+        d.role?.trim().toLowerCase() === driveForm.role.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      showToast(`Drive for "${driveForm.companyName.trim()}" (${driveForm.role.trim()}) already exists.`);
+      return;
+    }
+
+    // Validate interview rounds
+    if (!configuredRounds || configuredRounds.length === 0) {
+      showToast('Please configure at least 1 interview round.');
+      return;
+    }
+
+    const roundNamesSeen = new Set();
+    for (let i = 0; i < configuredRounds.length; i++) {
+      const r = configuredRounds[i];
+      const name = r.name?.trim();
+      if (!name) {
+        showToast(`Round ${i + 1} must have a valid name.`);
+        return;
+      }
+      const lower = name.toLowerCase();
+      if (roundNamesSeen.has(lower)) {
+        showToast(`Duplicate round name "${name}" detected. Round names must be distinct.`);
+        return;
+      }
+      roundNamesSeen.add(lower);
+    }
+
+    const finalRoundConfigs = configuredRounds.map((r, idx) => ({
+      roundNumber: idx + 1,
+      name: r.name.trim(),
+      description: r.description?.trim() || ''
+    }));
+    const finalRoundsList = finalRoundConfigs.map((r) => r.name);
+    const roundConfigsJson = JSON.stringify(finalRoundConfigs);
+
     const newDrive = {
       id: `drv-${Date.now()}`,
-      companyId: driveForm.companyName.toLowerCase().replace(/\s+/g, '-'),
-      companyName: driveForm.companyName,
-      role: driveForm.role,
-      ctc: driveForm.ctc || '₹6.00 LPA - ₹10.00 LPA',
-      driveDate: driveForm.driveDate,
-      venue: driveForm.venue,
+      driveId: `drv-${Date.now()}`,
+      companyId: driveForm.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      companyName: driveForm.companyName.trim(),
+      role: driveForm.role.trim(),
+      ctc: driveForm.ctc?.trim() || '₹6.00 LPA - ₹10.00 LPA',
+      driveDate: driveForm.driveDate || new Date().toISOString().split('T')[0],
+      venue: driveForm.venue?.trim() || 'Auditorium Hall A & Tech Labs',
       status: 'Verified Upcoming Drive',
       minCgpa: parseFloat(driveForm.minCgpa) || 6.5,
       maxBacklogs: parseInt(driveForm.maxBacklogs, 10) || 0,
-      eligibleBatches: driveForm.eligibleBatches.split(',').map(s => s.trim()),
-      allowedBranches: driveForm.allowedBranches.split(',').map(s => s.trim())
+      eligibleBatches: (driveForm.eligibleBatches || '2024, 2025, 2026')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      allowedBranches: (driveForm.allowedBranches || 'CSE, IT, ECE, EE')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      isRegistered: false,
+      totalRounds: finalRoundConfigs.length,
+      rounds: finalRoundsList,
+      roundConfigs: finalRoundConfigs,
+      roundConfigsJson: roundConfigsJson
     };
-    setDrives([newDrive, ...drives]);
+
+    // Save locally via storage helper
+    try {
+      addDrive(newDrive);
+      updateDriveRoundsConfig(newDrive.id, finalRoundsList, finalRoundConfigs);
+      updateDriveRoundsConfig(newDrive.companyId, finalRoundsList, finalRoundConfigs);
+    } catch (err) {
+      console.warn('Local storage addDrive error:', err);
+    }
+
+    // Update local state immediately
+    setDrives((prev) => [newDrive, ...prev]);
+
+    // Save to remote backend database
+    try {
+      await DriveApi.create(newDrive);
+    } catch (err) {
+      console.warn('Backend DriveApi.create sync warning (persisted locally):', err);
+    }
+
+    // Reset form and close modal
+    setDriveForm({
+      companyName: '',
+      role: '',
+      ctc: '',
+      driveDate: '',
+      venue: '',
+      minCgpa: 6.5,
+      maxBacklogs: 0,
+      eligibleBatches: '',
+      allowedBranches: ''
+    });
+    setNumberOfRounds(4);
+    setConfiguredRounds([
+      { roundNumber: 1, name: 'Online Assessment', description: 'Aptitude, Core CS & Coding Evaluation' },
+      { roundNumber: 2, name: 'Technical Interview – Round 1', description: 'Data Structures & Problem Solving' },
+      { roundNumber: 3, name: 'Technical Interview – Round 2', description: 'System Design & In-Depth Discussion' },
+      { roundNumber: 4, name: 'HR & Final Selection', description: 'Culture Fit, Behavioral & Offer Formalities' }
+    ]);
     setIsDriveModalOpen(false);
-    showToast(`Drive for ${driveForm.companyName} created successfully!`);
+    showToast(`Campus hiring drive for ${newDrive.companyName} with ${finalRoundConfigs.length} interview rounds created successfully!`);
   };
 
   const handleCreateInternship = (e) => {
@@ -500,12 +720,17 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     return sortedDrives.slice(startIndex, startIndex + DRIVES_PER_PAGE);
   }, [sortedDrives, drivesPage]);
 
+  const studentEligibleLiveSessions = useMemo(() => {
+    if (!isStudent) return liveSessions;
+    return getLiveSessionsForStudent(currentUser, drives);
+  }, [liveSessions, isStudent, currentUser, drives]);
+
   const [liveSessionsPage, setLiveSessionsPage] = useState(1);
-  const totalLiveSessionsPages = Math.ceil(liveSessions.length / DRIVES_PER_PAGE) || 1;
+  const totalLiveSessionsPages = Math.ceil(studentEligibleLiveSessions.length / DRIVES_PER_PAGE) || 1;
   const paginatedLiveSessions = useMemo(() => {
     const startIndex = (liveSessionsPage - 1) * DRIVES_PER_PAGE;
-    return liveSessions.slice(startIndex, startIndex + DRIVES_PER_PAGE);
-  }, [liveSessions, liveSessionsPage]);
+    return studentEligibleLiveSessions.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [studentEligibleLiveSessions, liveSessionsPage]);
 
   // Recruiter candidate list (masked sensitive data)
   const displayedCandidates = useMemo(() => {
@@ -576,7 +801,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 </button>
               )}
 
-              {(isTPO || isCoordinator) && (
+              {(isTPO || isCoordinator || isDirector) && (
                 <button
                   type="button"
                   onClick={() => setIsDriveModalOpen(true)}
@@ -839,7 +1064,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                   </h3>
                   {/* Red badge with white text */}
                   <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
-                    {isTPO ? 'Full Edit Access' : isCoordinator ? 'Logistics Managed' : isRecruiter ? 'Recruiter Scoped' : isDirector ? 'Read-Only View' : 'Student Eligible'}
+                    {isTPO ? 'Full Edit Access' : isCoordinator ? 'Logistics Managed' : isRecruiter ? 'Recruiter Scoped' : isDirector ? 'Executive Access' : 'Student Eligible'}
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
@@ -850,7 +1075,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               </div>
 
               <div className="flex items-center gap-2.5 shrink-0 relative z-10">
-                {(isTPO || isCoordinator) && (
+                {(isTPO || isCoordinator || isDirector) && (
                   <button
                     onClick={() => setIsDriveModalOpen(true)}
                     className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
@@ -898,6 +1123,11 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
                           Package: {drive.ctc}
                         </span>
+                        {drive.rounds && drive.rounds.length > 0 && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {drive.rounds.length} Interview Rounds
+                          </span>
+                        )}
                       </div>
 
                       <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-3">
@@ -1183,7 +1413,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* FEATURE 4: LIVE SESSIONS (PPTS & WEBINARS)                                */}
         {/* ========================================================================= */}
         {activeTab === 'live-sessions' && (
-          <div className="space-y-6">
+          isDirector ? (
+            <DirectorLiveSessionsView onNavigate={onNavigate} showToast={showToast} />
+          ) : (
+            <div className="space-y-6">
             {/* Header Bar with Attractive Dark Texture Background */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
               <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -1332,165 +1565,142 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               </div>
             )}
           </div>
+          )
         )}
 
         {/* ========================================================================= */}
-        {/* FEATURE 5: SHORTLISTED STUDENTS                                           */}
+        {/* FEATURE 5: SHORTLISTED STUDENTS / DIRECTOR PLACEMENT ROUND ANALYTICS      */}
         {/* ========================================================================= */}
         {activeTab === 'shortlisted' && (
-          <div className="space-y-6">
-
-            {/* Header info */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-black text-slate-900">
-                    {isStudent ? 'My Interview Rounds & Shortlist Status' :
-                     isRecruiter ? 'Assigned Company Shortlist Management' :
-                     isDirector ? 'Campus Shortlist Conversion Intelligence' :
-                     'Candidate Shortlisting & Selection Workflow Engine'}
-                  </h3>
-                  {isRecruiter && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                      Sensitive PII Masked
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  {isStudent ? 'Live status of your progress across aptitude, technical, managerial, and HR rounds.' :
-                   isRecruiter ? 'Review candidates registered for your corporate recruitment drive.' :
-                   'Multi-round candidate advancement, evaluator ratings, and stage transitions.'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => onNavigate('workflow')}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shrink-0"
-              >
-                <span>Full Workflow Center</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Director Funnel Statistics */}
-            {isDirector && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-6 rounded-3xl bg-white border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Total Registered:</span>
-                  <span className="text-2xl font-black text-slate-900">{candidates.length} Candidates</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Saved candidate records</p>
-                </div>
-                <div className="p-6 rounded-3xl bg-white border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Aptitude Cleared:</span>
-                  <span className="text-2xl font-black text-indigo-600">{candidates.filter(item => item.status === 'Shortlisted').length} Shortlisted</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Based on recorded statuses</p>
-                </div>
-                <div className="p-6 rounded-3xl bg-white border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Technical Cleared:</span>
-                  <span className="text-2xl font-black text-amber-600">{candidates.filter(item => item.status === 'Advanced').length} Advanced</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Based on recorded statuses</p>
-                </div>
-                <div className="p-6 rounded-3xl bg-white border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Offers Extended:</span>
-                  <span className="text-2xl font-black text-emerald-600">{candidates.filter(item => /Selected|Offered/i.test(item.status || '')).length} Selections</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Package summary not available</p>
-                </div>
-              </div>
-            )}
-
-            {/* Candidates Pipeline Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedCandidates.map(cand => (
-                <div key={cand.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-black text-xs text-slate-900">{cand.companyName}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        cand.status === 'Selected' ? 'bg-emerald-100 text-emerald-800' :
-                        cand.status === 'Advanced' ? 'bg-indigo-100 text-indigo-800' :
-                        cand.status === 'Eliminated' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'
-                      }`}>
-                        {cand.status}
+          isDirector ? (
+            <DirectorPlacementAnalytics onNavigate={onNavigate} />
+          ) : (
+            <div className="space-y-6">
+              {/* Header info */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-slate-900">
+                      {isStudent ? 'My Interview Rounds & Shortlist Status' :
+                       isRecruiter ? 'Assigned Company Shortlist Management' :
+                       'Candidate Shortlisting & Selection Workflow Engine'}
+                    </h3>
+                    {isRecruiter && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        Sensitive PII Masked
                       </span>
-                    </div>
-
-                    <h4 className="font-bold text-slate-900 text-base mb-0.5">{cand.name}</h4>
-                    <p className="text-xs text-slate-500 mb-3">{cand.branch} • {cand.college}</p>
-
-                    <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1.5 mb-4 border border-slate-100">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Current Round:</span>
-                        <span className="font-bold text-slate-800 uppercase">{cand.currentRound} Round</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Aptitude Score:</span>
-                        <span className="font-bold text-indigo-600">{cand.scores?.aptitude || 'N/A'}/100</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Technical Score:</span>
-                        <span className="font-bold text-emerald-600">{cand.scores?.technical || 'Under Review'}/100</span>
-                      </div>
-                      {isRecruiter ? (
-                        <div className="flex justify-between text-amber-700 bg-amber-50 p-1.5 rounded-lg text-[11px]">
-                          <span>Student Contact:</span>
-                          <span className="font-mono">*** Masked for Privacy ***</span>
-                        </div>
-                      ) : (
-                        <div className="flex justify-between text-slate-500">
-                          <span>Email:</span>
-                          <span className="font-mono text-slate-700 truncate max-w-[170px]">{cand.email}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-slate-500 italic mb-4 leading-relaxed">"{cand.notes}"</p>
-                  </div>
-
-                  {/* Actions depending on role */}
-                  <div className="flex gap-2">
-                    {isRecruiter ? (
-                      <>
-                        <button
-                          onClick={() => handleCandidateStatusChange(cand.id, 'Advanced')}
-                          className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition"
-                        >
-                          Advance Candidate
-                        </button>
-                        <button
-                          onClick={() => handleCandidateStatusChange(cand.id, 'Eliminated')}
-                          className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    ) : (isTPO || isCoordinator) ? (
-                      <>
-                        <button
-                          onClick={() => handleCandidateStatusChange(cand.id, 'Selected')}
-                          className="flex-1 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition"
-                        >
-                          Select
-                        </button>
-                        <button
-                          onClick={() => handleCandidateStatusChange(cand.id, 'Advanced')}
-                          className="flex-1 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition"
-                        >
-                          Advance
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => onNavigate('workflow')}
-                        className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition"
-                      >
-                        View Round Evaluation Sheet
-                      </button>
                     )}
                   </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {isStudent ? 'Live status of your progress across aptitude, technical, managerial, and HR rounds.' :
+                     isRecruiter ? 'Review candidates registered for your corporate recruitment drive.' :
+                     'Multi-round candidate advancement, evaluator ratings, and stage transitions.'}
+                  </p>
                 </div>
-              ))}
+
+                <button
+                  onClick={() => onNavigate('workflow')}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shrink-0"
+                >
+                  <span>Full Workflow Center</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Candidates Pipeline Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedCandidates.map(cand => (
+                  <div key={cand.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-black text-xs text-slate-900">{cand.companyName}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          cand.status === 'Selected' ? 'bg-emerald-100 text-emerald-800' :
+                          cand.status === 'Advanced' ? 'bg-indigo-100 text-indigo-800' :
+                          cand.status === 'Eliminated' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'
+                        }`}>
+                          {cand.status}
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-slate-900 text-base mb-0.5">{cand.name}</h4>
+                      <p className="text-xs text-slate-500 mb-3">{cand.branch} • {cand.college}</p>
+
+                      <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1.5 mb-4 border border-slate-100">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Current Round:</span>
+                          <span className="font-bold text-slate-800 uppercase">{cand.currentRound} Round</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Aptitude Score:</span>
+                          <span className="font-bold text-indigo-600">{cand.scores?.aptitude || 'N/A'}/100</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Technical Score:</span>
+                          <span className="font-bold text-emerald-600">{cand.scores?.technical || 'Under Review'}/100</span>
+                        </div>
+                        {isRecruiter ? (
+                          <div className="flex justify-between text-amber-700 bg-amber-50 p-1.5 rounded-lg text-[11px]">
+                            <span>Student Contact:</span>
+                            <span className="font-mono">*** Masked for Privacy ***</span>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between text-slate-500">
+                            <span>Email:</span>
+                            <span className="font-mono text-slate-700 truncate max-w-[170px]">{cand.email}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-slate-500 italic mb-4 leading-relaxed">"{cand.notes}"</p>
+                    </div>
+
+                    {/* Actions depending on role */}
+                    <div className="flex gap-2">
+                      {isRecruiter ? (
+                        <>
+                          <button
+                            onClick={() => handleCandidateStatusChange(cand.id, 'Advanced')}
+                            className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition"
+                          >
+                            Advance Candidate
+                          </button>
+                          <button
+                            onClick={() => handleCandidateStatusChange(cand.id, 'Eliminated')}
+                            className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : (isTPO || isCoordinator) ? (
+                        <>
+                          <button
+                            onClick={() => handleCandidateStatusChange(cand.id, 'Selected')}
+                            className="flex-1 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition"
+                          >
+                            Select
+                          </button>
+                          <button
+                            onClick={() => handleCandidateStatusChange(cand.id, 'Advanced')}
+                            className="flex-1 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition"
+                          >
+                            Advance
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => onNavigate('workflow')}
+                          className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition"
+                        >
+                          View Round Evaluation Sheet
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {/* ========================================================================= */}
@@ -1847,13 +2057,13 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       />
 
       {/* ========================================================================= */}
-      {/* MODAL: CREATE CAMPUS DRIVE (TPO / COORDINATOR)                            */}
+      {/* MODAL: CREATE CAMPUS DRIVE (TPO / COORDINATOR / DIRECTOR)                  */}
       {/* ========================================================================= */}
       {isDriveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-slate-200 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-black text-slate-900 mb-1">Create New Campus Hiring Drive</h3>
-            <p className="text-xs text-slate-500 mb-4">Publish a verified recruitment drive with packages and eligibility.</p>
+            <p className="text-xs text-slate-500 mb-4">Publish a verified recruitment drive with packages, cutoffs, and customizable interview rounds.</p>
 
             <form onSubmit={handleCreateDrive} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
@@ -1933,6 +2143,111 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                     onChange={(e) => setDriveForm({ ...driveForm, maxBacklogs: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   />
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* NEW SECTION: INTERVIEW ROUND CONFIGURATION                                */}
+              {/* ========================================================================= */}
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Interview Round Configuration</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Configure recruitment rounds with custom names and optional evaluation descriptions.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                    <label htmlFor="num-rounds-input" className="text-[11px] font-bold text-slate-700 whitespace-nowrap">
+                      Number of Rounds:
+                    </label>
+                    <input
+                      id="num-rounds-input"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={numberOfRounds}
+                      onChange={(e) => handleNumberOfRoundsChange(e.target.value)}
+                      className="w-14 bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-800 text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Dynamically Generated Round Fields */}
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                  {configuredRounds.map((round, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 hover:border-emerald-300 transition"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800">
+                          Round {round.roundNumber}
+                        </span>
+
+                        {configuredRounds.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRound(idx)}
+                            className="text-slate-400 hover:text-rose-600 transition p-1 rounded-md text-[11px] flex items-center gap-1 cursor-pointer"
+                            title="Remove this round"
+                            aria-label={`Remove Round ${round.roundNumber}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span className="text-[10px] font-semibold hidden sm:inline">Remove</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
+                            Round Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={round.name}
+                            onChange={(e) => handleRoundFieldChange(idx, 'name', e.target.value)}
+                            placeholder="e.g. Technical Interview – Round 1"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
+                            Description / Focus (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={round.description || ''}
+                            onChange={(e) => handleRoundFieldChange(idx, 'description', e.target.value)}
+                            placeholder="e.g. DSA, System Design & Live Coding"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={handleAddRound}
+                    disabled={configuredRounds.length >= 10}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-40 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Round</span>
+                  </button>
+                  <span className="text-[10px] font-medium text-slate-400">
+                    {configuredRounds.length} rounds configured
+                  </span>
                 </div>
               </div>
 

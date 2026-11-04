@@ -120,12 +120,11 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       }
 
       const destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
-      const emailTrim = formData.email.trim().toLowerCase();
 
       let userObj;
       if (authMode === 'login') {
         const loginRes = await AuthApi.login({
-          email: emailTrim,
+          email,
           password: formData.password
         });
         if (!loginRes?.user) throw new Error('Backend login did not return a user session.');
@@ -134,7 +133,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
         const fullNameTrim = formData.fullName.trim();
         const backendRes = await AuthApi.register({
           name: fullNameTrim,
-          email: emailTrim,
+          email,
           password: formData.password,
           college: (formData.college || '').trim(),
           branch: (formData.branch || '').trim(),

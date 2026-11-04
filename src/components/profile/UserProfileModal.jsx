@@ -131,6 +131,13 @@ export default function UserProfileModal({ isOpen, onClose, onProfileUpdated }) 
                 college: remoteData.user.college || local.educationDetails.college,
                 branch: remoteData.user.branch || local.educationDetails.branch,
                 graduationBatch: remoteData.user.graduationBatch || local.educationDetails.graduationBatch,
+                cgpa: remoteData.user.cgpa !== undefined && remoteData.user.cgpa !== null ? remoteData.user.cgpa : local.educationDetails.cgpa,
+                tenthPercentage: remoteData.user.tenthPercentage || local.educationDetails.tenthPercentage,
+                tenthSchool: remoteData.user.tenthSchool || local.educationDetails.tenthSchool,
+                tenthBoard: remoteData.user.tenthBoard || local.educationDetails.tenthBoard,
+                twelfthPercentage: remoteData.user.twelfthPercentage || local.educationDetails.twelfthPercentage,
+                twelfthSchool: remoteData.user.twelfthSchool || local.educationDetails.twelfthSchool,
+                twelfthBoard: remoteData.user.twelfthBoard || local.educationDetails.twelfthBoard,
               }
             };
           }

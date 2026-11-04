@@ -37,12 +37,13 @@ const DsaPracticePage = lazy(() => import('./pages/DsaPracticePage'));
 const ResumeAtsCheckerPage = lazy(() => import('./pages/ResumeAtsCheckerPage'));
 const AcademicProfilePage = lazy(() => import('./pages/AcademicProfilePage'));
 const MyApplicationsPage = lazy(() => import('./pages/MyApplicationsPage'));
+const StudentOnboardingPage = lazy(() => import('./pages/StudentOnboardingPage'));
 
 import { getCompanies, getCurrentUser } from './services/storage';
 import { getRoleDefaultDashboard } from './components/ui/BackNavButton';
 
 const VALID_ROUTES = new Set([
-  'gateway', 'home', 'classic-home', 'auth-portal', 'institute-portal', 'placement-portal',
+  'gateway', 'home', 'classic-home', 'auth-portal', 'student-onboarding', 'institute-portal', 'placement-portal',
   'management-portal', 'landing', 'workflow', 'drives', 'companies', 'company-hub',
   'prep', 'experiences', 'ai-insights', 'mock-interview', 'dashboard', 'academic-records',
   'admin', 'attendance', 'daily-attendance', 'class-attendance', 'crt-attendance',
@@ -173,9 +174,13 @@ export default function App() {
     scrollToTop();
   };
 
-  const handleAuthSuccess = (user, portalBranch) => {
+  const handleAuthSuccess = (user, portalBranch, targetRoute) => {
     setAuthorizedPortal(portalBranch);
-    if (portalBranch === 'institute') {
+    if (targetRoute) {
+      setCurrentRoute(targetRoute);
+    } else if (portalBranch === 'placement' && user?.role === 'student' && (!user?.onboardingCompleted || user?.onboardingStatus !== 'COMPLETED')) {
+      setCurrentRoute('student-onboarding');
+    } else if (portalBranch === 'institute') {
       setCurrentRoute('institute-portal');
     } else if (portalBranch === 'placement') {
       setCurrentRoute('placement-portal');
@@ -249,11 +254,10 @@ export default function App() {
     );
   }
 
-
-  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
+  const isGuidedFlowRoute = ['gateway', 'home', 'auth-portal', 'student-onboarding', 'institute-portal', 'placement-portal', 'management-portal'].includes(currentRoute);
 
   return (
-    <div className={`pp-app ${['gateway', 'home', 'auth-portal', 'landing'].includes(currentRoute) ? '' : 'pp-workspace'} min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
+    <div className={`pp-app ${['gateway', 'home', 'auth-portal', 'student-onboarding', 'landing'].includes(currentRoute) ? '' : 'pp-workspace'} min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 font-sans ${currentRoute === 'student-onboarding' ? 'bg-[#F0EFFF] text-slate-800' : isGuidedFlowRoute ? 'bg-slate-950 text-white' : 'bg-[#F8F8F9] text-[#111439]'}`}>
       
       {!isGuidedFlowRoute && (
         <Navbar
@@ -289,6 +293,17 @@ export default function App() {
             initialPortal={selectedAuthPortal}
             onAuthSuccess={handleAuthSuccess}
             onBackToGateway={() => handleNavigate('gateway')}
+          />
+        )}
+
+        {/* 2b. MULTI-STEP STUDENT PROFILE COMPLETION WIZARD */}
+        {currentRoute === 'student-onboarding' && (
+          <StudentOnboardingPage
+            onComplete={() => {
+              setAuthorizedPortal('placement');
+              handleNavigate('placement-portal');
+            }}
+            onNavigateBack={() => handleNavigateAuth('placement')}
           />
         )}
 

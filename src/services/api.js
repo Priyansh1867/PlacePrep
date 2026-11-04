@@ -183,6 +183,13 @@ export const AuthApi = {
     return await request(`/auth/users${queryString}`);
   },
 
+  async verifyPassphrase(passphrase) {
+    return await request('/auth/verify-passphrase', {
+      method: 'POST',
+      body: JSON.stringify({ passphrase })
+    });
+  },
+
   logout() {
     setAuthToken(null);
   }
@@ -277,6 +284,24 @@ export const UserApi = {
     return await request('/users/profile', {
       method: 'PUT',
       body: JSON.stringify({ email, profile })
+    });
+  },
+
+  async saveOnboardingStep(email, step, stepData, isCompleted = false) {
+    return await request('/users/profile/step', {
+      method: 'PUT',
+      body: JSON.stringify({ email, step, stepData, isCompleted })
+    });
+  },
+
+  async uploadDocument(file, documentType, email) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    if (email) formData.append('email', email);
+    return await request('/users/upload-document', {
+      method: 'POST',
+      body: formData
     });
   }
 };
@@ -1052,5 +1077,70 @@ export const MasterTimetableApi = {
     if (params.section) query.set('section', params.section);
     const qs = query.toString() ? `?${query.toString()}` : '';
     return await request(`/management/timetables/student/active${qs}`);
+  }
+};
+
+// 27. Director Placement Analytics API
+export const DirectorApi = {
+  async getPlacementAnalytics(companyId = null, status = null) {
+    const params = new URLSearchParams();
+    if (companyId && companyId !== 'ALL') params.set('companyId', companyId);
+    if (status && status !== 'ALL') params.set('status', status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return await request(`/director/placement-analytics${qs}`);
+  }
+};
+
+// 28. Live Sessions API
+export const LiveSessionApi = {
+  async getAll(role = null, studentEmail = null) {
+    const params = new URLSearchParams();
+    if (role) params.set('role', role);
+    if (studentEmail) params.set('studentEmail', studentEmail);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return await request(`/live-sessions${qs}`);
+  },
+
+  async getById(id) {
+    return await request(`/live-sessions/${encodeURIComponent(id)}`);
+  },
+
+  async previewEligibility(driveId) {
+    return await request(`/live-sessions/preview-eligibility?driveId=${encodeURIComponent(driveId)}`);
+  },
+
+  async create(session) {
+    return await request('/live-sessions', {
+      method: 'POST',
+      body: JSON.stringify(session)
+    });
+  },
+
+  async update(id, updates) {
+    return await request(`/live-sessions/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  async reschedule(id, rescheduleData) {
+    return await request(`/live-sessions/${encodeURIComponent(id)}/reschedule`, {
+      method: 'PUT',
+      body: JSON.stringify(rescheduleData)
+    });
+  },
+
+  async cancel(id, cancelData = {}) {
+    return await request(`/live-sessions/${encodeURIComponent(id)}/cancel`, {
+      method: 'PUT',
+      body: JSON.stringify(cancelData)
+    });
+  },
+
+  async rsvp(id, studentEmail) {
+    return await request(`/live-sessions/${encodeURIComponent(id)}/rsvp`, {
+      method: 'POST',
+      body: JSON.stringify({ email: studentEmail })
+    });
   }
 };

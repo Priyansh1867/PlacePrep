@@ -100,7 +100,7 @@ export function normalizeDsaQuestion(rawQ, index = 0) {
   const topic = categorizeQuestionTopic(rawQ);
   const difficulty = rawQ.difficulty || 'Medium';
   const company = rawQ.companyName || (rawQ.companyId ? rawQ.companyId.toUpperCase() : 'General');
-  
+
   // Extract or synthesize constraints & examples where not explicitly given
   const constraints = rawQ.constraints || [
     'Time Complexity Target: O(N) or O(N log N)',
@@ -184,9 +184,11 @@ class Solution {
         System.out.println("PlacePrep DSA Studio Runner initialized.");
     }
 
-    public void ${methodName}() {
-        // Write your solution here
-        
+    static class Solution {
+        public void ${methodName}() {
+            // Write your solution here
+
+        }
     }
 }`;
 
@@ -245,7 +247,7 @@ int main() {
 
 function ${methodName}() {
   // Write your solution here
-  
+
 }
 
 // Example local invocation

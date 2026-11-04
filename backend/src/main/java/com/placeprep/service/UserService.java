@@ -332,4 +332,227 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User saveOnboardingStep(String email, Integer step, Map<String, Object> stepData, boolean isCompleted) {
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + cleanEmail));
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        Map<String, Object> profile;
+        try {
+            if (user.getFullProfileJson() != null && !user.getFullProfileJson().trim().isEmpty()) {
+                profile = mapper.readValue(user.getFullProfileJson(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            } else {
+                profile = new HashMap<>();
+            }
+        } catch (Exception e) {
+            profile = new HashMap<>();
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> basicDetails = (Map<String, Object>) profile.computeIfAbsent("basicDetails", k -> new HashMap<String, Object>());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> educationDetails = (Map<String, Object>) profile.computeIfAbsent("educationDetails", k -> new HashMap<String, Object>());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> documents = (Map<String, Object>) profile.computeIfAbsent("documents", k -> new HashMap<String, Object>());
+
+        if (step == 1) {
+            String option = String.valueOf(stepData.getOrDefault("option", "apply_job"));
+            profile.put("onboardingOption", option);
+            if (stepData.containsKey("passphrase")) {
+                String pass = String.valueOf(stepData.get("passphrase")).trim();
+                user.setPassphrase(pass);
+                user.setPassphraseVerified(Boolean.parseBoolean(String.valueOf(stepData.getOrDefault("passphraseVerified", false))));
+            }
+        } else if (step == 2) {
+            if (stepData.get("mobileNumber") != null) {
+                user.setPhone(String.valueOf(stepData.get("mobileNumber")).trim());
+                basicDetails.put("phone", user.getPhone());
+            }
+            if (stepData.get("alternateMobileNumber") != null) {
+                user.setAlternatePhone(String.valueOf(stepData.get("alternateMobileNumber")).trim());
+                basicDetails.put("alternatePhone", user.getAlternatePhone());
+            }
+            if (stepData.get("personalEmail") != null) {
+                user.setPersonalEmail(String.valueOf(stepData.get("personalEmail")).trim());
+                basicDetails.put("personalEmail", user.getPersonalEmail());
+            }
+            if (stepData.get("currentAddress") != null) {
+                user.setCurrentAddress(String.valueOf(stepData.get("currentAddress")).trim());
+                basicDetails.put("currentAddress", user.getCurrentAddress());
+            }
+            if (stepData.get("city") != null) {
+                user.setCity(String.valueOf(stepData.get("city")).trim());
+                basicDetails.put("city", user.getCity());
+            }
+            if (stepData.get("state") != null) {
+                user.setState(String.valueOf(stepData.get("state")).trim());
+                basicDetails.put("state", user.getState());
+            }
+            if (stepData.get("pincode") != null) {
+                user.setPincode(String.valueOf(stepData.get("pincode")).trim());
+                basicDetails.put("pincode", user.getPincode());
+            }
+        } else if (step == 3) {
+            if (stepData.get("college") != null) {
+                user.setCollege(String.valueOf(stepData.get("college")).trim());
+                educationDetails.put("college", user.getCollege());
+            }
+            if (stepData.get("degree") != null) {
+                user.setDegree(String.valueOf(stepData.get("degree")).trim());
+                educationDetails.put("degree", user.getDegree());
+            }
+            if (stepData.get("branch") != null) {
+                user.setBranch(String.valueOf(stepData.get("branch")).trim());
+                educationDetails.put("branch", user.getBranch());
+            }
+            if (stepData.get("currentSemester") != null) {
+                user.setCurrentSemester(String.valueOf(stepData.get("currentSemester")).trim());
+                educationDetails.put("currentSemester", user.getCurrentSemester());
+            }
+            if (stepData.get("rollNumber") != null) {
+                user.setRollNumber(String.valueOf(stepData.get("rollNumber")).trim());
+                educationDetails.put("rollNumber", user.getRollNumber());
+            }
+            if (stepData.get("enrollmentNumber") != null) {
+                user.setEnrollmentNumber(String.valueOf(stepData.get("enrollmentNumber")).trim());
+                educationDetails.put("enrollmentNumber", user.getEnrollmentNumber());
+            }
+            if (stepData.get("cgpa") != null && !String.valueOf(stepData.get("cgpa")).trim().isEmpty()) {
+                try {
+                    user.setCgpa(Double.parseDouble(String.valueOf(stepData.get("cgpa")).trim()));
+                    educationDetails.put("cgpa", user.getCgpa());
+                } catch (Exception ignored) {}
+            }
+            if (stepData.get("educationStartYear") != null && !String.valueOf(stepData.get("educationStartYear")).trim().isEmpty()) {
+                try {
+                    user.setEducationStartYear(Integer.parseInt(String.valueOf(stepData.get("educationStartYear")).trim()));
+                    educationDetails.put("educationStartYear", user.getEducationStartYear());
+                } catch (Exception ignored) {}
+            }
+            if (stepData.get("expectedGraduationYear") != null && !String.valueOf(stepData.get("expectedGraduationYear")).trim().isEmpty()) {
+                try {
+                    user.setExpectedGraduationYear(Integer.parseInt(String.valueOf(stepData.get("expectedGraduationYear")).trim()));
+                    educationDetails.put("expectedGraduationYear", user.getExpectedGraduationYear());
+                } catch (Exception ignored) {}
+            }
+            if (stepData.get("graduationBatch") != null) {
+                user.setGraduationBatch(String.valueOf(stepData.get("graduationBatch")).trim());
+                educationDetails.put("graduationBatch", user.getGraduationBatch());
+            }
+        } else if (step == 4) {
+            if (stepData.get("tenthSchool") != null) {
+                user.setTenthSchool(String.valueOf(stepData.get("tenthSchool")).trim());
+                educationDetails.put("tenthSchool", user.getTenthSchool());
+            }
+            if (stepData.get("tenthBoard") != null) {
+                user.setTenthBoard(String.valueOf(stepData.get("tenthBoard")).trim());
+                educationDetails.put("tenthBoard", user.getTenthBoard());
+            }
+            if (stepData.get("tenthYear") != null) {
+                user.setTenthYear(String.valueOf(stepData.get("tenthYear")).trim());
+                educationDetails.put("tenthYear", user.getTenthYear());
+            }
+            if (stepData.get("tenthPercentage") != null && !String.valueOf(stepData.get("tenthPercentage")).trim().isEmpty()) {
+                try {
+                    user.setTenthPercentage(Double.parseDouble(String.valueOf(stepData.get("tenthPercentage")).trim()));
+                    educationDetails.put("tenthPercentage", user.getTenthPercentage());
+                } catch (Exception ignored) {}
+            }
+            if (stepData.get("twelfthSchool") != null) {
+                user.setTwelfthSchool(String.valueOf(stepData.get("twelfthSchool")).trim());
+                educationDetails.put("twelfthSchool", user.getTwelfthSchool());
+            }
+            if (stepData.get("twelfthBoard") != null) {
+                user.setTwelfthBoard(String.valueOf(stepData.get("twelfthBoard")).trim());
+                educationDetails.put("twelfthBoard", user.getTwelfthBoard());
+            }
+            if (stepData.get("twelfthStream") != null) {
+                user.setTwelfthStream(String.valueOf(stepData.get("twelfthStream")).trim());
+                educationDetails.put("twelfthStream", user.getTwelfthStream());
+            }
+            if (stepData.get("twelfthYear") != null) {
+                user.setTwelfthYear(String.valueOf(stepData.get("twelfthYear")).trim());
+                educationDetails.put("twelfthYear", user.getTwelfthYear());
+            }
+            if (stepData.get("twelfthPercentage") != null && !String.valueOf(stepData.get("twelfthPercentage")).trim().isEmpty()) {
+                try {
+                    user.setTwelfthPercentage(Double.parseDouble(String.valueOf(stepData.get("twelfthPercentage")).trim()));
+                    educationDetails.put("twelfthPercentage", user.getTwelfthPercentage());
+                } catch (Exception ignored) {}
+            }
+        } else if (step == 5) {
+            Object experiences = stepData.get("experiences");
+            profile.put("workExperiences", experiences != null ? experiences : new ArrayList<>());
+            profile.put("hasNoExperience", Boolean.parseBoolean(String.valueOf(stepData.getOrDefault("hasNoExperience", false))));
+        } else if (step == 6) {
+            if (stepData.get("profilePhotoUrl") != null) {
+                user.setProfilePhotoUrl(String.valueOf(stepData.get("profilePhotoUrl")));
+                documents.put("profilePhotoUrl", user.getProfilePhotoUrl());
+            }
+            if (stepData.get("resumeUrl") != null) {
+                user.setResumeUrl(String.valueOf(stepData.get("resumeUrl")));
+                documents.put("resumeUrl", user.getResumeUrl());
+            }
+            if (stepData.get("documents") instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> docsMap = (Map<String, Object>) stepData.get("documents");
+                documents.putAll(docsMap);
+            }
+        }
+
+        if (isCompleted || step >= 7) {
+            user.setOnboardingCompleted(true);
+            user.setOnboardingStatus("COMPLETED");
+            user.setCurrentOnboardingStep(7);
+            profile.put("onboardingCompleted", true);
+            profile.put("onboardingCompletedAt", java.time.LocalDateTime.now().toString());
+        } else {
+            int nextStep = Math.max(user.getCurrentOnboardingStep() != null ? user.getCurrentOnboardingStep() : 1, step + 1);
+            user.setCurrentOnboardingStep(nextStep);
+            user.setOnboardingStatus("IN_PROGRESS");
+        }
+
+        try {
+            user.setFullProfileJson(mapper.writeValueAsString(profile));
+        } catch (Exception ignored) {}
+
+        return userRepository.save(user);
+    }
+
+    public void attachUserDocument(String email, String documentType, String fileName, String fileUrl, String previewUrl) {
+        String cleanEmail = email.trim().toLowerCase();
+        userRepository.findByEmail(cleanEmail).ifPresent(user -> {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            try {
+                Map<String, Object> profile;
+                if (user.getFullProfileJson() != null && !user.getFullProfileJson().trim().isEmpty()) {
+                    profile = mapper.readValue(user.getFullProfileJson(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                } else {
+                    profile = new HashMap<>();
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> documents = (Map<String, Object>) profile.computeIfAbsent("documents", k -> new HashMap<String, Object>());
+                Map<String, Object> docMeta = new HashMap<>();
+                docMeta.put("fileName", fileName);
+                docMeta.put("fileUrl", fileUrl);
+                if (previewUrl != null) docMeta.put("previewUrl", previewUrl);
+                docMeta.put("uploadedAt", java.time.LocalDateTime.now().toString());
+
+                documents.put(documentType, docMeta);
+
+                if ("profilePhoto".equalsIgnoreCase(documentType)) {
+                    user.setProfilePhotoUrl(previewUrl != null ? previewUrl : fileUrl);
+                } else if ("resume".equalsIgnoreCase(documentType)) {
+                    user.setResumeUrl(fileUrl);
+                    documents.put("resumeFileName", fileName);
+                    documents.put("resumeLastUpdated", java.time.LocalDateTime.now().toString());
+                }
+
+                user.setFullProfileJson(mapper.writeValueAsString(profile));
+                userRepository.save(user);
+            } catch (Exception ignored) {}
+        });
+    }
+
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrowLeft, ArrowRight, Award, BookOpen, Briefcase, Building2, Check, CheckCircle2,
   CircleHelp, Eye, EyeOff, GraduationCap, Layers3, Lock, Mail, ShieldCheck, School,

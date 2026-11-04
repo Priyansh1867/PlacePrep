@@ -96,7 +96,7 @@ const ROLE_METAS = {
   student: { label: 'Student', icon: GraduationCap, desc: 'Eligible drives, self-eligibility & applications' }
 };
 
-export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
+export default function PlacementPortalPage({ onNavigate, onBack, onSelectCompany, onSelectQuestion }) {
   // User profile strictly fixed based on authentic logged in session
   const [currentUser, setCurrentUserState] = useState(() => getCurrentUser() || {});
   const rawRole = (currentUser?.role || 'student').toLowerCase();
@@ -752,7 +752,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => onNavigate('gateway')}
+          onClick={() => onBack ? onBack('gateway') : onNavigate('gateway')}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-emerald-900 font-bold text-xs shadow-xs transition cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-emerald-600 transition-transform group-hover:-translate-x-0.5" />

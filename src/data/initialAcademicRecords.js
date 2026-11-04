@@ -7,7 +7,9 @@ export const INITIAL_BRANCHES = [
   'Electronics and Communication Engineering',
   'Electrical and Electronics Engineering',
   'Mechanical Engineering',
-  'Civil Engineering'
+  'Civil Engineering',
+  'Artificial Intelligence and Data Science',
+  'Other'
 ];
 
 export const INITIAL_COURSES = [

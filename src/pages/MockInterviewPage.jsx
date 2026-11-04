@@ -28,8 +28,9 @@ import {
 } from '../services/storage';
 import { evaluateStudentAnswer } from '../services/aiEngine';
 import { MockSessionApi, QuestionApi } from '../services/api';
+import BackNavButton from '../components/ui/BackNavButton';
 
-export default function MockInterviewPage({ initialCompany, initialRound, onFinish }) {
+export default function MockInterviewPage({ initialCompany, initialRound, onFinish, onBack, onNavigate }) {
   const companies = getCompanies();
   const currentBatch = getGraduationBatch();
 
@@ -161,7 +162,21 @@ export default function MockInterviewPage({ initialCompany, initialRound, onFini
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-150">
-      
+      {/* Top Back Navigation */}
+      <BackNavButton
+        onNavigate={onNavigate}
+        onBack={() => {
+          if (sessionActive) {
+            setSessionActive(false);
+          } else if (typeof onBack === 'function') {
+            onBack('placement-portal');
+          } else if (typeof onFinish === 'function') {
+            onFinish();
+          }
+        }}
+        fallbackRoute="placement-portal"
+      />
+
       {/* Page Header */}
       <div className="surface-card p-6 sm:p-8 border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

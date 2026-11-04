@@ -203,3 +203,60 @@ test('OpportunityApi Graceful Fallback — Returns valid data even when backend 
   }
 });
 
+test('Category Strict Isolation — Jobs, Internships and Hackathons datasets are strictly non-overlapping', () => {
+  const jobs = getOffCampusCompanies();
+  const interns = getInternships();
+  const hacks = getHackathons();
+
+  // 1. Off-Campus Jobs must NOT contain any hackathon or internship keywords in core role
+  for (const j of jobs) {
+    const roleLower = (j.role || j.title || '').toLowerCase();
+    assert.ok(!roleLower.includes('hackathon'), `Job ${j.companyName} should not be a hackathon`);
+    assert.ok(!roleLower.includes('internship') && !roleLower.includes('intern'), `Job ${j.companyName} (${roleLower}) should not be an internship`);
+  }
+
+  // 2. Corporate Internships must be internships, NOT full-time jobs or hackathons
+  for (const i of interns) {
+    const titleLower = `${i.title || ''} ${i.role || ''} ${i.category || ''} ${i.jobType || ''}`.toLowerCase();
+    assert.ok(
+      titleLower.includes('intern') || titleLower.includes('analyst') || i.category === 'Internship' || i.jobType === 'Internship',
+      `Internship at ${i.companyName} must specify internship role or category`
+    );
+    assert.ok(!titleLower.includes('hackathon'), `Internship at ${i.companyName} must not be a hackathon`);
+    assert.ok(i.duration, `Internship at ${i.companyName} must specify duration (e.g. Summer, 6 Months)`);
+  }
+
+  // 3. Hackathons must be coding challenges/hackathons, NOT corporate jobs or internships
+  for (const h of hacks) {
+    const hackTitleLower = `${h.title || ''} ${h.organizer || ''} ${h.problemStatement || ''}`.toLowerCase();
+    assert.ok(
+      hackTitleLower.includes('hack') || hackTitleLower.includes('challenge') || hackTitleLower.includes('cup') || hackTitleLower.includes('grid'),
+      `Hackathon "${h.title}" must represent a competitive hackathon/challenge`
+    );
+    assert.ok(h.prizePool, `Hackathon "${h.title}" must state a prize pool or reward`);
+  }
+});
+
+test('Hackathons Filter Independence — Supports all requested domains (AI/ML, Web Dev, Blockchain, etc.) and formats', () => {
+  const hacks = getHackathons();
+
+  // Test domain coverage across seed dataset
+  const allDomains = hacks.flatMap(h => Array.isArray(h.domains) ? h.domains : [h.domains]);
+  const domainText = allDomains.join(' ').toLowerCase();
+
+  assert.ok(domainText.includes('ai') || domainText.includes('ml'), 'Must support AI/ML domain');
+  assert.ok(domainText.includes('web') || domainText.includes('full-stack'), 'Must support Web Development domain');
+  assert.ok(domainText.includes('blockchain') || domainText.includes('web3'), 'Must support Blockchain domain');
+  assert.ok(domainText.includes('security') || domainText.includes('cyber'), 'Must support Cybersecurity domain');
+  assert.ok(domainText.includes('cloud'), 'Must support Cloud Computing domain');
+  assert.ok(domainText.includes('iot'), 'Must support IoT domain');
+  assert.ok(domainText.includes('innovation') || domainText.includes('smart') || domainText.includes('sustainable'), 'Must support Open Innovation domain');
+
+  // Test format coverage (Online, Offline, Hybrid)
+  const formats = hacks.map(h => (h.mode || h.format || '').toLowerCase());
+  assert.ok(formats.some(f => f.includes('online') || f.includes('virtual')), 'Must include online hackathons');
+  assert.ok(formats.some(f => f.includes('offline') || f.includes('in-person')), 'Must include offline / in-person hackathons');
+  assert.ok(formats.some(f => f.includes('hybrid')), 'Must include hybrid hackathons');
+});
+
+

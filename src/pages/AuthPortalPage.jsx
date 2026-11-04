@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrowLeft, ArrowRight, Award, BookOpen, Briefcase, Building2, Check, CheckCircle2,
   CircleHelp, Eye, EyeOff, GraduationCap, Layers3, Lock, Mail, ShieldCheck, School,
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import PlacePrepLogo from '../components/PlacePrepLogo';
 import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
-import { setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
+import { getCurrentUser, setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
 import { AuthApi } from '../services/api';
 import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 
@@ -137,33 +137,44 @@ export const isCollegeEmail = (email) => {
 
 const fieldClass = 'auth-input';
 
-export default function AuthPortalPage({ initialPortal = 'institute', onAuthSuccess, onBackToGateway }) {
+export default function AuthPortalPage({ initialPortal = 'institute', initialMode = 'login', initialRole = null, onAuthSuccess, onBackToGateway }) {
   const safeInitialPortal = initialPortal === 'placement' ? 'placement' : 'institute';
   const [portalBranch, setPortalBranch] = useState(safeInitialPortal);
-  const [authMode, setAuthMode] = useState('login');
-  const [selectedRole, setSelectedRole] = useState(defaultRoleFor(safeInitialPortal));
+  const [authMode, setAuthMode] = useState(initialMode || 'login');
+  const [selectedRole, setSelectedRole] = useState(initialRole || defaultRoleFor(safeInitialPortal));
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (initialPortal) setPortalBranch(initialPortal === 'placement' ? 'placement' : 'institute');
+    if (initialMode) setAuthMode(initialMode);
+    if (initialRole) setSelectedRole(initialRole);
+  }, [initialPortal, initialMode, initialRole]);
+
   const defaultAcc = useMemo(() => {
     return HARDCODED_ACCOUNTS.find((a) => a.role === defaultRoleFor(safeInitialPortal)) || HARDCODED_ACCOUNTS[0];
   }, [safeInitialPortal]);
 
-  const [formData, setFormData] = useState({
-    fullName: defaultAcc.name,
-    email: defaultAcc.email,
-    password: defaultAcc.password,
-    confirmPassword: defaultAcc.password,
-    rollNumber: '2024/CSE/084',
-    college: 'Indian Institute of Technology',
-    branch: 'Computer Science & Engineering',
-    batch: '2026',
-    department: 'Computer Science & Engineering',
-    designation: defaultAcc.badge,
-    companyName: 'Google',
-    adminKey: '',
+  const [formData, setFormData] = useState(() => {
+    const existing = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const existingIsOther = existing?.branch && !INITIAL_BRANCHES.slice(0, -1).includes(existing?.branch);
+    return {
+      fullName: existing?.name || defaultAcc.name,
+      email: existing?.email || defaultAcc.email,
+      password: defaultAcc.password,
+      confirmPassword: defaultAcc.password,
+      rollNumber: existing?.rollNumber || '2024/CSE/084',
+      college: existing?.college || 'Indian Institute of Technology',
+      branch: existingIsOther ? 'Other' : (existing?.branch || 'Computer Science and Engineering'),
+      customBranch: existingIsOther ? existing?.branch : (existing?.customBranch || ''),
+      batch: existing?.graduationBatch || '2026',
+      department: existing?.department || 'Computer Science & Engineering',
+      designation: defaultAcc.badge,
+      companyName: 'Google',
+      adminKey: '',
+    };
   });
 
   const activePortal = useMemo(() => portalOptions.find((item) => item.id === portalBranch), [portalBranch]);
@@ -283,10 +294,19 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
       if (authMode === 'register') {
         if (selectedRole === 'management') throw new Error('Management accounts must be created by an administrator.');
         if (!formData.fullName.trim()) throw new Error('Enter your full name.');
-        if (selectedRole === 'student' && !formData.branch.trim()) throw new Error('Please select your branch.');
+        if (selectedRole === 'student') {
+          if (!formData.branch || !formData.branch.trim()) throw new Error('Please select your branch.');
+          if (formData.branch === 'Other' && (!formData.customBranch || !formData.customBranch.trim())) {
+            throw new Error('Please enter your branch / specialization.');
+          }
+        }
         if (selectedRole === 'student' && !isCollegeEmail(email)) throw new Error('Use your official college email.');
         if (formData.password !== formData.confirmPassword) throw new Error('Passwords do not match.');
       }
+
+      const effectiveBranch = selectedRole === 'student'
+        ? (formData.branch === 'Other' ? formData.customBranch.trim() : formData.branch)
+        : (formData.branch || formData.department);
 
       let user = null;
       let destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
@@ -298,7 +318,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
               email,
               password: formData.password,
               college: formData.college,
-              branch: formData.branch,
+              branch: effectiveBranch,
               graduationBatch: formData.batch,
               role: selectedRole,
               rollNumber: formData.rollNumber,
@@ -309,7 +329,11 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           : await AuthApi.login({ email, password: formData.password });
 
         if (response?.user) {
-          user = response.user;
+          user = {
+            ...response.user,
+            branch: effectiveBranch || response.user.branch,
+            customBranch: formData.branch === 'Other' ? formData.customBranch.trim() : ''
+          };
           if (response.token) localStorage.setItem('placeprep_token', response.token);
         }
       } catch (backendErr) {
@@ -320,7 +344,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           name: formData.fullName?.trim() || matchingAcc?.name || email.split('@')[0],
           email,
           role: selectedRole || matchingAcc?.role || 'student',
-          branch: formData.branch || (selectedRole === 'student' ? 'Computer Science & Engineering' : (matchingAcc?.badge || 'Operations')),
+          branch: effectiveBranch || (selectedRole === 'student' ? 'Computer Science & Engineering' : (matchingAcc?.badge || 'Operations')),
+          customBranch: formData.branch === 'Other' ? formData.customBranch.trim() : '',
           college: formData.college || 'Indian Institute of Technology',
           rollNumber: formData.rollNumber || (selectedRole === 'student' ? '2024/CSE/084' : undefined),
           graduationBatch: formData.batch || '2026',
@@ -362,6 +387,18 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     }
   };
 
+  const handleAuthBack = () => {
+    setErrorMsg('');
+    if (authMode === 'register') {
+      // Create Account -> Back -> Previous Sign In page
+      setAuthMode('login');
+      return;
+    }
+    if (typeof onBackToGateway === 'function') {
+      onBackToGateway();
+    }
+  };
+
   return (
     <div className="auth-page min-h-screen w-full flex flex-col justify-between py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8 antialiased">
       <div className="mx-auto w-full max-w-6xl my-auto flex flex-col justify-between gap-4">
@@ -370,11 +407,11 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
         <header className="flex items-center justify-between px-1 shrink-0 py-1">
           <button 
             type="button"
-            onClick={onBackToGateway} 
+            onClick={handleAuthBack} 
             className="auth-back-button inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 hover:bg-white text-slate-700 hover:text-indigo-900 text-xs font-bold border border-slate-200/80 shadow-xs transition cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>All portals</span>
+            <span>{authMode === 'register' ? 'Back to Sign in' : 'All portals'}</span>
           </button>
           <PlacePrepLogo className="h-7 sm:h-8 w-auto" theme="light" />
           <div className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white/80 border border-slate-200/70 px-3 py-1.5 rounded-xl shadow-xs">
@@ -578,21 +615,38 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                 )}
 
                 {authMode === 'register' && selectedRole === 'student' && (
-                  <InputField label="Branch / specialization" icon={GraduationCap}>
-                    <select
-                      name="branch"
-                      aria-label="Branch / specialization"
-                      value={formData.branch}
-                      onChange={handleInputChange}
-                      className={fieldClass}
-                      required
-                    >
-                      <option value="" disabled>Select your branch</option>
-                      {INITIAL_BRANCHES.map((branch) => (
-                        <option key={branch} value={branch}>{branch}</option>
-                      ))}
-                    </select>
-                  </InputField>
+                  <>
+                    <InputField label="Branch / specialization" icon={GraduationCap}>
+                      <select
+                        name="branch"
+                        aria-label="Branch / specialization"
+                        value={formData.branch}
+                        onChange={handleInputChange}
+                        className={fieldClass}
+                        required
+                      >
+                        <option value="" disabled>Select your branch</option>
+                        {INITIAL_BRANCHES.map((branch) => (
+                          <option key={branch} value={branch}>{branch}</option>
+                        ))}
+                      </select>
+                    </InputField>
+
+                    {formData.branch === 'Other' && (
+                      <InputField label="Enter Your Branch / Specialization" icon={GraduationCap}>
+                        <input
+                          type="text"
+                          name="customBranch"
+                          aria-label="Enter Your Branch / Specialization"
+                          value={formData.customBranch || ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Artificial Intelligence, Aerospace Engineering"
+                          className={fieldClass}
+                          required
+                        />
+                      </InputField>
+                    )}
+                  </>
                 )}
 
                 {authMode === 'register' && selectedRole === 'student' && (

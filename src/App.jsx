@@ -63,6 +63,8 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
   const [routeHistory, setRouteHistory] = useState([]);
   const [selectedAuthPortal, setSelectedAuthPortal] = useState('institute');
+  const [authPortalInitialMode, setAuthPortalInitialMode] = useState('login');
+  const [authPortalInitialRole, setAuthPortalInitialRole] = useState(null);
   const [authorizedPortal, setAuthorizedPortal] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
@@ -111,7 +113,11 @@ export default function App() {
     if (routeHistory.length > 0) {
       const prev = routeHistory[routeHistory.length - 1];
       setRouteHistory(h => h.slice(0, -1));
-      setCurrentRoute(prev);
+      if (typeof window !== 'undefined' && window.history && window.history.state?.route) {
+        window.history.back();
+      } else {
+        setCurrentRoute(prev);
+      }
     } else if (fallbackRoute && VALID_ROUTES.has(fallbackRoute)) {
       setCurrentRoute(fallbackRoute);
     } else {
@@ -136,15 +142,23 @@ export default function App() {
   // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = (e) => {
+      let targetRoute = null;
       if (e.state && e.state.route && VALID_ROUTES.has(e.state.route)) {
-        setCurrentRoute(e.state.route);
-        return;
-      }
-      if (typeof window !== 'undefined' && window.location.hash) {
+        targetRoute = e.state.route;
+      } else if (typeof window !== 'undefined' && window.location.hash) {
         const raw = window.location.hash.replace(/^#\/?/, '').toLowerCase().trim();
         if (VALID_ROUTES.has(raw)) {
-          setCurrentRoute(raw);
+          targetRoute = raw;
         }
+      }
+      if (targetRoute) {
+        setRouteHistory(prev => {
+          if (prev.length > 0 && prev[prev.length - 1] === targetRoute) {
+            return prev.slice(0, -1);
+          }
+          return prev;
+        });
+        setCurrentRoute(targetRoute);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -167,10 +181,11 @@ export default function App() {
     scrollToTop();
   };
 
-  const handleNavigateAuth = (portalBranch = 'institute') => {
+  const handleNavigateAuth = (portalBranch = 'institute', mode = 'login', role = null) => {
     setSelectedAuthPortal(portalBranch);
-    setCurrentRoute('auth-portal');
-    scrollToTop();
+    setAuthPortalInitialMode(mode);
+    setAuthPortalInitialRole(role);
+    handleNavigate('auth-portal');
   };
 
   const handleAuthSuccess = (user, portalBranch, targetRoute) => {
@@ -285,8 +300,10 @@ export default function App() {
         {currentRoute === 'auth-portal' && (
           <AuthPortalPage
             initialPortal={selectedAuthPortal}
+            initialMode={authPortalInitialMode}
+            initialRole={authPortalInitialRole}
             onAuthSuccess={handleAuthSuccess}
-            onBackToGateway={() => handleNavigate('gateway')}
+            onBackToGateway={() => handleBack('gateway')}
           />
         )}
 
@@ -297,7 +314,7 @@ export default function App() {
               setAuthorizedPortal('placement');
               handleNavigate('placement-portal');
             }}
-            onNavigateBack={() => handleNavigateAuth('placement')}
+            onNavigateBack={() => handleNavigateAuth('placement', 'register', 'student')}
           />
         )}
 
@@ -306,6 +323,7 @@ export default function App() {
         {currentRoute === 'institute-portal' && (
           <InstitutePortalPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
@@ -316,6 +334,7 @@ export default function App() {
         {currentRoute === 'placement-portal' && (
           <PlacementPortalPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
@@ -326,6 +345,7 @@ export default function App() {
         {currentRoute === 'classic-home' && (
           <HomePage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectCompany={handleSelectCompany}
             onSelectQuestion={handleSelectQuestion}
           />
@@ -367,7 +387,7 @@ export default function App() {
         {currentRoute === 'company-hub' && selectedCompany && (
           <CompanyHubPage
             company={selectedCompany}
-            onBack={() => handleNavigate('companies')}
+            onBack={() => handleBack('companies')}
             onSelectRound={handleSelectRound}
             onSelectQuestion={handleSelectQuestion}
             onStartMockInterview={handleStartMockInterview}
@@ -383,10 +403,7 @@ export default function App() {
             initialQuestion={selectedQuestion}
             roundType={selectedRoundType}
             companyId={selectedCompany?.id}
-            onBack={() => {
-              if (selectedCompany) setCurrentRoute('company-hub');
-              else setCurrentRoute('gateway');
-            }}
+            onBack={() => handleBack(selectedCompany ? 'company-hub' : 'placement-portal')}
             onNavigateToMock={(company, round) => handleStartMockInterview(company, round)}
           />
         )}
@@ -418,7 +435,9 @@ export default function App() {
           <MockInterviewPage
             initialCompany={mockSessionParams.company || selectedCompany}
             initialRound={mockSessionParams.round || 'technical'}
-            onFinish={() => handleNavigate('dashboard')}
+            onFinish={() => handleBack('placement-portal')}
+            onBack={handleBack}
+            onNavigate={handleNavigate}
           />
         )}
 
@@ -445,6 +464,7 @@ export default function App() {
         {currentRoute === 'academic-profile' && (
           <AcademicProfilePage
             onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 
@@ -452,6 +472,7 @@ export default function App() {
         {(currentRoute === 'applications' || currentRoute === 'selection-tracker') && (
           <MyApplicationsPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectCompany={handleSelectCompany}
             onOpenAuthModal={() => setIsAuthModalOpen(true)}
           />
@@ -469,25 +490,25 @@ export default function App() {
         
         {/* 17. TEACHER & HOD DAILY CLASS ATTENDANCE PORTAL */}
         {(currentRoute === 'attendance' || currentRoute === 'daily-attendance' || currentRoute === 'class-attendance') && (
-          <DailyAttendancePage onNavigate={handleNavigate} />
+          <DailyAttendancePage onNavigate={handleNavigate} onBack={handleBack} />
         )}
 
         
         {/* 18. CRT TRAINING ATTENDANCE & ELIGIBILITY PORTAL */}
         {(currentRoute === 'crt-attendance' || currentRoute === 'crt-training-attendance') && (
-          <CrtAttendancePage onNavigate={handleNavigate} />
+          <CrtAttendancePage onNavigate={handleNavigate} onBack={handleBack} />
         )}
 
         
         {/* 19. REPORTS EXPORTER (DRIVE ELIGIBILITY, PLACEMENTS & ATTENDANCE) */}
         {(currentRoute === 'reports' || currentRoute === 'reports-exporter') && (
-          <ReportsExporterPage onNavigate={handleNavigate} />
+          <ReportsExporterPage onNavigate={handleNavigate} onBack={handleBack} />
         )}
 
         
         {/* 20. HOD CURRICULUM & SYLLABUS GOVERNANCE */}
         {(currentRoute === 'curriculum-governance' || currentRoute === 'syllabus-governance') && (
-          <CurriculumGovernancePage onNavigate={handleNavigate} />
+          <CurriculumGovernancePage onNavigate={handleNavigate} onBack={handleBack} />
         )}
 
         
@@ -495,6 +516,7 @@ export default function App() {
         {(currentRoute === 'dsa-studio' || currentRoute === 'dsa-practice') && (
           <DsaPracticePage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectGlobalQuestion={handleSelectQuestion}
           />
         )}
@@ -504,6 +526,7 @@ export default function App() {
         {currentRoute === 'management-portal' && (
           <ManagementPortalPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
           />
         )}
 
@@ -512,6 +535,7 @@ export default function App() {
         {(currentRoute === 'resume-ats' || currentRoute === 'resume-checker' || currentRoute === 'ats-checker') && (
           <ResumeAtsCheckerPage
             onNavigate={handleNavigate}
+            onBack={handleBack}
             onSelectCompany={handleSelectCompany}
           />
         )}

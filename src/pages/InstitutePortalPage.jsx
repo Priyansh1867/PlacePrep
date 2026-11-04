@@ -78,7 +78,7 @@ import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAtten
 import TimetableManagementView from '../components/timetable/TimetableManagementView';
 import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
-export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
+export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
 
   useEffect(() => {
@@ -422,7 +422,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => onNavigate('gateway')}
+          onClick={() => onBack ? onBack('gateway') : onNavigate('gateway')}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-indigo-900 font-bold text-xs shadow-xs transition cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-indigo-600 transition-transform group-hover:-translate-x-0.5" />

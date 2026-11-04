@@ -49,6 +49,7 @@ const fieldClass = 'auth-input';
 
 export default function AuthPortalPage({ initialPortal = 'institute', onAuthSuccess, onBackToGateway }) {
   const safeInitialPortal = initialPortal === 'placement' ? 'placement' : 'institute';
+  const initialDemoAccount = demoAutofillForRole(defaultRoleFor(safeInitialPortal));
   const [portalBranch, setPortalBranch] = useState(safeInitialPortal);
   const [authMode, setAuthMode] = useState('login');
   const [selectedRole, setSelectedRole] = useState(defaultRoleFor(safeInitialPortal));
@@ -58,10 +59,10 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    fullName: initialDemoAccount.name,
+    email: initialDemoAccount.email,
+    password: initialDemoAccount.password,
+    confirmPassword: initialDemoAccount.password,
     rollNumber: '',
     college: '',
     branch: '',
@@ -80,7 +81,9 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setSelectedRole(roleId);
     setErrorMsg('');
     setAuthMode('login');
-    setFormData((prev) => ({ ...prev, email: '', password: '', confirmPassword: '' }));
+    setSuccessMsg('');
+    const account = demoAutofillForRole(roleId);
+    if (account) setFormData((current) => autofillLoginFields(current, account));
   };
 
   const changePortal = (branch) => {
@@ -89,7 +92,8 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     setAuthMode('login');
     setErrorMsg('');
     setSuccessMsg('');
-    setFormData((prev) => ({ ...prev, email: '', password: '', confirmPassword: '' }));
+    const account = demoAutofillForRole(defaultRoleFor(branch));
+    if (account) setFormData((current) => autofillLoginFields(current, account));
   };
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -101,7 +105,7 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
     if (!account) return;
     setFormData((current) => autofillLoginFields(current, account));
     setErrorMsg('');
-    setSuccessMsg(`Email filled for ${account.label}. Enter your password to sign in.`);
+    setSuccessMsg(`Autofilled credentials for ${account.label} (${account.email})`);
   };
 
   const handleSubmit = async (event) => {
@@ -329,19 +333,17 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
                   </InputField>
                 )}
 
-                {authMode === 'login' && demoAutofillForRole(selectedRole) && (
-                  <div className="flex justify-end">
-                    <button type="button" onClick={handleAutofill}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700">
-                      <Sparkles className="w-3 h-3" />
-                      Autofill {roleOptions.find((role) => role.id === selectedRole)?.label} email
-                    </button>
-                  </div>
-                )}
                 <InputField
                   label={
                     <span className="flex items-center justify-between">
                       <span>Email address</span>
+                      {authMode === 'login' && (
+                        <button type="button" onClick={(event) => { event.preventDefault(); handleAutofill(); }}
+                          className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 cursor-pointer">
+                          <Sparkles className="w-3 h-3 text-orange-500" />
+                          <span>Autofill {roleOptions.find((role) => role.id === selectedRole)?.label || 'Credentials'}</span>
+                        </button>
+                      )}
                     </span>
                   }
                   icon={Mail}

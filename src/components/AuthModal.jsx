@@ -8,6 +8,11 @@ import {
   EyeOff,
   GraduationCap,
   Building,
+  Building2,
+  Briefcase,
+  BookOpen,
+  Award,
+  Users,
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
@@ -23,6 +28,11 @@ import Select from './ui/Select';
 import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
 import { DEMO_AUTOFILL_ACCOUNTS, autofillLoginFields } from '../data/demoAutofillAccounts';
 
+const demoAccountIcons = {
+  student: GraduationCap, tpo: Building2, management: ShieldCheck, hr: Briefcase,
+  teacher: BookOpen, hod: Award, coordinator: Users, director: ShieldCheck,
+};
+
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
   const [tab, setTab] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);
@@ -32,13 +42,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
   // Form State
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    college: '',
-    branch: '',
-    graduationBatch: ''
+    name: 'Priyansh Jain',
+    email: 'priyansh.jain@example.edu',
+    password: 'password123',
+    confirmPassword: 'password123',
+    college: 'Indian Institute of Technology',
+    branch: 'Computer Science & Engineering',
+    graduationBatch: '2026'
   });
 
   if (!isOpen) return null;
@@ -52,7 +62,31 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
   const handleAutofillModal = (account) => {
     setFormData((current) => autofillLoginFields(current, account));
     setErrorMsg('');
-    setSuccessMsg(`Email filled for ${account.label}. Enter your password to sign in.`);
+    setSuccessMsg(`Autofilled credentials for ${account.label} (${account.email})`);
+  };
+
+  const handleQuickModalLogin = async (role) => {
+    const account = DEMO_AUTOFILL_ACCOUNTS.find((item) => item.role === role);
+    if (!account) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await AuthApi.login({ email: account.email, password: account.password });
+      if (!response?.user) throw new Error('Backend login did not return a user session.');
+      if (String(response.user.role || '').toLowerCase() !== account.role) {
+        AuthApi.logout();
+        throw new Error('This account does not have access to the selected role.');
+      }
+      const user = { ...response.user, authenticatedAt: new Date().toISOString() };
+      setCurrentUser(user);
+      setSuccessMsg(`Welcome, ${user.name}!`);
+      onAuthSuccess?.(user);
+      onClose();
+    } catch (error) {
+      setErrorMsg(error.message || 'Unable to sign in. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e) => {
@@ -208,22 +242,33 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
 
           {tab === 'login' ? (
             <div className="space-y-3.5">
+              {/* Autofill Demo Credentials Bar */}
               <div className="p-2.5 rounded-xl bg-gradient-to-r from-orange-50 via-slate-50 to-indigo-50/60 border border-orange-200/70">
-                <div className="flex items-center gap-1.5 mb-1.5 text-xs font-bold text-slate-800">
-                  <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-                  <span>Autofill account email</span>
+                <div className="flex items-center justify-between mb-1.5 px-0.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                    <Sparkles className="w-3.5 h-3.5 text-orange-500 animate-pulse" />
+                    <span>Autofill Demo Credentials</span>
+                  </div>
+                  <span className="text-[9.5px] font-semibold text-orange-700 bg-orange-100/80 px-1.5 py-0.5 rounded-full">
+                    Click to Autofill
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {DEMO_AUTOFILL_ACCOUNTS.map((account) => (
-                    <button key={account.role} type="button" onClick={() => handleAutofillModal(account)}
-                      title={`Fill email for ${account.label}`}
-                      className="p-1.5 rounded-lg bg-white border border-slate-200/90 hover:border-orange-500 text-left cursor-pointer transition shadow-2xs">
-                      <span className="block text-[11px] font-bold text-slate-800">{account.label}</span>
-                      <span className="block text-[9px] text-slate-500 truncate">{account.email}</span>
-                    </button>
-                  ))}
+                  {DEMO_AUTOFILL_ACCOUNTS.map((account) => {
+                    const AccountIcon = demoAccountIcons[account.role];
+                    return (
+                      <button key={account.role} type="button" onClick={() => handleAutofillModal(account)}
+                        title={`Autofill credentials for ${account.name} (${account.email})`}
+                        className="p-1.5 rounded-lg bg-white border border-slate-200/90 hover:border-orange-500 text-left cursor-pointer transition shadow-2xs flex items-center justify-between group">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <AccountIcon className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                          <span className="text-[11px] font-bold text-slate-800 group-hover:text-orange-600 truncate">{account.label}</span>
+                        </div>
+                        <span className="text-[9px] text-slate-400 truncate ml-1">{account.badge}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <p className="mt-1.5 text-[10px] text-slate-500">Use an existing backend account and enter its password.</p>
               </div>
               <form onSubmit={handleLogin} className="space-y-3.5">
                 <Input
@@ -388,6 +433,22 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
             </form>
           )}
 
+          {/* Quick Demo Access Bar */}
+          <div className="pt-3 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-[#64748B] text-center mb-2 uppercase tracking-wider">
+              1-Click Demo Evaluation Profiles
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="secondary" disabled={loading}
+                onClick={() => handleQuickModalLogin('student')} className="w-full">
+                Demo Student
+              </Button>
+              <Button size="sm" variant="secondary" disabled={loading}
+                onClick={() => handleQuickModalLogin('management')} className="w-full">
+                Demo Admin
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

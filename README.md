@@ -113,7 +113,7 @@ Validates full TypeScript/JSX bundling, asset optimization, and CSS compilation 
 
 ## 🔑 Accounts
 
-Public signup creates a student account. Staff and administrator accounts must be provisioned through an authorized administrative process. Login autofill buttons fill sample account emails for the selected role; users must enter the account password and pass backend authentication. The frontend does not include demo passwords or a local login fallback.
+Public signup creates a student account. Staff and administrator accounts must be provisioned through an authorized administrative process. Login autofill and quick demo buttons use the sample email and password shown in the UI. Those sample accounts must exist in the backend; every sign-in still requires a successful backend response. Use these passwords only for disposable demo accounts.
 
 ### Local bulk test data
 

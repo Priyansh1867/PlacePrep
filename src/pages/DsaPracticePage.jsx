@@ -30,10 +30,11 @@ import {
 } from '../services/dsaService.js';
 import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
+import BackNavButton from '../components/ui/BackNavButton';
 import DsaQuestionExplorer from '../components/dsa/DsaQuestionExplorer';
 import DsaCodingWorkspace from '../components/dsa/DsaCodingWorkspace';
 
-export default function DsaPracticePage({ onNavigate, onSelectGlobalQuestion }) {
+export default function DsaPracticePage({ onNavigate, onBack, onSelectGlobalQuestion }) {
   const currentUser = getCurrentUser();
   const isAuthorized = isUserAuthorizedStudent(currentUser);
   const studentId = currentUser?.id || currentUser?.email || 'default_student';
@@ -170,39 +171,42 @@ export default function DsaPracticePage({ onNavigate, onSelectGlobalQuestion }) 
       
       {/* Studio Header (Only shown on Question Explorer view) */}
       {!activeQuestion && (
-        <PageHeader
-          badge="Student-Only DSA Studio"
-          badgeIcon={Code2}
-          title="DSA & Coding Practice Studio"
-          description="Master canonical data structures, algorithmic patterns, and practice code problems asked in campus technical screening rounds."
-          actions={
-            <div className="flex items-center gap-2.5">
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setSelectedStatus(selectedStatus === 'REVISION' ? 'ALL' : 'REVISION')}
-              >
-                Revision Queue ({revisionIds.length})
-              </Button>
-              <Button
-                variant="outline"
-                size="md"
-                icon={School}
-                onClick={() => onNavigate && onNavigate('institute-portal')}
-              >
-                Institute Portal
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                icon={Bot}
-                onClick={() => onNavigate && onNavigate('mock-interview')}
-              >
-                AI Coding Mock
-              </Button>
-            </div>
-          }
-        />
+        <>
+          <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="placement-portal" />
+          <PageHeader
+            badge="Student-Only DSA Studio"
+            badgeIcon={Code2}
+            title="DSA & Coding Practice Studio"
+            description="Master canonical data structures, algorithmic patterns, and practice code problems asked in campus technical screening rounds."
+            actions={
+              <div className="flex items-center gap-2.5">
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => setSelectedStatus(selectedStatus === 'REVISION' ? 'ALL' : 'REVISION')}
+                >
+                  Revision Queue ({revisionIds.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="md"
+                  icon={School}
+                  onClick={() => (onBack ? onBack('institute-portal') : onNavigate && onNavigate('institute-portal'))}
+                >
+                  Institute Portal
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={Bot}
+                  onClick={() => onNavigate && onNavigate('mock-interview')}
+                >
+                  AI Coding Mock
+                </Button>
+              </div>
+            }
+          />
+        </>
       )}
 
       {/* VIEW SWITCHER: QUESTION EXPLORER vs CODING WORKSPACE */}

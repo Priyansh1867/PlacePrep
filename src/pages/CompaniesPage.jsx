@@ -103,9 +103,6 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal, onNav
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
-      {/* Top Back Navigation */}
-      <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="placement-portal" />
-
       {/* Page Header */}
       <PageHeader
         badge="Company Intelligence"

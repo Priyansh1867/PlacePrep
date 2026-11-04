@@ -24,9 +24,7 @@ export const VALID_BRANCHES = [
   'Electronics and Communication Engineering',
   'Electrical and Electronics Engineering',
   'Mechanical Engineering',
-  'Civil Engineering',
-  'Artificial Intelligence and Data Science',
-  'Other'
+  'Civil Engineering'
 ];
 
 // Branch alias normalization
@@ -41,7 +39,6 @@ export function normalizeBranchName(rawBranch) {
   if (lower === 'eee' || lower.includes('electrical')) return 'Electrical and Electronics Engineering';
   if (lower === 'mech' || lower.includes('mechanical')) return 'Mechanical Engineering';
   if (lower === 'civil' || lower.includes('civil')) return 'Civil Engineering';
-  if (lower === 'aids' || lower.includes('artificial intelligence') || lower.includes('data science')) return 'Artificial Intelligence and Data Science';
 
   // Return original capitalized string if not directly mapped
   return trimmed;

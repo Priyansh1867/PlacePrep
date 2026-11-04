@@ -29,7 +29,6 @@ import Dialog from '../components/ui/Dialog';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
 import PageHeader from '../components/ui/PageHeader';
-import BackNavButton from '../components/ui/BackNavButton';
 
 const STATUS_COLORS = {
   INTERESTED: 'slate',
@@ -51,7 +50,7 @@ const STATUS_LABELS = {
   WITHDRAWN: 'Withdrawn'
 };
 
-export default function MyApplicationsPage({ onNavigate, onBack, onSelectCompany, onOpenAuthModal }) {
+export default function MyApplicationsPage({ onNavigate, onSelectCompany, onOpenAuthModal }) {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -190,9 +189,6 @@ export default function MyApplicationsPage({ onNavigate, onBack, onSelectCompany
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
-      {/* Top Back Navigation */}
-      <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="placement-portal" />
-
       {/* Header */}
       <PageHeader
         badge="Placement Lifecycle"

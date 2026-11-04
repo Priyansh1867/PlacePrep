@@ -160,6 +160,13 @@ export const AuthApi = {
     return await request(`/auth/users${queryString}`);
   },
 
+  async verifyPassphrase(passphrase) {
+    return await request('/auth/verify-passphrase', {
+      method: 'POST',
+      body: JSON.stringify({ passphrase })
+    });
+  },
+
   logout() {
     setAuthToken(null);
   }
@@ -254,6 +261,24 @@ export const UserApi = {
     return await request('/users/profile', {
       method: 'PUT',
       body: JSON.stringify({ email, profile })
+    });
+  },
+
+  async saveOnboardingStep(email, step, stepData, isCompleted = false) {
+    return await request('/users/profile/step', {
+      method: 'PUT',
+      body: JSON.stringify({ email, step, stepData, isCompleted })
+    });
+  },
+
+  async uploadDocument(file, documentType, email) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    if (email) formData.append('email', email);
+    return await request('/users/upload-document', {
+      method: 'POST',
+      body: formData
     });
   }
 };

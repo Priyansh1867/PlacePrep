@@ -79,6 +79,54 @@ public class User {
 
     private boolean onboardingCompleted;
 
+    private Integer currentOnboardingStep = 1;
+
+    private String onboardingStatus = "PENDING";
+
+    private String passphrase;
+
+    private Boolean passphraseVerified = false;
+
+    private String alternatePhone;
+
+    private String personalEmail;
+
+    private String currentAddress;
+
+    private String city;
+
+    private String state;
+
+    private String pincode;
+
+    private String currentSemester;
+
+    private String enrollmentNumber;
+
+    private Integer educationStartYear;
+
+    private Integer expectedGraduationYear;
+
+    private String degree;
+
+    private String tenthSchool;
+
+    private String tenthBoard;
+
+    private String tenthYear;
+
+    private String twelfthSchool;
+
+    private String twelfthBoard;
+
+    private String twelfthStream;
+
+    private String twelfthYear;
+
+    private String profilePhotoUrl;
+
+    private String resumeUrl;
+
     private Double cgpa;
 
     private Double tenthPercentage;

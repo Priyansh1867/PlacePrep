@@ -95,6 +95,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/student/attendance/verify-face").permitAll()
                         .requestMatchers("/api/student/attendance/mark").permitAll()
                         .requestMatchers("/api/users/profile/**", "/api/users/profile").permitAll()
+                        .requestMatchers("/api/users/upload-document").permitAll()
+                        .requestMatchers("/api/uploads/**").permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/student/attendance/**").permitAll()

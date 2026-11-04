@@ -20,6 +20,8 @@ import java.util.Map;
 import java.security.Principal;
 import java.util.HashMap;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/users")
@@ -197,6 +199,107 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/profile/step")
+    public ResponseEntity<?> saveOnboardingStep(@RequestBody Map<String, Object> payload, Principal principal) {
+        try {
+            String email = payload != null && payload.get("email") != null
+                    ? String.valueOf(payload.get("email")).trim()
+                    : (principal != null ? principal.getName() : null);
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Email is required"));
+            }
+
+            Integer step = payload.get("step") != null ? Integer.parseInt(String.valueOf(payload.get("step"))) : 1;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> stepData = payload.get("stepData") instanceof Map
+                    ? (Map<String, Object>) payload.get("stepData")
+                    : Collections.emptyMap();
+            boolean isCompleted = Boolean.parseBoolean(String.valueOf(payload.get("isCompleted")));
+
+            User updatedUser = userService.saveOnboardingStep(email, step, stepData, isCompleted);
+            Map<String, Object> res = new HashMap<>();
+            res.put("success", true);
+            res.put("step", step);
+            res.put("currentOnboardingStep", updatedUser.getCurrentOnboardingStep());
+            res.put("onboardingStatus", updatedUser.getOnboardingStatus());
+            res.put("onboardingCompleted", updatedUser.isOnboardingCompleted());
+            res.put("user", updatedUser);
+            return ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Failed to save step: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/upload-document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadDocument(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("documentType") String documentType,
+            @RequestParam(value = "email", required = false) String email,
+            Principal principal
+    ) {
+        try {
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("error", "File is required and cannot be empty."));
+            }
+            if (file.getSize() > 10 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("error", "File exceeds maximum permitted size of 10MB."));
+            }
+
+            String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "document";
+            String lowerName = originalName.toLowerCase();
+            boolean validExt = lowerName.endsWith(".pdf") || lowerName.endsWith(".jpg")
+                    || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png")
+                    || lowerName.endsWith(".doc") || lowerName.endsWith(".docx");
+            if (!validExt) {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Invalid file format. Allowed formats: PDF, JPG, JPEG, PNG, DOC, DOCX."));
+            }
+
+            // Create uploads directory
+            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "documents");
+            if (!java.nio.file.Files.exists(uploadDir)) {
+                java.nio.file.Files.createDirectories(uploadDir);
+            }
+
+            String safeFileName = System.currentTimeMillis() + "_" + documentType + "_" + originalName.replaceAll("[^a-zA-Z0-9.-]", "_");
+            java.nio.file.Path targetPath = uploadDir.resolve(safeFileName);
+            java.nio.file.Files.copy(file.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            String fileUrl = "/api/uploads/documents/" + safeFileName;
+
+            // Generate small data preview URI for images so UI displays immediately without network lag
+            String previewDataUri = null;
+            if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png")) {
+                String mime = lowerName.endsWith(".png") ? "image/png" : "image/jpeg";
+                previewDataUri = "data:" + mime + ";base64," + java.util.Base64.getEncoder().encodeToString(file.getBytes());
+            }
+
+            String effectiveEmail = (email != null && !email.trim().isEmpty())
+                    ? email.trim()
+                    : (principal != null ? principal.getName() : null);
+
+            if (effectiveEmail != null && !effectiveEmail.trim().isEmpty()) {
+                userService.attachUserDocument(effectiveEmail, documentType, originalName, fileUrl, previewDataUri);
+            }
+
+            Map<String, Object> resp = new java.util.LinkedHashMap<>();
+            resp.put("success", true);
+            resp.put("fileName", originalName);
+            resp.put("documentType", documentType);
+            resp.put("fileSize", file.getSize());
+            resp.put("fileUrl", fileUrl);
+            resp.put("previewUrl", previewDataUri != null ? previewDataUri : fileUrl);
+            resp.put("uploadedAt", java.time.LocalDateTime.now().toString());
+
+            return ResponseEntity.ok(resp);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Document upload failed: " + e.getMessage()));
         }
     }
 

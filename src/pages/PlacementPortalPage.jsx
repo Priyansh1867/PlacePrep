@@ -1,6 +1,6 @@
 import ProfilePopover from '../components/profile/ProfilePopover';
 import { getProfileMetrics, displayValue } from '../services/profileMetrics';
-import { DriveApi, WorkflowApi, CompanyApi, ApplicationApi, request } from '../services/api';
+import { DriveApi, WorkflowApi, CompanyApi, ApplicationApi, UserApi, request } from '../services/api';
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   Briefcase,
@@ -129,12 +129,43 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
 
-  // Keep currentUser synced when profile is saved
+  // Keep currentUser synced when profile is saved or updated remotely
   useEffect(() => {
     const handleProfileUpdate = () => {
       setCurrentUserState(getCurrentUser());
     };
     window.addEventListener('profile-updated', handleProfileUpdate);
+
+    // Fetch freshest student profile from backend database
+    const user = getCurrentUser();
+    if (user?.email && user?.role === 'student') {
+      UserApi.getStudentFullProfile(user.email).then((remoteData) => {
+        if (!remoteData) return;
+        let parsed = remoteData;
+        if (typeof remoteData === 'string') {
+          try { parsed = JSON.parse(remoteData); } catch {}
+        }
+        if (parsed?.user) {
+          const merged = { ...user, ...parsed.user };
+          setCurrentUserState(merged);
+          setCurrentUser(merged);
+        } else if (parsed?.basicDetails) {
+          const merged = {
+            ...user,
+            name: parsed.basicDetails.fullName || user.name,
+            phone: parsed.basicDetails.phone || user.phone,
+            branch: parsed.educationDetails?.branch || user.branch,
+            college: parsed.educationDetails?.college || user.college,
+            rollNumber: parsed.educationDetails?.rollNumber || user.rollNumber,
+            graduationBatch: parsed.educationDetails?.graduationBatch || user.graduationBatch,
+            cgpa: parsed.educationDetails?.cgpa !== undefined ? parsed.educationDetails.cgpa : user.cgpa,
+          };
+          setCurrentUserState(merged);
+          setCurrentUser(merged);
+        }
+      }).catch(() => {});
+    }
+
     return () => window.removeEventListener('profile-updated', handleProfileUpdate);
   }, []);
 

@@ -1,8 +1,6 @@
 package com.placeprep.service;
 
 import com.placeprep.model.ClassAttendanceRecord;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.CrtAttendanceRecord;
 import com.placeprep.model.CrtTrainingSession;
@@ -38,66 +36,6 @@ import com.placeprep.repository.UserRepository;
 
 @Service
 public class AttendanceService {
-
-    @Transactional
-    public EntityResponseDto createClassSessionDto(ClassAttendanceSession session) {
-        return EntityResponseMapper.toDto(createClassSession(session));
-    }
-
-    @Transactional
-    public EntityResponseDto findOrCreateClassSessionDto(ClassAttendanceSession session) {
-        return EntityResponseMapper.toDto(findOrCreateClassSession(session));
-    }
-
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getSessionRecordsDto(Long sessionId) {
-        return EntityResponseMapper.toDtoList(getSessionRecords(sessionId));
-    }
-
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getClassSessionsDto(String department, String semester) {
-        return EntityResponseMapper.toDtoList(getClassSessions(department, semester));
-    }
-
-    @Transactional
-    public List<EntityResponseDto> markClassAttendanceDto(Long sessionId, List<ClassAttendanceRecord> records) {
-        return EntityResponseMapper.toDtoList(markClassAttendance(sessionId, records));
-    }
-
-    @Transactional
-    public EntityResponseDto createCrtSessionDto(CrtTrainingSession session) {
-        return EntityResponseMapper.toDto(createCrtSession(session));
-    }
-
-    @Transactional
-    public EntityResponseDto updateCrtSessionDto(Long id, CrtTrainingSession updated) {
-        return EntityResponseMapper.toDto(updateCrtSession(id, updated));
-    }
-
-    @Transactional
-    public EntityResponseDto updateCrtSessionStatusDto(Long id, String newStatus) {
-        return EntityResponseMapper.toDto(updateCrtSessionStatus(id, newStatus));
-    }
-
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getCrtSessionsDto(String targetBatch, String department, String status) {
-        return EntityResponseMapper.toDtoList(getCrtSessions(targetBatch, department, status));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<EntityResponseDto> getCrtSessionByIdDto(Long id) {
-        return EntityResponseMapper.toDtoOptional(getCrtSessionById(id));
-    }
-
-    @Transactional
-    public List<EntityResponseDto> markCrtAttendanceDto(Long crtSessionId, List<CrtAttendanceRecord> records, String recordedBy) {
-        return EntityResponseMapper.toDtoList(markCrtAttendance(crtSessionId, records, recordedBy));
-    }
-
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getCrtSessionRecordsDto(Long crtSessionId) {
-        return EntityResponseMapper.toDtoList(getCrtSessionRecords(crtSessionId));
-    }
 
     public static final double SHORTAGE_THRESHOLD = 75.0;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -336,7 +274,7 @@ public class AttendanceService {
                         if (matchBranch) {
                             Map<String, Object> map = new LinkedHashMap<>();
                             map.put("studentId", u.getEmail());
-                            map.put("rollNumber", u.getRollNumber() != null ? u.getRollNumber() : "22CS" + String.format("%04d", u.getId()));
+                            map.put("rollNumber", u.getRollNumber());
                             map.put("name", u.getName());
                             map.put("email", u.getEmail());
                             map.put("department", u.getBranch());
@@ -349,42 +287,8 @@ public class AttendanceService {
             }
         }
 
-        if (list.isEmpty()) {
-            list = getDefaultClassRoster(department, semester);
-        }
+
         return list;
-    }
-
-    private List<Map<String, Object>> getDefaultClassRoster(String department, String semester) {
-        String deptCode = (department != null && department.toUpperCase().contains("IT")) ? "IT" :
-                          (department != null && department.toUpperCase().contains("EC")) ? "EC" : "CS";
-        String[][] students = {
-            {"22" + deptCode + "0101", "Priyansh Jain", "priyansh.jain@example.edu"},
-            {"22" + deptCode + "0102", "Ananya Sharma", "ananya.sharma@example.edu"},
-            {"22" + deptCode + "0103", "Rohan Kulkarni", "rohan.kulkarni@example.edu"},
-            {"22" + deptCode + "0104", "Siddharth Nair", "siddharth.nair@example.edu"},
-            {"22" + deptCode + "0105", "Meera Venkat", "meera.venkat@example.edu"},
-            {"22" + deptCode + "0106", "Kabir Mehta", "kabir.mehta@example.edu"},
-            {"22" + deptCode + "0107", "Divya Reddy", "divya.reddy@example.edu"},
-            {"22" + deptCode + "0108", "Aarav Gupta", "aarav.gupta@example.edu"},
-            {"22" + deptCode + "0109", "Ishita Verma", "ishita.verma@example.edu"},
-            {"22" + deptCode + "0110", "Tanmay Deshmukh", "tanmay.deshmukh@example.edu"},
-            {"22" + deptCode + "0111", "Sneha Iyer", "sneha.iyer@example.edu"},
-            {"22" + deptCode + "0112", "Aditya Rawat", "aditya.rawat@example.edu"}
-        };
-
-        List<Map<String, Object>> roster = new ArrayList<>();
-        for (String[] s : students) {
-            Map<String, Object> map = new LinkedHashMap<>();
-            map.put("studentId", s[2]);
-            map.put("rollNumber", s[0]);
-            map.put("name", s[1]);
-            map.put("email", s[2]);
-            map.put("department", department != null ? department : "CSE");
-            map.put("semester", semester != null ? semester : "6");
-            roster.add(map);
-        }
-        return roster;
     }
 
     public Map<String, Object> getStudentAttendanceSummary(String studentId) {

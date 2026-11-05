@@ -36,7 +36,7 @@ export default function StudentFormModal({
     fullName: '',
     rollNumber: '',
     registrationNumber: '',
-    collegeName: 'Delhi Technological University (DTU)',
+    collegeName: '',
     course: 'B.Tech (Bachelor of Technology)',
     branch: 'Computer Science and Engineering',
     graduationBatch: '2026',
@@ -253,7 +253,7 @@ export default function StudentFormModal({
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    placeholder="e.g. Priyansh Jain"
+                    placeholder="Enter full name"
                     className={`w-full px-3.5 py-2 rounded-lg text-sm border bg-white focus:outline-none focus:ring-2 transition-all ${
                       errors.fullName ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'
                     }`}

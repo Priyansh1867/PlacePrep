@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.StudentAcademicRecord;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.StudentAcademicRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -33,14 +31,14 @@ public class AcademicRecordController {
     private StudentAcademicRecordService academicRecordService;
 
     @GetMapping({"/students", "/student", "/all"})
-    public ResponseEntity<List<EntityResponseDto>> getAllStudentRecords() {
+    public ResponseEntity<List<StudentAcademicRecord>> getAllStudentRecords() {
         return ResponseEntity.ok(academicRecordService.findAllRecords());
     }
 
     @GetMapping({"/students/{emailOrId}", "/student/{emailOrId}"})
     public ResponseEntity<?> getStudentRecord(@PathVariable String emailOrId) {
         return academicRecordService.findForStudent(emailOrId)
-                .<ResponseEntity<?>>map(entity -> ResponseEntity.ok(entity))
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Collections.singletonMap("error", "Academic record not found for: " + emailOrId)));
     }
@@ -48,7 +46,8 @@ public class AcademicRecordController {
     @PostMapping({"/students", "/student"})
     public ResponseEntity<?> saveStudentRecord(@RequestBody StudentAcademicRecord record) {
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(academicRecordService.saveRecord(record));
+            StudentAcademicRecord saved = academicRecordService.saveRecord(record);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -89,9 +88,7 @@ public class AcademicRecordController {
 
     @GetMapping("/template")
     public ResponseEntity<byte[]> downloadCsvTemplate() {
-        String template = "email,studentId,name,branch,graduationBatch,tenthPercentage,twelfthPercentage,diplomaPercentage,sem1Sgpa,sem2Sgpa,sem3Sgpa,sem4Sgpa,sem5Sgpa,sem6Sgpa,sem7Sgpa,sem8Sgpa,cgpa,activeBacklogs\n" +
-                "rahul.verma@example.edu,DTU-2024-001,Rahul Verma,Computer Science,2026,88.5,86.0,,8.2,8.4,8.1,8.5,8.7,8.6,8.8,8.9,8.53,0\n" +
-                "sneha.patel@example.edu,DTU-2024-002,Sneha Patel,Information Technology,2026,91.0,,85.5,7.9,8.0,8.2,8.3,8.4,8.5,8.6,8.7,8.33,0\n";
+        String template = "email,studentId,name,branch,graduationBatch,tenthPercentage,twelfthPercentage,diplomaPercentage,sem1Sgpa,sem2Sgpa,sem3Sgpa,sem4Sgpa,sem5Sgpa,sem6Sgpa,sem7Sgpa,sem8Sgpa,cgpa,activeBacklogs\n";
 
         byte[] bytes = template.getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()

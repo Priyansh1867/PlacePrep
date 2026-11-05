@@ -43,10 +43,9 @@ export async function fetchFacultyOperations(params = {}, currentUser) {
       return backendData;
     }
   } catch (err) {
-    console.warn('Backend /api/hod/faculty-operations request failed:', err?.message || err);
+    // Backend offline / network fallback
+    console.warn('Backend /api/hod/faculty-operations fallback to local store:', err?.message || err);
   }
-
-  return [];
 
   // 2. Local Fallback - Aggregate genuine persistent records across faculty modules
   const activities = [];
@@ -56,7 +55,7 @@ export async function fetchFacultyOperations(params = {}, currentUser) {
   const classRecords = safeGetJson(ATTENDANCE_RECORDS_KEY, []);
 
   classSessions.forEach((s) => {
-    const fName = s.facultyName && s.facultyName.trim() ? s.facultyName.trim() : 'Dr. Neha Sharma';
+    const fName = s.facultyName && s.facultyName.trim() ? s.facultyName.trim() : 'Not recorded';
     const fId = s.facultyId && s.facultyId.trim() ? s.facultyId.trim() : 'FAC-CSE-042';
     const sessionRecs = classRecords.filter((r) => String(r.sessionId) === String(s.id));
     const recordsCount = sessionRecs.length;

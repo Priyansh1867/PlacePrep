@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.InterviewQuestion;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.QuestionImportService;
 import com.placeprep.service.QuestionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +34,7 @@ public class QuestionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EntityResponseDto>> getQuestions(
+    public ResponseEntity<List<InterviewQuestion>> getQuestions(
             @RequestParam(required = false) String companyId,
             @RequestParam(required = false) String round) {
         boolean hasCompany = companyId != null && !companyId.trim().isEmpty();
@@ -56,7 +54,8 @@ public class QuestionController {
     @GetMapping("/{questionId}")
     public ResponseEntity<?> getQuestionById(@PathVariable String questionId) {
         try {
-            return ResponseEntity.ok(questionService.getByQuestionId(questionId));
+            InterviewQuestion question = questionService.getByQuestionId(questionId);
+            return ResponseEntity.ok(question);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -66,8 +65,9 @@ public class QuestionController {
     }
 
     @PostMapping
-    public ResponseEntity<EntityResponseDto> createQuestion(@RequestBody InterviewQuestion question) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(questionService.create(question));
+    public ResponseEntity<InterviewQuestion> createQuestion(@RequestBody InterviewQuestion question) {
+        InterviewQuestion created = questionService.create(question);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PostMapping("/import-file")

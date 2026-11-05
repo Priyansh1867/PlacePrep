@@ -5,7 +5,6 @@ import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.CrtAttendanceRecord;
 import com.placeprep.model.CrtTrainingSession;
 import com.placeprep.service.AttendanceService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -24,31 +23,31 @@ public class AttendanceWriteTool {
     @Tool(description = "Create a class attendance session. Requires teaching or management staff permission.")
     public Object createClassSession(ClassAttendanceSession session, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.createClassSessionDto(session));
+        return attendanceService.createClassSession(session);
     }
 
     @Tool(description = "Mark attendance for a class session. Requires teaching or management staff permission.")
     public Object markClassAttendance(Long sessionId, List<ClassAttendanceRecord> records, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.markClassAttendanceDto(sessionId, records));
+        return attendanceService.markClassAttendance(sessionId, records);
     }
 
     @Tool(description = "Create a CRT training session. Requires teaching or management staff permission.")
     public Object createCrtSession(CrtTrainingSession session, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.createCrtSessionDto(session));
+        return attendanceService.createCrtSession(session);
     }
 
     @Tool(description = "Update a CRT training session. Requires teaching or management staff permission.")
     public Object updateCrtSession(Long sessionId, CrtTrainingSession session, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.updateCrtSessionDto(sessionId, session));
+        return attendanceService.updateCrtSession(sessionId, session);
     }
 
     @Tool(description = "Update CRT session status. Requires teaching or management staff permission.")
     public Object updateCrtSessionStatus(Long sessionId, String status, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.updateCrtSessionStatusDto(sessionId, status));
+        return attendanceService.updateCrtSessionStatus(sessionId, status);
     }
 
     @Tool(description = "Mark CRT attendance. Requires teaching or management staff permission.")
@@ -56,6 +55,6 @@ public class AttendanceWriteTool {
                                     @ToolParam(description = "Staff identifier recording attendance") String recordedBy,
                                     ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.markCrtAttendanceDto(sessionId, records, recordedBy));
+        return attendanceService.markCrtAttendance(sessionId, records, recordedBy);
     }
 }

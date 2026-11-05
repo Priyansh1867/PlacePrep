@@ -39,11 +39,3 @@ backend/target/
 # Project documents and diagrams
 Responsibilities.md
 *.excalidraw
-
-# Eclipse IDE
-.metadata/
-.settings/
-.project
-.classpath
-.factorypath
-.springBeans

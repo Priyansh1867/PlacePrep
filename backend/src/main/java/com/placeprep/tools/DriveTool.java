@@ -15,12 +15,12 @@ public class DriveTool {
 
     @Tool(description = "List placement drives, optionally filtered by eligible batch.")
     public Object listDrives(@ToolParam(description = "Graduation batch, or blank for all drives") String batch) {
-        return driveService.getAllDtos(batch);
+        return driveService.getAll(batch);
     }
 
     @Tool(description = "Get one placement drive by its identifier.")
     public Object getDrive(@ToolParam(description = "Placement drive identifier") String driveId) {
-        return driveService.getByDriveIdDto(driveId);
+        return driveService.getByDriveId(driveId);
     }
 
     @Tool(description = "Get placement drive calendar events.")

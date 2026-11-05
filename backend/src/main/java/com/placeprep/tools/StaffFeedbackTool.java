@@ -1,7 +1,6 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.FeedbackService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -19,6 +18,6 @@ public class StaffFeedbackTool {
     public Object listRecruiterFeedback(@ToolParam(description = "Drive identifier, or blank") String driveId,
                                         ToolContext context) {
         AiToolAuthorization.requirePlacementStaff(context);
-        return EntityResponseMapper.toJsonSafe(feedbackService.getAllRecruiterFeedback(driveId));
+        return feedbackService.getAllRecruiterFeedback(driveId);
     }
 }

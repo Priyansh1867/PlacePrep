@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.User;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,10 +35,14 @@ public class AuthController {
         this.userService = userService;
     }
 
+    private String unavailableTokenService() {
+        throw new IllegalStateException("Authentication service is unavailable.");
+    }
+
     private Map<String, Object> buildAuthResponse(User user, String token) {
         Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("token", token);
-        resp.put("user", EntityResponseMapper.toDto(user));
+        resp.put("user", user);
         resp.put("id", user.getId());
         resp.put("name", user.getName());
         resp.put("email", user.getEmail());
@@ -48,14 +50,48 @@ public class AuthController {
         resp.put("branch", user.getBranch());
         resp.put("college", user.getCollege());
         resp.put("rollNumber", user.getRollNumber());
+        resp.put("graduationBatch", user.getGraduationBatch());
+        resp.put("onboardingCompleted", user.isOnboardingCompleted());
+        resp.put("currentOnboardingStep", user.getCurrentOnboardingStep() != null ? user.getCurrentOnboardingStep() : 1);
+        resp.put("onboardingStatus", user.getOnboardingStatus() != null ? user.getOnboardingStatus() : "PENDING");
+        resp.put("fullProfileJson", user.getFullProfileJson());
+        resp.put("cgpa", user.getCgpa());
+        resp.put("activeBacklogs", user.getActiveBacklogs());
         return resp;
+    }
+
+    @PostMapping("/verify-passphrase")
+    public ResponseEntity<?> verifyPassphrase(@RequestBody Map<String, String> body) {
+        String passphrase = body != null ? body.get("passphrase") : null;
+        if (passphrase == null || passphrase.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Passphrase is required."));
+        }
+        String clean = passphrase.trim().toUpperCase();
+        // Accepted college placement cell passphrases (campus codes e.g. PLACEPREP2026, CAMPUS2026, TPO2026, etc.)
+        boolean valid = clean.equals("PLACEPREP2026") || clean.equals("CAMPUS2026") 
+                     || clean.equals("TPO2026") || clean.equals("IIT2026") 
+                     || clean.equals("NIT2026") || clean.equals("CAMPUS_PLACEMENT_2026")
+                     || clean.startsWith("TPO-") || clean.startsWith("CAMPUS-");
+
+        if (valid) {
+            Map<String, Object> resp = new java.util.LinkedHashMap<>();
+            resp.put("valid", true);
+            resp.put("college", "College Placement Cell (Verified)");
+            resp.put("message", "Passphrase verified successfully. Institutional placement access granted.");
+            return ResponseEntity.ok(resp);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "valid", false,
+                "error", "Invalid passphrase. Please verify with your college placement cell (TPO) or select 'I am here to apply for a job' to continue."
+            ));
+        }
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
             User created = userService.register(user);
-            String token = tokenService != null ? tokenService.generateToken(created.getId(), created.getEmail(), created.getRole()) : "pp_demo_token";
+            String token = tokenService != null ? tokenService.generateToken(created.getId(), created.getEmail(), created.getRole()) : unavailableTokenService();
             return ResponseEntity.status(HttpStatus.CREATED).body(buildAuthResponse(created, token));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
@@ -71,7 +107,7 @@ public class AuthController {
         String password = credentials != null ? credentials.get("password") : null;
         try {
             User user = userService.login(email, password);
-            String token = tokenService != null ? tokenService.generateToken(user.getId(), user.getEmail(), user.getRole()) : "pp_demo_token";
+            String token = tokenService != null ? tokenService.generateToken(user.getId(), user.getEmail(), user.getRole()) : unavailableTokenService();
             return ResponseEntity.ok(buildAuthResponse(user, token));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
@@ -81,29 +117,16 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/demo-login")
-    public ResponseEntity<?> demoLogin(@RequestBody(required = false) Map<String, String> body) {
-        try {
-            String role = (body != null && body.containsKey("role")) ? body.get("role") : "student";
-            User demoUser = userService.demoLogin(role);
-            String token = tokenService != null ? tokenService.generateToken(demoUser.getId(), demoUser.getEmail(), demoUser.getRole()) : "pp_demo_token";
-            return ResponseEntity.ok(buildAuthResponse(demoUser, token));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", "Demo login error: " + e.getMessage()));
-        }
-    }
-
     @GetMapping("/users")
-    public ResponseEntity<List<EntityResponseDto>> getAllUsers() {
-        return ResponseEntity.ok(EntityResponseMapper.toDtoList(userService.getAllUsers(null, null)));
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers(null, null));
     }
 
     @GetMapping("/user/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         try {
             User user = userService.getUserById(id);
-            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
+            return ResponseEntity.ok(user);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {

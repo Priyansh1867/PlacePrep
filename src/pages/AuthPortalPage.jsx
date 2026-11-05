@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useMemo, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Award, BookOpen, Briefcase, Building2, Check, CheckCircle2,
@@ -158,11 +159,435 @@ export default function AuthPortalPage({ initialPortal = 'institute', onAuthSucc
           let altPassword = null;
           if (isPassword123) altPassword = 'demo123';
           else if (isDemo123) altPassword = 'password123';
+=======
+import React, { useMemo, useState, useEffect } from 'react';
+import {
+  ArrowLeft, ArrowRight, Award, BookOpen, Briefcase, Building2, Check, CheckCircle2,
+  CircleHelp, Eye, EyeOff, GraduationCap, Layers3, Lock, Mail, ShieldCheck, School,
+  Sparkles, User, Users,
+} from 'lucide-react';
+import PlacePrepLogo from '../components/PlacePrepLogo';
+import campusLoginHero from '../assets/images/campus_dusk_bg.jpg';
+import { getCurrentUser, setCurrentUser, setPortalMode, setPortalRole, setGraduationBatch, findRegisteredUser, saveRegisteredUser } from '../services/storage';
+import { AuthApi } from '../services/api';
+import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
+
+const portalOptions = [
+  { id: 'institute', label: 'Institute', icon: School },
+  { id: 'placement', label: 'Placement', icon: Briefcase },
+];
+
+const rolesByPortal = {
+  institute: [
+    { id: 'student', label: 'Student', icon: GraduationCap, description: 'Prepare and apply' },
+    { id: 'teacher', label: 'Faculty', icon: BookOpen, description: 'Guide your cohort' },
+    { id: 'hod', label: 'HOD', icon: Award, description: 'See department insights' },
+    { id: 'management', label: 'Management', icon: Building2, description: 'Location & geofence' },
+  ],
+  placement: [
+    { id: 'tpo', label: 'TPO Officer', icon: Building2, description: 'Manage campus drives' },
+    { id: 'coordinator', label: 'Coordinator', icon: Users, description: 'Run placement ops' },
+    { id: 'hr', label: 'Recruiter', icon: Briefcase, description: 'Discover candidates' },
+    { id: 'director', label: 'Director', icon: ShieldCheck, description: 'Monitor outcomes' },
+    { id: 'student', label: 'Student', icon: GraduationCap, description: 'View drives, eligibility & jobs' },
+  ],
+};
+
+const defaultRoleFor = (portal) => (portal === 'placement' ? 'tpo' : 'student');
+
+export const HARDCODED_ACCOUNTS = [
+  {
+    role: 'student',
+    portal: 'institute',
+    label: 'Student',
+    icon: GraduationCap,
+    email: 'priyansh.jain@example.edu',
+    password: 'password123',
+    name: 'Priyansh Jain',
+    badge: 'Student',
+    accent: 'bg-blue-50 text-blue-800 border-blue-200/90 hover:bg-blue-600 hover:text-white',
+  },
+  {
+    role: 'tpo',
+    portal: 'placement',
+    label: 'TPO Officer',
+    icon: Building2,
+    email: 'tpo@placeprep.edu',
+    password: 'password123',
+    name: 'Prof. Rajesh Raman',
+    badge: 'TPO Cell',
+    accent: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-600 hover:text-white',
+  },
+  {
+    role: 'management',
+    portal: 'management',
+    label: 'Management',
+    icon: ShieldCheck,
+    email: 'management@placeprep.com',
+    password: 'password123',
+    name: 'Dr. Ramesh Gupta',
+    badge: 'Operations',
+    accent: 'bg-teal-50 text-teal-800 border-teal-200/90 hover:bg-teal-600 hover:text-white',
+  },
+  {
+    role: 'hr',
+    portal: 'placement',
+    label: 'Recruiter',
+    icon: Briefcase,
+    email: 'recruiter@placeprep.com',
+    password: 'password123',
+    name: 'Sarah Jenkins',
+    badge: 'Google',
+    accent: 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-600 hover:text-white',
+  },
+  {
+    role: 'teacher',
+    portal: 'institute',
+    label: 'Faculty',
+    icon: BookOpen,
+    email: 'teacher@placeprep.com',
+    password: 'password123',
+    name: 'Dr. Neha Sharma',
+    badge: 'CSE Faculty',
+    accent: 'bg-violet-50 text-violet-800 border-violet-200/90 hover:bg-violet-600 hover:text-white',
+  },
+  {
+    role: 'hod',
+    portal: 'institute',
+    label: 'HOD',
+    icon: Award,
+    email: 'hod@placeprep.com',
+    password: 'password123',
+    name: 'Prof. Alok Verma',
+    badge: 'HOD CSE',
+    accent: 'bg-rose-50 text-rose-800 border-rose-200/90 hover:bg-rose-600 hover:text-white',
+  },
+  {
+    role: 'coordinator',
+    portal: 'placement',
+    label: 'Coordinator',
+    icon: Users,
+    email: 'coordinator@placeprep.com',
+    password: 'password123',
+    name: 'Prof. Ananya Gupta',
+    badge: 'Logistics',
+    accent: 'bg-cyan-50 text-cyan-800 border-cyan-200/90 hover:bg-cyan-600 hover:text-white',
+  },
+  {
+    role: 'director',
+    portal: 'placement',
+    label: 'Director',
+    icon: ShieldCheck,
+    email: 'director@placeprep.com',
+    password: 'password123',
+    name: 'Dr. Vikramaditya Sen',
+    badge: 'Executive',
+    accent: 'bg-indigo-50 text-indigo-800 border-indigo-200/90 hover:bg-indigo-600 hover:text-white',
+  },
+];
+
+export const isCollegeEmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const lower = email.trim().toLowerCase();
+  return (
+    lower.endsWith('.edu') ||
+    lower.endsWith('.ac.in') ||
+    lower.endsWith('.edu.in') ||
+    /^[^\s@]+@[^\s@]+\.(edu|ac\.in|edu\.in|[a-z0-9-]+\.edu|[a-z0-9-]+\.ac\.in)$/i.test(lower)
+  );
+};
+
+const fieldClass = 'auth-input';
+
+export default function AuthPortalPage({ initialPortal = 'institute', initialMode = 'login', initialRole = null, onAuthSuccess, onBackToGateway }) {
+  const safeInitialPortal = initialPortal === 'placement' ? 'placement' : 'institute';
+  const [portalBranch, setPortalBranch] = useState(safeInitialPortal);
+  const [authMode, setAuthMode] = useState(initialMode || 'login');
+  const [selectedRole, setSelectedRole] = useState(initialRole || defaultRoleFor(safeInitialPortal));
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialPortal) setPortalBranch(initialPortal === 'placement' ? 'placement' : 'institute');
+    if (initialMode) setAuthMode(initialMode);
+    if (initialRole) setSelectedRole(initialRole);
+  }, [initialPortal, initialMode, initialRole]);
+
+  const defaultAcc = useMemo(() => {
+    return HARDCODED_ACCOUNTS.find((a) => a.role === defaultRoleFor(safeInitialPortal)) || HARDCODED_ACCOUNTS[0];
+  }, [safeInitialPortal]);
+
+  const [formData, setFormData] = useState(() => {
+    const existing = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const existingIsOther = existing?.branch && !INITIAL_BRANCHES.slice(0, -1).includes(existing?.branch);
+    return {
+      fullName: existing?.name || defaultAcc.name,
+      email: existing?.email || defaultAcc.email,
+      password: defaultAcc.password,
+      confirmPassword: defaultAcc.password,
+      rollNumber: existing?.rollNumber || '2024/CSE/084',
+      college: existing?.college || 'Indian Institute of Technology',
+      branch: existingIsOther ? 'Other' : (existing?.branch || 'Computer Science and Engineering'),
+      customBranch: existingIsOther ? existing?.branch : (existing?.customBranch || ''),
+      batch: existing?.graduationBatch || '2026',
+      department: existing?.department || 'Computer Science & Engineering',
+      designation: defaultAcc.badge,
+      companyName: 'Google',
+      adminKey: '',
+    };
+  });
+
+  const activePortal = useMemo(() => portalOptions.find((item) => item.id === portalBranch), [portalBranch]);
+  const ActivePortalIcon = activePortal.icon;
+  const roleOptions = rolesByPortal[portalBranch];
+
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
+    setErrorMsg('');
+    const acc = HARDCODED_ACCOUNTS.find((a) => a.role === roleId);
+    if (acc) {
+      setFormData((prev) => ({
+        ...prev,
+        email: acc.email,
+        password: acc.password,
+        confirmPassword: acc.password,
+        fullName: acc.name,
+        designation: acc.badge,
+      }));
+    }
+  };
+
+  const changePortal = (branch) => {
+    setPortalBranch(branch);
+    const targetRole = defaultRoleFor(branch);
+    setSelectedRole(targetRole);
+    setErrorMsg('');
+    setSuccessMsg('');
+    const acc = HARDCODED_ACCOUNTS.find((a) => a.role === targetRole);
+    if (acc) {
+      setFormData((prev) => ({
+        ...prev,
+        email: acc.email,
+        password: acc.password,
+        confirmPassword: acc.password,
+        fullName: acc.name,
+        designation: acc.badge,
+      }));
+    }
+  };
+
+  const handleAutofill = (acc) => {
+    setSelectedRole(acc.role);
+    if (acc.portal && acc.portal !== 'management') {
+      setPortalBranch(acc.portal);
+    }
+    setFormData((prev) => ({
+      ...prev,
+      email: acc.email,
+      password: acc.password,
+      confirmPassword: acc.password,
+      fullName: acc.name,
+      designation: acc.badge,
+    }));
+    setErrorMsg('');
+    setSuccessMsg(`Autofilled credentials for ${acc.label} (${acc.email})`);
+  };
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleQuickLogin = async (acc) => {
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const destinationPortal = acc.role === 'management' ? 'management' : (acc.portal || portalBranch);
+      let user = null;
+      try {
+        const response = await AuthApi.login({ email: acc.email, password: acc.password });
+        if (response?.user) {
+          user = response.user;
+          if (response.token) localStorage.setItem('placeprep_token', response.token);
+        }
+      } catch (e) {
+        console.warn('API login skipped, using guaranteed hardcoded login:', e);
+      }
+
+      if (!user) {
+        user = {
+          id: Math.floor(Math.random() * 9000) + 1000,
+          name: acc.name,
+          email: acc.email,
+          role: acc.role,
+          branch: acc.role === 'student' ? 'Computer Science & Engineering' : acc.badge,
+          college: 'Indian Institute of Technology',
+          rollNumber: acc.role === 'student' ? '2024/CSE/084' : undefined,
+          graduationBatch: acc.role === 'student' ? '2026' : undefined,
+          status: 'ACTIVE',
+          onboardingCompleted: true,
+        };
+      }
+
+      setCurrentUser(user);
+      setPortalMode(destinationPortal);
+      setPortalRole(user.role);
+      if (user.graduationBatch) setGraduationBatch(user.graduationBatch);
+      setSuccessMsg(`Logged in as ${user.name} (${acc.label})`);
+      setTimeout(() => {
+        onAuthSuccess(user, destinationPortal);
+      }, 150);
+    } catch (err) {
+      setErrorMsg(err.message || 'Login failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const email = formData.email.trim().toLowerCase();
+      if (!email || !formData.password) throw new Error('Enter your email and password.');
+      if (authMode === 'register') {
+        if (selectedRole === 'management') throw new Error('Management accounts must be created by an administrator.');
+        if (!formData.fullName.trim()) throw new Error('Enter your full name.');
+        if (selectedRole === 'student') {
+          if (!formData.branch || !formData.branch.trim()) throw new Error('Please select your branch.');
+          if (formData.branch === 'Other' && (!formData.customBranch || !formData.customBranch.trim())) {
+            throw new Error('Please enter your branch / specialization.');
+          }
+        }
+        if (selectedRole === 'student' && !isCollegeEmail(email)) throw new Error('Use your official college email.');
+        if (formData.password !== formData.confirmPassword) throw new Error('Passwords do not match.');
+      }
+
+      const effectiveBranch = selectedRole === 'student'
+        ? (formData.branch === 'Other' ? formData.customBranch.trim() : formData.branch)
+        : (formData.branch || formData.department);
+
+      let user = null;
+      let destinationPortal = selectedRole === 'management' ? 'management' : portalBranch;
+
+      try {
+        const response = authMode === 'register'
+          ? await AuthApi.register({
+              name: formData.fullName.trim(),
+              email,
+              password: formData.password,
+              college: formData.college,
+              branch: effectiveBranch,
+              graduationBatch: formData.batch,
+              role: selectedRole,
+              rollNumber: formData.rollNumber,
+              department: formData.department,
+              designation: formData.designation,
+              company: formData.companyName,
+            })
+          : await AuthApi.login({ email, password: formData.password });
+
+        if (response?.user) {
+          user = {
+            ...response.user,
+            branch: effectiveBranch || response.user.branch,
+            customBranch: formData.branch === 'Other' ? formData.customBranch.trim() : ''
+          };
+          if (response.token) localStorage.setItem('placeprep_token', response.token);
+        }
+      } catch (backendErr) {
+        console.warn('Backend login fallback applied:', backendErr);
+        const matchingAcc = HARDCODED_ACCOUNTS.find((a) => a.email.toLowerCase() === email || a.role === selectedRole);
+        user = {
+          id: Math.floor(Math.random() * 9000) + 1000,
+          name: formData.fullName?.trim() || matchingAcc?.name || email.split('@')[0],
+          email,
+          role: selectedRole || matchingAcc?.role || 'student',
+          branch: effectiveBranch || (selectedRole === 'student' ? 'Computer Science & Engineering' : (matchingAcc?.badge || 'Operations')),
+          customBranch: formData.branch === 'Other' ? formData.customBranch.trim() : '',
+          college: formData.college || 'Indian Institute of Technology',
+          rollNumber: formData.rollNumber || (selectedRole === 'student' ? '2024/CSE/084' : undefined),
+          graduationBatch: formData.batch || '2026',
+          status: 'ACTIVE',
+          onboardingCompleted: authMode === 'register' && selectedRole === 'student' ? false : true,
+          currentOnboardingStep: authMode === 'register' && selectedRole === 'student' ? 1 : 7,
+          onboardingStatus: authMode === 'register' && selectedRole === 'student' ? 'PENDING' : 'COMPLETED',
+        };
+      }
+
+      if (authMode === 'register' && selectedRole === 'student') {
+        user.onboardingCompleted = false;
+        user.currentOnboardingStep = 1;
+        user.onboardingStatus = 'PENDING';
+      }
+
+      if (user.role === 'management') destinationPortal = 'management';
+      setCurrentUser(user);
+      setPortalMode(destinationPortal);
+      setPortalRole(user.role);
+      if (user.graduationBatch) setGraduationBatch(user.graduationBatch);
+
+      // Determine redirect target strictly for Student in Placement Portal
+      let targetRoute = null;
+      if (destinationPortal === 'placement' && (selectedRole === 'student' || user.role === 'student')) {
+        const isProfileComplete = user.onboardingCompleted === true && user.onboardingStatus === 'COMPLETED';
+        if (authMode === 'register' || !isProfileComplete) {
+          targetRoute = 'student-onboarding';
+        } else {
+          targetRoute = 'placement-portal';
+        }
+      }
+
+      onAuthSuccess(user, destinationPortal, targetRoute);
+    } catch (error) {
+      setErrorMsg(error.message || 'Unable to sign in. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAuthBack = () => {
+    setErrorMsg('');
+    if (authMode === 'register') {
+      // Create Account -> Back -> Previous Sign In page
+      setAuthMode('login');
+      return;
+    }
+    if (typeof onBackToGateway === 'function') {
+      onBackToGateway();
+    }
+  };
+
+  return (
+    <div className="auth-page min-h-screen w-full flex flex-col justify-between py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8 antialiased">
+      <div className="mx-auto w-full max-w-6xl my-auto flex flex-col justify-between gap-4">
+        
+        {/* Header Bar */}
+        <header className="flex items-center justify-between px-1 shrink-0 py-1">
+          <button 
+            type="button"
+            onClick={handleAuthBack} 
+            className="auth-back-button inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 hover:bg-white text-slate-700 hover:text-indigo-900 text-xs font-bold border border-slate-200/80 shadow-xs transition cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>{authMode === 'register' ? 'Back to Sign in' : 'All portals'}</span>
+          </button>
+          <PlacePrepLogo className="h-7 sm:h-8 w-auto" theme="light" />
+          <div className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white/80 border border-slate-200/70 px-3 py-1.5 rounded-xl shadow-xs">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            <span>Secure campus access</span>
+          </div>
+        </header>
+>>>>>>> main
 
           let altEmail = emailTrim;
           if (emailTrim === 'hod.cse@dtu.ac.in') altEmail = 'hod@placeprep.com';
           else if (emailTrim === 'neha.sharma@dtu.ac.in') altEmail = 'teacher@placeprep.com';
 
+<<<<<<< HEAD
           let retrySuccess = false;
           if (altPassword || altEmail !== emailTrim) {
             try {
@@ -577,3 +1002,361 @@ function InputField({ label, icon: Icon, action, children }) {
     </label>
   );
 }
+=======
+            <div className="relative z-10 mt-auto max-w-md">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-indigo-50 backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                <span>BUILT FOR AMBITIOUS CAMPUSES</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black leading-[1.1] tracking-[-0.04em] text-white">
+                The next great opportunity begins here.
+              </h1>
+              <p className="mt-3 text-xs sm:text-sm leading-relaxed text-indigo-100/90">
+                A considered workspace for students, faculties, and placement teams to turn preparation into outcomes.
+              </p>
+              
+              <div className="mt-6 grid grid-cols-3 gap-2.5">
+                {[
+                  ['Learn', 'academic workspace'],
+                  ['Prepare', 'career workspace'],
+                  ['Connect', 'placement workspace'],
+                ].map(([value, label]) => (
+                  <div key={label} className="rounded-2xl border border-white/15 bg-slate-950/25 p-2.5 backdrop-blur-md text-center">
+                    <div className="text-base sm:text-lg font-black tracking-tight text-white">{value}</div>
+                    <div className="mt-0.5 text-[10px] font-semibold text-indigo-200/80 uppercase tracking-wide leading-tight">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          {/* Right Form Section */}
+          <section className="relative lg:col-span-7 bg-white px-5 py-6 sm:px-8 sm:py-8 xl:px-10 flex flex-col justify-center">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400" />
+            <div className="mx-auto w-full max-w-lg">
+              
+              {/* Heading */}
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-[0.12em]">
+                    <ActivePortalIcon className="h-3.5 w-3.5" />
+                    <span>{activePortal.label} portal</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                    {authMode === 'login' ? 'Welcome back.' : 'Start your journey.'}
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {authMode === 'login' ? 'Sign in to continue where your ambitions left off.' : 'Create a profile built for your campus role.'}
+                  </p>
+                </div>
+                <div className="hidden rounded-2xl border border-slate-100 bg-slate-50 p-2 text-slate-400 sm:block">
+                  <CircleHelp className="h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Portal Switcher */}
+              <div className="auth-portal-switcher mb-3.5 grid grid-cols-2 gap-1.5 p-1">
+                {portalOptions.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => changePortal(id)}
+                    className={`auth-portal-option ${portalBranch === id ? 'is-active' : ''}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Mode Tabs */}
+              <div className="mb-3.5 flex items-center justify-between border-b border-slate-100">
+                <div className="flex gap-4">
+                  {['login', 'register'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => { setAuthMode(mode); setErrorMsg(''); }}
+                      className={`auth-mode-tab ${authMode === mode ? 'is-active' : ''}`}
+                    >
+                      {mode === 'login' ? 'Sign in' : 'Create account'}
+                    </button>
+                  ))}
+                </div>
+                <span className="hidden text-[11px] font-semibold text-slate-400 sm:block">Role-aware access</span>
+              </div>
+
+
+
+              {/* Role Picker */}
+              <div className="mb-3.5">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">I’m signing in as</label>
+                  <span className="text-[11px] text-slate-400">Choose your workspace</span>
+                </div>
+                <div className={`grid gap-1.5 ${roleOptions.length === 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                  {roleOptions.map(({ id, label, icon: Icon, description }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => handleRoleSelect(id)}
+                      className={`auth-role-card ${selectedRole === id ? 'is-selected' : ''}`}
+                    >
+                      <span className="auth-role-icon"><Icon className="h-3.5 w-3.5" /></span>
+                      <span className="min-w-0 text-left">
+                        <span className="block truncate text-xs font-bold text-slate-800">{label}</span>
+                        <span className="block truncate text-[10px] text-slate-400">{description}</span>
+                      </span>
+                      {selectedRole === id && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-indigo-600" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Feedback Alerts */}
+              {errorMsg && <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{errorMsg}</div>}
+              {successMsg && <div className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4" />{successMsg}</div>}
+
+              {/* Input Form with zero-overlap InputField */}
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {authMode === 'register' && (
+                  <InputField label="Full name" icon={User}>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      placeholder="Enter full name"
+                      className={fieldClass}
+                      required
+                    />
+                  </InputField>
+                )}
+
+                <InputField
+                  label={
+                    <span className="flex items-center justify-between">
+                      <span>Email address</span>
+                      {authMode === 'login' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const acc = HARDCODED_ACCOUNTS.find((a) => a.role === selectedRole) || HARDCODED_ACCOUNTS[0];
+                            handleAutofill(acc);
+                          }}
+                          className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3 text-orange-500" />
+                          <span>Autofill {roleOptions.find((r) => r.id === selectedRole)?.label || 'Credentials'}</span>
+                        </button>
+                      )}
+                    </span>
+                  }
+                  icon={Mail}
+                >
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder={selectedRole === 'hr' ? 'recruiter@company.com' : 'you@university.edu'}
+                    className={fieldClass}
+                    required
+                  />
+                </InputField>
+                {formData.email && (
+                  <div className="mt-1 flex items-center gap-1.5 text-[11px] px-1">
+                    {isCollegeEmail(formData.email) ? (
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Verified College Domain (.edu / .ac.in / .edu.in)
+                      </span>
+                    ) : selectedRole === 'student' ? (
+                      <span className="text-amber-300 font-medium flex items-center gap-1">
+                        <CircleHelp className="w-3.5 h-3.5 text-amber-300" />
+                        Please use official college email (.edu, .ac.in, .edu.in)
+                      </span>
+                    ) : null}
+                  </div>
+                )}
+
+                {authMode === 'register' && selectedRole === 'student' && (
+                  <>
+                    <InputField label="Branch / specialization" icon={GraduationCap}>
+                      <select
+                        name="branch"
+                        aria-label="Branch / specialization"
+                        value={formData.branch}
+                        onChange={handleInputChange}
+                        className={fieldClass}
+                        required
+                      >
+                        <option value="" disabled>Select your branch</option>
+                        {INITIAL_BRANCHES.map((branch) => (
+                          <option key={branch} value={branch}>{branch}</option>
+                        ))}
+                      </select>
+                    </InputField>
+
+                    {formData.branch === 'Other' && (
+                      <InputField label="Enter Your Branch / Specialization" icon={GraduationCap}>
+                        <input
+                          type="text"
+                          name="customBranch"
+                          aria-label="Enter Your Branch / Specialization"
+                          value={formData.customBranch || ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Artificial Intelligence, Aerospace Engineering"
+                          className={fieldClass}
+                          required
+                        />
+                      </InputField>
+                    )}
+                  </>
+                )}
+
+                {authMode === 'register' && selectedRole === 'student' && (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <InputField label="Roll number">
+                      <input
+                        type="text"
+                        name="rollNumber"
+                        value={formData.rollNumber}
+                        onChange={handleInputChange}
+                        placeholder="2024/CSE/084"
+                        className={`${fieldClass} no-icon`}
+                      />
+                    </InputField>
+                    <InputField label="Graduation batch">
+                      <select
+                        name="batch"
+                        value={formData.batch}
+                        onChange={handleInputChange}
+                        className={`${fieldClass} no-icon`}
+                      >
+                        <option value="">Choose batch</option>
+                        {Array.from({ length: 7 }, (_, index) => String(new Date().getFullYear() + index)).map((year) => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </InputField>
+                  </div>
+                )}
+
+                {authMode === 'register' && selectedRole === 'hr' && (
+                  <InputField label="Company / organization">
+                    <input
+                      type="text"
+                      name="companyName"
+                      value={formData.companyName}
+                      onChange={handleInputChange}
+                      placeholder="Enter company name"
+                      className={`${fieldClass} no-icon`}
+                      required
+                    />
+                  </InputField>
+                )}
+
+                <InputField
+                  label="Password"
+                  icon={Lock}
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="auth-input-action p-1"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  }
+                >
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Enter your password"
+                    className={`${fieldClass} has-action`}
+                    required
+                  />
+                </InputField>
+
+                {authMode === 'register' && (
+                  <InputField label="Confirm password" icon={Lock}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="Repeat your password"
+                      className={fieldClass}
+                      required
+                    />
+                  </InputField>
+                )}
+
+                <div className="flex items-center justify-between pt-0.5 text-[11px] font-medium">
+                  <label className="flex cursor-pointer items-center gap-2 text-slate-500">
+                    <input type="checkbox" defaultChecked className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    Keep me signed in
+                  </label>
+                  {authMode === 'login' && (
+                    <button type="button" className="text-indigo-600 transition hover:text-indigo-800">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+
+                <button type="submit" disabled={isSubmitting} className="auth-submit-button py-2.5 disabled:opacity-75 disabled:cursor-wait">
+                  <span>
+                    {isSubmitting
+                      ? 'Saving to database...'
+                      : authMode === 'login'
+                        ? `Continue as ${roleOptions.find((role) => role.id === selectedRole)?.label}`
+                        : 'Create account & continue'}
+                  </span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[10px] leading-4 text-slate-400">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Protected with institution-grade security
+              </p>
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function InputField({ label, icon: Icon, action, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-bold text-slate-700">{label}</span>
+      <span className="relative block">
+        {Icon && (
+          <Icon className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        )}
+        {React.cloneElement(children, {
+          style: {
+            paddingLeft: Icon ? '2.85rem' : '0.85rem',
+            paddingRight: action ? '2.85rem' : '0.85rem',
+            ...(children.props.style || {}),
+          },
+        })}
+        {action && (
+          <span className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex items-center">
+            {action}
+          </span>
+        )}
+      </span>
+    </label>
+  );
+}
+>>>>>>> main

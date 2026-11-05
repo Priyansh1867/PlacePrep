@@ -22,22 +22,7 @@ public class InstituteLocationService {
     private LocationUpdateHistoryRepository historyRepository;
 
     public Optional<InstituteLocation> getCurrentLocation() {
-        Optional<InstituteLocation> opt = locationRepository.findTopByOrderByUpdatedAtDesc();
-        if (opt.isPresent()) {
-            return opt;
-        }
-        // Fallback default DTU Campus center so that 100m geofencing is always fully operational
-        InstituteLocation defaultLoc = new InstituteLocation();
-        defaultLoc.setId(1L);
-        defaultLoc.setInstituteName("Delhi Technological University (DTU) Campus");
-        defaultLoc.setInstituteAddress("Shahbad Daulatpur, Main Bawana Road");
-        defaultLoc.setCity("Delhi");
-        defaultLoc.setState("Delhi");
-        defaultLoc.setLatitude(28.7495);
-        defaultLoc.setLongitude(77.1170);
-        defaultLoc.setGeofenceRadiusMeters(100);
-        defaultLoc.setLocationStatus("ACTIVE");
-        return Optional.of(defaultLoc);
+        return locationRepository.findTopByOrderByUpdatedAtDesc();
     }
 
     public InstituteLocation saveOrUpdateLocation(

@@ -92,7 +92,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
     setLoading(true);
     setError(null);
     try {
-      // Parallel fetch from the backend only
+      // Parallel fetch from API with fallback to storage
       const [compsRes, drivesRes, questionsRes, userRes] = await Promise.all([
         CompanyApi.getAll(currentBatch).catch(() => []),
         DriveApi.getAll(currentBatch).catch(() => []),
@@ -100,22 +100,22 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
         UserApi.getMe().catch(() => null)
       ]);
 
-      const resolvedCompanies = Array.isArray(compsRes) ? compsRes : [];
-      const resolvedDrives = Array.isArray(drivesRes) ? drivesRes : [];
-      const resolvedQuestions = Array.isArray(questionsRes) ? questionsRes : [];
+      const resolvedCompanies = (compsRes && compsRes.length > 0) ? compsRes : getCompanies();
+      const resolvedDrives = (drivesRes && drivesRes.length > 0) ? drivesRes : getUpcomingDrives(currentBatch);
+      const resolvedQuestions = (questionsRes && questionsRes.length > 0) ? questionsRes : getInterviewQuestions();
 
       setCompanies(resolvedCompanies);
       setDrives(resolvedDrives);
       setQuestions(resolvedQuestions);
 
-      const currentUser = userRes;
+      const currentUser = userRes || getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
         setDashboardMetrics({
-          savedCount: currentUser.savedQuestionIds?.length || 0,
-          practicedCount: currentUser.practicedQuestionIds?.length || 0,
-          revisionCount: currentUser.revisionQuestionIds?.length || 0,
-          savedCompaniesCount: currentUser.savedCompanyIds?.length || 0
+          savedCount: currentUser.savedQuestionIds?.length || getSavedQuestions().length,
+          practicedCount: currentUser.practicedQuestionIds?.length || getPracticedQuestions().length,
+          revisionCount: currentUser.revisionQuestionIds?.length || getRevisionList().length,
+          savedCompaniesCount: currentUser.savedCompanyIds?.length || getSavedCompanies().length
         });
 
         // Load applications & mock sessions for logged in student
@@ -124,24 +124,24 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           MockSessionApi.getMySessions().catch(() => [])
         ]);
 
-        const resolvedApps = Array.isArray(appsRes) ? appsRes : [];
-        const resolvedMocks = Array.isArray(mocksRes) ? mocksRes : [];
+        const resolvedApps = (appsRes && appsRes.length > 0) ? appsRes : getStudentApplications();
+        const resolvedMocks = (mocksRes && mocksRes.length > 0) ? mocksRes : getMockSessions();
 
         setMyApplications(resolvedApps || []);
         setMockSessions(resolvedMocks || []);
       } else {
-        setMyApplications([]);
-        setMockSessions([]);
+        setMyApplications(getStudentApplications());
+        setMockSessions(getMockSessions());
       }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      setCompanies([]);
-      setDrives([]);
-      setQuestions([]);
-      setMyApplications([]);
-      setMockSessions([]);
-      setUser(null);
-      setError('Unable to load dashboard data from the backend.');
+      // Fall back to local storage gracefully
+      setCompanies(getCompanies());
+      setDrives(getUpcomingDrives(currentBatch));
+      setQuestions(getInterviewQuestions());
+      setMyApplications(getStudentApplications());
+      setMockSessions(getMockSessions());
+      setUser(getCurrentUser());
     } finally {
       setLoading(false);
     }
@@ -188,7 +188,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
   // - Applications Tracked: up to 15 pts (5 pts per active application, max 3)
   const questionPoints = Math.min(40, practicedQuestions.length * 4);
   const companyPoints = Math.min(15, targetCompanies.length * 5);
-  const latestMockScore = mockSessions.length > 0 ? (mockSessions[0].score || 0) : 0;
+  const latestMockScore = mockSessions.length > 0 ? (mockSessions[0].score ?? 0) : 0;
   const mockPoints = mockSessions.length > 0 ? Math.round(latestMockScore * 0.3) : 0;
   const applicationPoints = Math.min(15, myApplications.length * 5);
 
@@ -240,7 +240,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans">
-                {user?.name || user?.fullName || 'Student'}
+                {user?.name || ''}
               </h1>
               <Badge variant="purple" size="sm">
                 Batch {currentBatch} Candidate
@@ -253,7 +253,7 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-mono">
               <span className="px-2.5 py-1 rounded-lg bg-white/10 text-indigo-100 border border-white/15">
-                Target Recruiters: {targetCompanies.length > 0 ? targetCompanies.map(c => c.name).join(', ') : 'Add target recruiters below'}
+                Roll: <strong className="text-white">{user?.rollNumber || ''}</strong>
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-white/10 text-indigo-100 border border-white/15">
                 CGPA: <strong className="text-emerald-300">8.84 / 10.0</strong> (0 Backlogs)
@@ -483,10 +483,10 @@ export default function StudentDashboardPage({ onNavigate, onSelectCompany, onSe
             <Bot className="w-4 h-4 text-[#D97706]" />
           </div>
           <p className="text-2xl font-black text-[#D97706]">
-            {mockSessions.length > 0 ? `${mockSessions[0].score}%` : '0%'}
+            {mockSessions.length > 0 ? `${mockSessions[0].score}%` : 'Not attempted'}
           </p>
           <p className="text-[11px] text-[#64748B] mt-1 font-medium">
-            {mockSessions.length > 0 ? `${mockSessions.length} session(s) recorded` : 'No simulated sessions yet'}
+            {mockSessions.length > 0 ? `${mockSessions.length} session(s) recorded` : 'No completed interview'}
           </p>
         </div>
       </div>

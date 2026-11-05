@@ -293,8 +293,8 @@ export default function Navbar({
                 <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
                 <div className="absolute right-0 mt-3 w-72 sm:w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-[0_16px_40px_rgba(17,20,57,0.12)] py-2 z-50 animate-in fade-in-50 zoom-in-95 text-xs max-h-[calc(100vh-100px)] overflow-y-auto">
                 <div className="px-4 py-3 border-b border-black/[0.05]">
-                  <p className="font-semibold text-[#111439]">{user?.name || user?.fullName || 'Student'}</p>
-                  <p className="text-[11px] text-slate-500 truncate">{user?.email || 'Active Account'}</p>
+                  <p className="font-semibold text-[#111439]">{user?.name || ''}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{user?.email || ''}</p>
                   <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold uppercase">
                     Role: {user?.role || 'STUDENT'} • {batch}
                   </div>

@@ -1,7 +1,6 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.AttendanceService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -18,13 +17,13 @@ public class StaffAttendanceTool {
     @Tool(description = "Get class attendance sessions for authorized teaching or management staff.")
     public Object listClassSessions(String department, String semester, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.getClassSessionsDto(department, semester));
+        return attendanceService.getClassSessions(department, semester);
     }
 
     @Tool(description = "Get attendance records for a session, for authorized staff only.")
     public Object getSessionRecords(@ToolParam(description = "Class session ID") Long sessionId, ToolContext context) {
         AiToolAuthorization.requireStaff(context);
-        return EntityResponseMapper.toJsonSafe(attendanceService.getSessionRecordsDto(sessionId));
+        return attendanceService.getSessionRecords(sessionId);
     }
 
     @Tool(description = "Get a department attendance report, for authorized staff only.")

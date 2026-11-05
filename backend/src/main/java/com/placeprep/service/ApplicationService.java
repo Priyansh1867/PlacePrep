@@ -2,13 +2,10 @@ package com.placeprep.service;
 
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.StudentApplication;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -52,8 +49,7 @@ public class ApplicationService {
         this.conflictService = conflictService;
     }
 
-    @Transactional
-    public EntityResponseDto registerApplication(StudentApplication app) {
+    public StudentApplication registerApplication(StudentApplication app) {
         if (app.getApplicationId() == null || app.getApplicationId().trim().isEmpty()) {
             app.setApplicationId("APP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         }
@@ -152,35 +148,33 @@ public class ApplicationService {
             selectionWorkflowService.initializePipeline(saved);
         }
 
-        return EntityResponseMapper.toDto(saved);
+        return saved;
     }
 
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getMyApplications(String userEmailOrId) {
+    public List<StudentApplication> getMyApplications(String userEmailOrId) {
         if (userEmailOrId == null || userEmailOrId.trim().isEmpty()) {
-            return List.of();
+            return Collections.emptyList();
         }
-        return EntityResponseMapper.toDtoList(applicationRepository.findByStudentIdOrStudentEmail(userEmailOrId, userEmailOrId));
+        return applicationRepository.findByStudentIdOrStudentEmail(userEmailOrId, userEmailOrId);
     }
 
-    public List<EntityResponseDto> getStudentApplications(String studentId) {
-        return EntityResponseMapper.toDtoList(applicationRepository.findByStudentId(studentId));
+    public List<StudentApplication> getStudentApplications(String studentId) {
+        return applicationRepository.findByStudentId(studentId);
     }
 
-    public List<EntityResponseDto> getDriveApplications(String driveId) {
-        return EntityResponseMapper.toDtoList(applicationRepository.findByDriveId(driveId));
+    public List<StudentApplication> getDriveApplications(String driveId) {
+        return applicationRepository.findByDriveId(driveId);
     }
 
-    public List<EntityResponseDto> getAllApplications() {
-        return EntityResponseMapper.toDtoList(applicationRepository.findAll());
+    public List<StudentApplication> getAllApplications() {
+        return applicationRepository.findAll();
     }
 
-    public Optional<EntityResponseDto> getByApplicationId(String applicationId) {
-        return EntityResponseMapper.toDtoOptional(applicationRepository.findByApplicationId(applicationId));
+    public Optional<StudentApplication> getByApplicationId(String applicationId) {
+        return applicationRepository.findByApplicationId(applicationId);
     }
 
-    @Transactional
-    public EntityResponseDto updateStatus(
+    public StudentApplication updateStatus(
             String applicationId,
             String newStatus,
             String currentRound,
@@ -225,6 +219,6 @@ public class ApplicationService {
             }
         }
 
-        return EntityResponseMapper.toDto(applicationRepository.save(app));
+        return applicationRepository.save(app);
     }
 }

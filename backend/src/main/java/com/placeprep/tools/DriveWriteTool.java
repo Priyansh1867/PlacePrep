@@ -19,19 +19,19 @@ public class DriveWriteTool {
     @Tool(description = "Create a placement drive from the supplied details. Requires ADMIN permission.")
     public Object createDrive(PlacementDrive drive, ToolContext context) {
         AiToolAuthorization.requireAdmin(context);
-        return driveService.createDto(drive);
+        return driveService.create(drive);
     }
 
     @Tool(description = "Update rounds and round configuration for a placement drive. Requires ADMIN permission.")
     public Object updateDriveRounds(String driveId, List<String> rounds, String roundConfigsJson, ToolContext context) {
         AiToolAuthorization.requireAdmin(context);
-        return driveService.updateRoundsDto(driveId, rounds, roundConfigsJson);
+        return driveService.updateRounds(driveId, rounds, roundConfigsJson);
     }
 
     @Tool(description = "Update venue, reporting time, and instructions for a placement drive. Requires ADMIN permission.")
     public Object updateDriveInstructions(String driveId, String venue, String reportingTime,
                                           String instructions, ToolContext context) {
         AiToolAuthorization.requireAdmin(context);
-        return driveService.updateInstructionsDto(driveId, venue, reportingTime, instructions);
+        return driveService.updateInstructions(driveId, venue, reportingTime, instructions);
     }
 }

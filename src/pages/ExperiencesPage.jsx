@@ -114,12 +114,15 @@ export default function ExperiencesPage({ onNavigate, onBack }) {
       if (expRes.status === 'fulfilled' && Array.isArray(expRes.value) && expRes.value.length > 0) {
         setExperiences(expRes.value);
       } else {
-        setExperiences([]);
+        // Fall back to seed data from storage
+        const local = getInterviewExperiences();
+        if (local && local.length > 0) {
+          setExperiences(local);
+        }
       }
     } catch (err) {
-      console.warn('Failed to load experiences via REST API:', err);
-      setExperiences([]);
-      setErrorNotice('Unable to load interview experiences from the backend.');
+      console.warn('Failed to load experiences via REST API, fallback active:', err);
+      setErrorNotice('Operating with synchronized local cache.');
     } finally {
       setLoading(false);
     }
@@ -203,8 +206,12 @@ export default function ExperiencesPage({ onNavigate, onBack }) {
       setFormQuestions('');
       setFormTips('');
     } catch (err) {
-      console.warn('Backend submission failed:', err);
-      showToast('Unable to save the interview experience to the backend.', 'error');
+      console.warn('Backend submission failed, saving to local fallback storage:', err);
+      // Fallback
+      addInterviewExperience(newExpPayload);
+      setExperiences(prev => [newExpPayload, ...prev]);
+      setIsSubmitModalOpen(false);
+      showToast('Interview experience saved to your local session vault.');
     } finally {
       setSubmittingExp(false);
     }

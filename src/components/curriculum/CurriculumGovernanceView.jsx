@@ -1144,7 +1144,7 @@ export default function CurriculumGovernanceView({ onNavigate }) {
                     required
                     value={targetForm.assignedFaculty}
                     onChange={(e) => setTargetForm(f => ({ ...f, assignedFaculty: e.target.value }))}
-                    placeholder="e.g. Dr. Neha Sharma"
+                    placeholder="Enter faculty name"
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium focus:outline-none focus:border-indigo-500"
                   />
                 </div>

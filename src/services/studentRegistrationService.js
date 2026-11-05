@@ -24,7 +24,9 @@ export const VALID_BRANCHES = [
   'Electronics and Communication Engineering',
   'Electrical and Electronics Engineering',
   'Mechanical Engineering',
-  'Civil Engineering'
+  'Civil Engineering',
+  'Artificial Intelligence and Data Science',
+  'Other'
 ];
 
 // Branch alias normalization
@@ -39,6 +41,7 @@ export function normalizeBranchName(rawBranch) {
   if (lower === 'eee' || lower.includes('electrical')) return 'Electrical and Electronics Engineering';
   if (lower === 'mech' || lower.includes('mechanical')) return 'Mechanical Engineering';
   if (lower === 'civil' || lower.includes('civil')) return 'Civil Engineering';
+  if (lower === 'aids' || lower.includes('artificial intelligence') || lower.includes('data science')) return 'Artificial Intelligence and Data Science';
 
   // Return original capitalized string if not directly mapped
   return trimmed;
@@ -222,44 +225,7 @@ export const TEMPLATE_COLUMNS = [
  * @param {string} format - 'xlsx' or 'csv'
  */
 export function downloadStudentTemplate(format = 'xlsx') {
-  const sampleRows = [
-    {
-      'Student Full Name *': 'Aarav Sharma',
-      'College Email Address *': 'aarav.sharma@dtu.ac.in',
-      'University Roll Number *': '2024/CSE/102',
-      'Graduation Batch *': '2026',
-      'Branch *': 'Computer Science and Engineering',
-      'Current CGPA *': '8.75',
-      'University Registration Number (Optional)': 'REG-2022-CSE-102',
-      'Mobile Number (Optional)': '+91 9876543210',
-      'Class 10 Percentage (Optional)': '92.5',
-      'Class 12 Percentage (Optional)': '89.4'
-    },
-    {
-      'Student Full Name *': 'Simran Kaur',
-      'College Email Address *': 'simran.kaur@dtu.ac.in',
-      'University Roll Number *': '2024/IT/205',
-      'Graduation Batch *': '2026',
-      'Branch *': 'Information Technology',
-      'Current CGPA *': '9.10',
-      'University Registration Number (Optional)': 'REG-2022-IT-205',
-      'Mobile Number (Optional)': '+91 9811223344',
-      'Class 10 Percentage (Optional)': '94.0',
-      'Class 12 Percentage (Optional)': '91.2'
-    },
-    {
-      'Student Full Name *': 'Devansh Gupta',
-      'College Email Address *': 'devansh.gupta@dtu.ac.in',
-      'University Roll Number *': '2024/ECE/310',
-      'Graduation Batch *': '2027',
-      'Branch *': 'Electronics and Communication Engineering',
-      'Current CGPA *': '8.20',
-      'University Registration Number (Optional)': 'REG-2023-ECE-310',
-      'Mobile Number (Optional)': '+91 9845012345',
-      'Class 10 Percentage (Optional)': '88.0',
-      'Class 12 Percentage (Optional)': '85.5'
-    }
-  ];
+  const sampleRows = [{"Student Full Name *":"","College Email Address *":"","University Roll Number *":"","Graduation Batch *":"","Branch *":"","Current CGPA *":"","University Registration Number (Optional)":"","Mobile Number (Optional)":"","Class 10 Percentage (Optional)":"","Class 12 Percentage (Optional)":""}];
 
   const filename = `PlacePrep_Student_Registration_Template.${format}`;
 
@@ -598,7 +564,7 @@ export function registerSingleStudent(formData, actor = getCurrentUser()) {
       graduationBatch: formData.batch || formData.graduationBatch,
       branch: formData.branch,
       cgpa: formData.cgpa,
-      collegeName: formData.college || 'Delhi Technological University (DTU)'
+      collegeName: formData.college || ''
     },
     existingStudents,
     new Set(),

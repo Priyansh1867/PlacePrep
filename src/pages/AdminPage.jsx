@@ -151,23 +151,7 @@ export default function AdminPage({ onNavigate, onBack }) {
     loadAdminData();
   }, []);
 
-  // One-click demo admin switch
-  const handleSwitchToAdmin = async () => {
-    try {
-      setSubmittingAction(true);
-      const res = await AuthApi.demoLogin('admin');
-      if (res && res.user) {
-        setCurrentUser(res.user);
-        setCurrentUserState(res.user);
-        showToast('Authenticated as Placement Officer (ROLE_ADMIN). Full write privileges activated.');
-        await loadAdminData();
-      }
-    } catch (err) {
-      showToast('Authentication failed: ' + err.message, 'error');
-    } finally {
-      setSubmittingAction(false);
-    }
-  };
+  const handleSwitchToAdmin = () => { showToast('Sign in with your administrator account to manage records.', 'error'); };
 
   // 1. Create Company Profile (Backend REST)
   const handleCreateCompany = async (e) => {
@@ -551,7 +535,7 @@ export default function AdminPage({ onNavigate, onBack }) {
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Recruiter Hubs</span>
               <p className="text-3xl font-black text-slate-900 mt-1">{companies.length}</p>
-              <p className="text-xs text-emerald-600 font-semibold mt-1">✓ Live in H2 database</p>
+              <p className="text-xs text-emerald-600 font-semibold mt-1">Database records</p>
             </div>
 
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
@@ -581,7 +565,7 @@ export default function AdminPage({ onNavigate, onBack }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block font-bold">Persistence Layer:</span>
-                <span className="font-extrabold text-slate-900 text-sm mt-0.5 block">H2 JPA Database (Live)</span>
+                <span className="font-extrabold text-slate-900 text-sm mt-0.5 block">Application database</span>
                 <p className="text-slate-500 mt-1">All mutations persist across server sessions.</p>
               </div>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
@@ -591,7 +575,7 @@ export default function AdminPage({ onNavigate, onBack }) {
               </div>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block font-bold">Recency Weight:</span>
-                <span className="font-extrabold text-emerald-600 text-sm mt-0.5 block">1.4x for 2026 Drive Data</span>
+                <span className="font-extrabold text-emerald-600 text-sm mt-0.5 block">Based on registered drive records</span>
                 <p className="text-slate-500 mt-1">Grounding verified with zero synthetic statistics.</p>
               </div>
             </div>

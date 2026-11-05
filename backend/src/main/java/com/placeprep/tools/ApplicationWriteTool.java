@@ -2,7 +2,6 @@ package com.placeprep.tools;
 
 import com.placeprep.model.StudentApplication;
 import com.placeprep.service.ApplicationService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
@@ -19,7 +18,7 @@ public class ApplicationWriteTool {
     public Object registerForDrive(StudentApplication application, ToolContext context) {
         String userId = AiToolAuthorization.userId(context);
         application.setStudentId(userId);
-        return EntityResponseMapper.toJsonSafe(applicationService.registerApplication(application));
+        return applicationService.registerApplication(application);
     }
 
     @Tool(description = "Update placement application status. Requires placement staff permission.")
@@ -27,7 +26,7 @@ public class ApplicationWriteTool {
                                           String scheduledDate, String scheduledTime, String scheduledEndTime,
                                           String venue, String instructions, ToolContext context) {
         AiToolAuthorization.requirePlacementStaff(context);
-        return EntityResponseMapper.toJsonSafe(applicationService.updateStatus(applicationId, status, currentRound, scheduledDate,
-                scheduledTime, scheduledEndTime, venue, instructions));
+        return applicationService.updateStatus(applicationId, status, currentRound, scheduledDate,
+                scheduledTime, scheduledEndTime, venue, instructions);
     }
 }

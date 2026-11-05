@@ -21,6 +21,7 @@ import {
   INITIAL_PUSH_NOTIFICATIONS,
   INITIAL_FEEDBACK_LOOP
 } from '../data/portalWorkflowData.js';
+import { getAllStudents } from './academicRecordsService.js';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'placeprep_current_user',
@@ -55,39 +56,8 @@ const STORAGE_KEYS = {
   FULL_STUDENT_PROFILE: 'placeprep_student_full_profile'
 };
 
-// Temporary integration mode: API responses are the only source of application data.
-// Authentication and small UI/session preferences remain local so a refresh keeps the session.
-const BACKEND_ONLY = true;
-const LOCAL_SESSION_KEYS = new Set([
-  STORAGE_KEYS.CURRENT_USER,
-  STORAGE_KEYS.GRADUATION_BATCH,
-  STORAGE_KEYS.ONBOARDING_DONE,
-  STORAGE_KEYS.PORTAL_MODE,
-  STORAGE_KEYS.PORTAL_ROLE
-]);
-const LEGACY_DATA_KEYS = Object.values(STORAGE_KEYS).filter((key) => !LOCAL_SESSION_KEYS.has(key));
-
-if (BACKEND_ONLY && typeof localStorage !== 'undefined') {
-  LEGACY_DATA_KEYS.forEach((key) => {
-    try {
-      localStorage.removeItem(key);
-    } catch (err) {
-      console.warn(`Unable to clear local mock data (${key}):`, err);
-    }
-  });
-}
-
-function emptyValue(defaultValue) {
-  if (Array.isArray(defaultValue)) return [];
-  if (defaultValue && typeof defaultValue === 'object') return {};
-  return null;
-}
-
 // Safe JSON parser
 function getStorageItem(key, defaultValue) {
-  if (BACKEND_ONLY && !LOCAL_SESSION_KEYS.has(key)) {
-    return emptyValue(defaultValue);
-  }
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
@@ -98,7 +68,6 @@ function getStorageItem(key, defaultValue) {
 }
 
 function setStorageItem(key, value) {
-  if (BACKEND_ONLY && !LOCAL_SESSION_KEYS.has(key)) return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
@@ -124,9 +93,7 @@ function dispatchSafeCustomEvent(eventName, detail) {
 }
 
 // User Profile
-export function getCurrentUser() {
-  return getStorageItem(STORAGE_KEYS.CURRENT_USER, null);
-}
+export function getCurrentUser() { return getStorageItem(STORAGE_KEYS.CURRENT_USER, null); }
 
 export function setCurrentUser(user) {
   try {
@@ -155,92 +122,96 @@ export function generateUniqueStudentId(seed = '') {
 
 export function getInitialFullStudentProfile(currentUser = null) {
   const user = currentUser || getCurrentUser() || {};
-  const userEmail = user?.email || '';
-  const userName = user?.name || '';
-  const uniqueId = user?.uniqueStudentId || (userEmail ? generateUniqueStudentId(userEmail) : '');
-
-  return {
-    uniqueStudentId: uniqueId,
-    verified: false,
-    avatarTheme: 'emerald',
-    basicDetails: {
-      fullName: userName,
-      email: userEmail,
-      phone: user?.phone || '',
-      alternatePhone: '',
-      dateOfBirth: user?.dateOfBirth || '',
-      gender: user?.gender || '',
-      bloodGroup: '',
-      category: '',
-      differentlyAbled: '',
-      currentAddress: user?.currentAddress || '',
-      permanentAddress: '',
-      pincode: '',
-      hometown: '',
-      state: '',
-      nationality: '',
-      linkedIn: user?.linkedIn || '',
-      github: user?.github || '',
-      portfolio: user?.portfolio || '',
-      leetCode: user?.leetCode || ''
-    },
-    educationDetails: {
-      college: user?.college || '',
-      degree: '',
-      branch: user?.branch || '',
-      graduationBatch: user?.graduationBatch || '',
-      rollNumber: user?.rollNumber || '',
-      registrationNumber: user?.rollNumber || '',
-      cgpa: user?.cgpa || '',
-      activeBacklogs: 0,
-      totalCreditsEarned: '',
-      twelfthSchool: '',
-      twelfthBoard: '',
-      twelfthStream: '',
-      twelfthPercentage: user?.twelfthPercentage || '',
-      twelfthYear: '',
-      tenthSchool: '',
-      tenthBoard: '',
-      tenthPercentage: user?.tenthPercentage || '',
-      tenthYear: ''
-    },
-    workExperiences: [],
-    skills: {
-      technical: [],
-      coreSubjects: [],
-      languages: []
-    },
-    responsibilities: [],
-    projects: [],
-    accomplishments: [],
-    volunteering: [],
-    extraCurricular: [],
-    documents: {
-      resumeFileName: '',
-      resumeLastUpdated: '',
-      resumeUrl: '',
-      aboutMe: '',
-      transcriptsUploaded: false,
-      idProofUploaded: false
-    },
-    guardians: {
-      fatherName: '',
-      fatherOccupation: '',
-      fatherPhone: '',
-      fatherEmail: '',
-      motherName: '',
-      motherOccupation: '',
-      motherPhone: '',
-      emergencyContactName: '',
-      emergencyRelation: '',
-      emergencyPhone: '',
-      residentialAddress: ''
-    }
-  };
+  const profile = {
+  "uniqueStudentId": "",
+  "verified": false,
+  "avatarTheme": "emerald",
+  "basicDetails": {
+    "fullName": "",
+    "email": "",
+    "phone": "",
+    "alternatePhone": "",
+    "dateOfBirth": "",
+    "gender": "",
+    "bloodGroup": "",
+    "category": "",
+    "differentlyAbled": "",
+    "currentAddress": "",
+    "permanentAddress": "",
+    "pincode": "",
+    "hometown": "",
+    "state": "",
+    "nationality": "",
+    "linkedIn": "",
+    "github": "",
+    "portfolio": "",
+    "leetCode": ""
+  },
+  "educationDetails": {
+    "college": "",
+    "degree": "",
+    "branch": "",
+    "graduationBatch": "",
+    "rollNumber": "",
+    "registrationNumber": "",
+    "cgpa": "",
+    "activeBacklogs": "",
+    "totalCreditsEarned": "",
+    "twelfthSchool": "",
+    "twelfthBoard": "",
+    "twelfthStream": "",
+    "twelfthPercentage": "",
+    "twelfthYear": "",
+    "tenthSchool": "",
+    "tenthBoard": "",
+    "tenthPercentage": "",
+    "tenthYear": ""
+  },
+  "workExperiences": [],
+  "skills": {
+    "technical": [],
+    "coreSubjects": [],
+    "languages": []
+  },
+  "responsibilities": [],
+  "projects": [],
+  "accomplishments": [],
+  "volunteering": [],
+  "extraCurricular": [],
+  "documents": {
+    "resumeFileName": "",
+    "resumeLastUpdated": "",
+    "resumeUrl": "",
+    "aboutMe": "",
+    "transcriptsUploaded": false,
+    "idProofUploaded": false
+  },
+  "guardians": {
+    "fatherName": "",
+    "fatherOccupation": "",
+    "fatherPhone": "",
+    "fatherEmail": "",
+    "motherName": "",
+    "motherOccupation": "",
+    "motherPhone": "",
+    "emergencyContactName": "",
+    "emergencyRelation": "",
+    "emergencyPhone": "",
+    "residentialAddress": ""
+  }
+};
+  profile.uniqueStudentId = user.uniqueStudentId || (user.email || user.id ? generateUniqueStudentId(user.email || user.id) : '');
+  profile.verified = user.verified === true;
+  const basicFields = { fullName: user.name, email: user.email, phone: user.phone, gender: user.gender, linkedIn: user.linkedIn, github: user.github, portfolio: user.portfolio, leetCode: user.leetCode };
+  for (const [field, value] of Object.entries(basicFields)) profile.basicDetails[field] = value ?? '';
+  const academicFields = { college: user.college, branch: user.branch, graduationBatch: user.graduationBatch, rollNumber: user.rollNumber, cgpa: user.cgpa, activeBacklogs: user.activeBacklogs, tenthPercentage: user.tenthPercentage, twelfthPercentage: user.twelfthPercentage };
+  for (const [field, value] of Object.entries(academicFields)) profile.educationDetails[field] = value ?? '';
+  return profile;
 }
 
 export function getFullStudentProfile(currentUser = null) {
   const current = currentUser || getCurrentUser() || {};
+  if (!current.email && !current.id) return getInitialFullStudentProfile(current);
   const userEmail = (current.email || '').toLowerCase().trim();
   const storageKey = userEmail ? `placeprep_student_full_profile_${userEmail.replace(/[^a-z0-9]/g, '_')}` : STORAGE_KEYS.FULL_STUDENT_PROFILE;
 
@@ -250,7 +221,7 @@ export function getFullStudentProfile(currentUser = null) {
       if (!saved.uniqueStudentId) {
         saved.uniqueStudentId = generateUniqueStudentId(userEmail || current.id);
       }
-      if (current.name && (!saved.basicDetails.fullName || saved.basicDetails.fullName !== current.name)) {
+      if (current.name && saved.basicDetails.fullName !== current.name && !saved.basicDetails.fullName) {
         saved.basicDetails.fullName = current.name;
       }
       if (current.rollNumber && !saved.educationDetails?.rollNumber) {
@@ -323,7 +294,7 @@ export function getGraduationBatch() {
   const directBatch = getStorageItem(STORAGE_KEYS.GRADUATION_BATCH, null);
   if (directBatch) return directBatch;
   const user = getCurrentUser();
-  return user?.graduationBatch || '2028';
+  return user?.graduationBatch || '';
 }
 
 export function setGraduationBatch(batchId) {
@@ -349,7 +320,7 @@ export function setOnboardingCompleted(completed) {
 // Companies
 export function getCompanies() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_COMPANIES, []);
-  return BACKEND_ONLY ? custom : [...INITIAL_COMPANIES, ...custom];
+  return [...INITIAL_COMPANIES, ...custom];
 }
 
 export const getInitialCompanies = getCompanies;
@@ -369,7 +340,7 @@ export function addCompany(newCompany) {
 // Placement Drives
 export function getUpcomingDrives() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_DRIVES, []);
-  return BACKEND_ONLY ? custom : [...INITIAL_UPCOMING_DRIVES, ...custom];
+  return [...INITIAL_UPCOMING_DRIVES, ...custom];
 }
 
 export function addDrive(newDrive) {
@@ -382,7 +353,7 @@ export function addDrive(newDrive) {
 // Interview Questions
 export function getInterviewQuestions() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_QUESTIONS, []);
-  return BACKEND_ONLY ? custom : [...INITIAL_QUESTIONS, ...custom];
+  return [...INITIAL_QUESTIONS, ...custom];
 }
 
 export function addInterviewQuestion(newQuestion) {
@@ -394,7 +365,7 @@ export function addInterviewQuestion(newQuestion) {
 
 // Questions Practiced / Saved / Revision
 export function getPracticedQuestions() {
-  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, ['hcl-tech-01', 'hcl-hr-01']);
+  return getStorageItem(STORAGE_KEYS.PRACTICED_QUESTIONS, []);
 }
 
 export function togglePracticedQuestion(questionId) {
@@ -411,7 +382,7 @@ export function togglePracticedQuestion(questionId) {
 }
 
 export function getSavedQuestions() {
-  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, ['hcl-tech-02', 'hcl-tech-03']);
+  return getStorageItem(STORAGE_KEYS.SAVED_QUESTIONS, []);
 }
 
 export function toggleSavedQuestion(questionId) {
@@ -428,7 +399,7 @@ export function toggleSavedQuestion(questionId) {
 }
 
 export function getRevisionList() {
-  return getStorageItem(STORAGE_KEYS.REVISION_LIST, ['hcl-mgr-01']);
+  return getStorageItem(STORAGE_KEYS.REVISION_LIST, []);
 }
 
 export function toggleRevisionQuestion(questionId) {
@@ -446,7 +417,7 @@ export function toggleRevisionQuestion(questionId) {
 
 // Saved Companies
 export function getSavedCompanies() {
-  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, ['hcltech', 'tcs']);
+  return getStorageItem(STORAGE_KEYS.SAVED_COMPANIES, []);
 }
 
 export function toggleSavedCompany(companyId) {
@@ -464,7 +435,7 @@ export function toggleSavedCompany(companyId) {
 // Interview Experiences
 export function getInterviewExperiences() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, []);
-  return BACKEND_ONLY ? custom : [...custom, ...INITIAL_EXPERIENCES];
+  return [...custom, ...INITIAL_EXPERIENCES];
 }
 
 export function addInterviewExperience(newExp) {
@@ -483,60 +454,10 @@ export function addInterviewExperience(newExp) {
 }
 
 // AI Insights
-export function getAiInsights(companyId) {
-  if (BACKEND_ONLY) return null;
-  if (INITIAL_AI_INSIGHTS[companyId]) {
-    return INITIAL_AI_INSIGHTS[companyId];
-  }
-  // Fallback intelligent generator for any company
-  const company = getCompanyBySlugOrId(companyId);
-  return {
-    companyId,
-    dataFreshness: 'October 2026',
-    totalSamplesAnalyzed: company?.experienceCount || 45,
-    confidenceScore: '92%',
-    verifiedSourcesBadge: `Campus Drive Logs (${company?.name})`,
-    frequentQuestions: [
-      { question: 'Data Structures: HashMaps, Arrays & Two Pointers', frequency: '42% of technical tests', trend: '+14% recent', category: 'DSA' },
-      { question: 'Core Fundamentals: OOPs Polymorphism & Inheritance', frequency: '36% of interviews', trend: 'Consistent', category: 'OOP' },
-      { question: 'Behavioral: Challenging team scenario & resolution', frequency: '85% of HR rounds', trend: 'Universal', category: 'HR' }
-    ],
-    trendingTopics: [
-      { topic: 'Cloud & System Reliability', change: '+35% increase in 2026', reason: 'High client shift towards cloud architectures' },
-      { topic: 'Hands-on live coding over pure theoretical MCQs', change: '+40% increase', reason: 'Evaluates hands-on implementation ability' }
-    ],
-    historicalVsRecentAnalysis: {
-      olderTrends: 'Earlier drives emphasized static textbook theory and rote-learned definitions.',
-      recentTrends: 'Recent interviews focus heavily on project architectural decisions, clean code, and practical problem solving.',
-      keyTakeaway: 'Ensure you can explain your GitHub projects and commit histories fluently.'
-    },
-    preparationPriority: [
-      { priority: 'High Priority (Must-Do)', topics: ['Data Structures (Arrays, Strings, Maps)', 'OOP Concepts in chosen language', 'Top 5 STAR behavioral responses'] },
-      { priority: 'Medium Priority (Concept Reinforcement)', topics: ['DBMS Normalization & SQL Queries', 'Operating Systems Core Concepts'] },
-      { priority: 'Additional Practice', topics: ['System Design Overview', 'Aptitude & Speed Math'] }
-    ],
-    disclaimer: 'Note: AI insights are synthesized from historical reports and candidate experiences.'
-  };
-}
+export function getAiInsights(companyId) { return { companyId, hasData: false, dataFreshness: null, totalSamplesAnalyzed: 0, confidenceScore: null, verifiedSourcesBadge: 'No analysis available', frequentQuestions: [], trendingTopics: [], historicalVsRecentAnalysis: { olderTrends: '', recentTrends: '', keyTakeaway: '' }, preparationPriority: [], disclaimer: 'No verified insights are available for this company.' }; }
 
 // Mock Interview Session Storage
-export function getMockSessions() {
-  return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, [
-    {
-      id: 'mock-01',
-      companyId: 'hcltech',
-      companyName: 'HCLTech',
-      round: 'Technical Interview',
-      date: '2026-10-10',
-      score: 84,
-      correctness: 86,
-      clarity: 82,
-      structure: 85,
-      questionsAnswered: 3,
-      feedbackSummary: 'Strong technical explanation of Floyd\'s cycle detection and SQL joins. Work on structuring your STAR answer for project challenges.'
-    }
-  ]);
-}
+export function getMockSessions() { return getStorageItem(STORAGE_KEYS.MOCK_INTERVIEW_SESSIONS, []); }
 
 export function saveMockSession(session) {
   const list = getMockSessions();
@@ -559,38 +480,7 @@ export function submitPlatformFeedback(fb) {
 // Company & Placement Management Engine
 // ----------------------------------------------------
 
-export const INITIAL_STUDENT_APPLICATIONS = [
-  {
-    applicationId: 'APP-HCL-101',
-    studentId: 'user-demo-01',
-    studentName: 'Priyansh Jain',
-    studentEmail: 'priyansh.jain@example.edu',
-    college: 'Delhi Technological University (DTU)',
-    branch: 'Computer Science and Engineering',
-    graduationBatch: '2028',
-    cgpa: 8.85,
-    tenthPercentage: 92.4,
-    twelfthPercentage: 89.6,
-    activeBacklogs: 0,
-    driveId: 'drv-hcl-2026',
-    companyId: 'hcltech',
-    companyName: 'HCLTech',
-    role: 'Graduate Engineer Trainee (GET)',
-    appliedAt: '2026-10-14 10:15',
-    status: 'INTERVIEW_SCHEDULED', // 'APPLIED', 'ELIGIBLE', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'REJECTED'
-    eligibilityStatus: 'ELIGIBLE',
-    eligibilityRemarks: 'Candidate satisfies all academic criteria (CGPA 8.85 >= 6.5, Backlogs 0 <= 0).',
-    currentRound: 'Round 2: Live Coding Test',
-    scheduledDate: '2026-11-18',
-    scheduledTime: '10:00 AM',
-    scheduledEndTime: '11:15 AM',
-    venue: 'Auditorium Hall A, Panel Desk #4',
-    reportingTime: '08:15 AM (Strictly 45 mins prior)',
-    candidateInstructions: 'Formal attire mandatory. Carry 3 printed copies of resume, College ID card, and a laptop with Wi-Fi.',
-    conflictFlagged: true,
-    conflictReason: 'Schedule collision flagged: Direct time collision with Accenture Virtual Panel assessment scheduled on Nov 18, 2026.'
-  }
-];
+export const INITIAL_STUDENT_APPLICATIONS = [];
 
 // Student Applications Management
 export function getStudentApplications() {
@@ -651,12 +541,15 @@ export function evaluateStudentEligibility(studentMetrics, drive) {
   const failureReasons = [];
   let overallEligible = true;
 
-  const cgpa = parseFloat(studentMetrics?.cgpa) || 8.4;
-  const tenth = parseFloat(studentMetrics?.tenthPercentage) || 88.0;
-  const twelfth = parseFloat(studentMetrics?.twelfthPercentage) || 86.0;
+  const requiredFields = ['cgpa', 'tenthPercentage', 'twelfthPercentage', 'activeBacklogs', 'branch', 'graduationBatch'];
+  const missing = requiredFields.filter(field => studentMetrics?.[field] === null || studentMetrics?.[field] === undefined || studentMetrics?.[field] === '');
+  if (missing.length) return { isEligible: false, status: 'INCOMPLETE_PROFILE', driveId: drive?.id, companyName: drive?.companyName, checks: [], failureReasons: missing.map(field => `Provide ${field} in your profile.`), summary: 'Complete your academic profile before checking eligibility.' };
+  const cgpa = Number(studentMetrics.cgpa);
+  const tenth = Number(studentMetrics.tenthPercentage);
+  const twelfth = Number(studentMetrics.twelfthPercentage);
   const backlogs = parseInt(studentMetrics?.activeBacklogs, 10) || 0;
-  const branch = studentMetrics?.branch || 'Computer Science and Engineering';
-  const batch = studentMetrics?.graduationBatch || '2028';
+  const branch = studentMetrics.branch;
+  const batch = studentMetrics.graduationBatch;
 
   // 1. CGPA
   const minCgpa = drive?.minCgpa ?? 6.0;
@@ -892,7 +785,7 @@ export function updateDriveRoundsConfig(driveId, roundsList, roundConfigs) {
     updatedAt: new Date().toISOString()
   };
   setStorageItem(STORAGE_KEYS.DRIVE_ROUNDS_CONFIG, customRounds);
-  window.dispatchEvent(new CustomEvent('drive-rounds-updated', { detail: { driveId, roundsList, roundConfigs } }));
+  dispatchSafeCustomEvent('drive-rounds-updated', { driveId, roundsList, roundConfigs });
   return customRounds[driveId];
 }
 
@@ -973,40 +866,196 @@ export function updateStudentRounds(rounds) {
   return rounds;
 }
 
+// Opportunities Status Calculator (Active, Closing Soon, Expired)
+export function getOpportunityStatus(opportunityOrDeadline) {
+  if (!opportunityOrDeadline) return 'Active';
+  const rawDeadline = typeof opportunityOrDeadline === 'string'
+    ? opportunityOrDeadline
+    : (opportunityOrDeadline.applicationDeadline || opportunityOrDeadline.registrationDeadline || opportunityOrDeadline.deadline);
+
+  if (!rawDeadline) {
+    if (typeof opportunityOrDeadline === 'object' && opportunityOrDeadline.status) {
+      return opportunityOrDeadline.status;
+    }
+    return 'Active';
+  }
+
+  try {
+    const deadlineDate = new Date(rawDeadline);
+    if (isNaN(deadlineDate.getTime())) {
+      return typeof opportunityOrDeadline === 'object' ? (opportunityOrDeadline.status || 'Active') : 'Active';
+    }
+    const today = new Date();
+    // Reset hours to compare calendar days accurately
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(23, 59, 59, 999);
+
+    const diffMs = deadlineDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return 'Expired';
+    }
+    if (diffDays <= 10) {
+      return 'Closing Soon';
+    }
+    return 'Active';
+  } catch {
+    return 'Active';
+  }
+}
+
 // Hackathons
 export function getHackathons() {
-  return getStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+  const list = getStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+  return (list || []).map(h => ({
+    ...h,
+    status: getOpportunityStatus(h)
+  }));
 }
 
 export function addHackathon(hackathon) {
   const current = getHackathons();
-  const updated = [hackathon, ...current];
+  const newEntry = {
+    ...hackathon,
+    id: hackathon.id || `hack-${Date.now()}`,
+    status: getOpportunityStatus(hackathon),
+    isPublished: hackathon.isPublished !== false,
+    lastVerifiedDate: hackathon.lastVerifiedDate || new Date().toISOString().split('T')[0]
+  };
+  const updated = [newEntry, ...current];
   setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  dispatchSafeCustomEvent('hackathons-updated', updated);
+  return updated;
+}
+
+export function updateHackathon(id, updates) {
+  const current = getHackathons();
+  const updated = current.map(item => {
+    if (String(item.id) === String(id)) {
+      const merged = { ...item, ...updates, lastVerifiedDate: new Date().toISOString().split('T')[0] };
+      return { ...merged, status: getOpportunityStatus(merged) };
+    }
+    return item;
+  });
+  setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  dispatchSafeCustomEvent('hackathons-updated', updated);
+  return updated;
+}
+
+export function deleteHackathon(id) {
+  const current = getHackathons();
+  const updated = current.filter(item => String(item.id) !== String(id));
+  setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  dispatchSafeCustomEvent('hackathons-updated', updated);
   return updated;
 }
 
 // Internships
 export function getInternships() {
-  return getStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+  const list = getStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+  return (list || []).map(i => ({
+    ...i,
+    status: getOpportunityStatus(i)
+  }));
 }
 
 export function addInternship(internship) {
   const current = getInternships();
-  const updated = [internship, ...current];
+  const newEntry = {
+    ...internship,
+    id: internship.id || `intern-${Date.now()}`,
+    status: getOpportunityStatus(internship),
+    isPublished: internship.isPublished !== false,
+    lastVerifiedDate: internship.lastVerifiedDate || new Date().toISOString().split('T')[0]
+  };
+  const updated = [newEntry, ...current];
   setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  dispatchSafeCustomEvent('internships-updated', updated);
   return updated;
 }
 
-// Off-Campus Companies (Final Year Only)
+export function updateInternship(id, updates) {
+  const current = getInternships();
+  const updated = current.map(item => {
+    if (String(item.id) === String(id)) {
+      const merged = { ...item, ...updates, lastVerifiedDate: new Date().toISOString().split('T')[0] };
+      return { ...merged, status: getOpportunityStatus(merged) };
+    }
+    return item;
+  });
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  dispatchSafeCustomEvent('internships-updated', updated);
+  return updated;
+}
+
+export function deleteInternship(id) {
+  const current = getInternships();
+  const updated = current.filter(item => String(item.id) !== String(id));
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  dispatchSafeCustomEvent('internships-updated', updated);
+  return updated;
+}
+
+// Off-Campus Companies (Verified Full-Time Drives)
 export function getOffCampusCompanies() {
-  return getStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+  const list = getStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+  return (list || []).map(c => ({
+    ...c,
+    status: getOpportunityStatus(c)
+  }));
 }
 
 export function addOffCampusCompany(comp) {
   const current = getOffCampusCompanies();
-  const updated = [comp, ...current];
+  const newEntry = {
+    ...comp,
+    id: comp.id || `offcampus-${Date.now()}`,
+    status: getOpportunityStatus(comp),
+    isPublished: comp.isPublished !== false,
+    lastVerifiedDate: comp.lastVerifiedDate || new Date().toISOString().split('T')[0]
+  };
+  const updated = [newEntry, ...current];
   setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  dispatchSafeCustomEvent('offcampus-updated', updated);
   return updated;
+}
+
+export function updateOffCampusCompany(id, updates) {
+  const current = getOffCampusCompanies();
+  const updated = current.map(item => {
+    if (String(item.id) === String(id)) {
+      const merged = { ...item, ...updates, lastVerifiedDate: new Date().toISOString().split('T')[0] };
+      return { ...merged, status: getOpportunityStatus(merged) };
+    }
+    return item;
+  });
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  dispatchSafeCustomEvent('offcampus-updated', updated);
+  return updated;
+}
+
+export function deleteOffCampusCompany(id) {
+  const current = getOffCampusCompanies();
+  const updated = current.filter(item => String(item.id) !== String(id));
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  dispatchSafeCustomEvent('offcampus-updated', updated);
+  return updated;
+}
+
+// Reset opportunities to latest verified defaults
+export function resetOpportunitiesToVerifiedDefaults() {
+  setStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+  dispatchSafeCustomEvent('hackathons-updated', INITIAL_HACKATHONS);
+  dispatchSafeCustomEvent('internships-updated', INITIAL_INTERNSHIPS);
+  dispatchSafeCustomEvent('offcampus-updated', INITIAL_OFF_CAMPUS_COMPANIES);
+  return {
+    hackathons: INITIAL_HACKATHONS,
+    internships: INITIAL_INTERNSHIPS,
+    offCampus: INITIAL_OFF_CAMPUS_COMPANIES
+  };
 }
 
 // Eligibility Matrix
@@ -1026,15 +1075,378 @@ export function addLiveSession(session) {
   return updated;
 }
 
-export function rsvpLiveSession(sessionId) {
+export function updateLiveSession(sessionId, updates, maybeActor) {
   const current = getLiveSessions();
+  let targetSession = null;
+  const actor = typeof maybeActor === 'object' ? (maybeActor.name || maybeActor.actorName) : (maybeActor || updates.actorName || 'Director');
+
   const updated = current.map(s => {
-    if (s.id === sessionId) {
-      return { ...s, rsvpsCount: (s.rsvpsCount || 0) + 1, hasRsvp: true };
+    if (s.id === sessionId || s.sessionId === sessionId) {
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const auditTrail = Array.isArray(s.auditTrail) ? [...s.auditTrail] : [];
+      auditTrail.unshift({
+        action: updates.joinUrl && updates.joinUrl !== s.joinUrl ? 'EDIT_LINK' : 'UPDATED',
+        timestamp: now,
+        actor: actor,
+        details: updates.joinUrl && updates.joinUrl !== s.joinUrl
+          ? `Updated meeting URL to ${updates.joinUrl.trim()}`
+          : 'Updated session details and speaker metadata.'
+      });
+      targetSession = { ...s, ...updates, updatedAt: now, auditTrail };
+      return targetSession;
     }
     return s;
   });
   setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+  if (targetSession) {
+    Object.assign(updated, targetSession);
+    updated.session = targetSession;
+  }
+  return updated;
+}
+
+export function rescheduleLiveSession(sessionId, optionsOrDate, newStartTime, newEndTime, reason, actorName) {
+  const current = getLiveSessions();
+  let targetSession = null;
+  let newDate, startTime, endTime, rsn, actor;
+
+  if (typeof optionsOrDate === 'object' && optionsOrDate !== null) {
+    newDate = optionsOrDate.newDate;
+    startTime = optionsOrDate.newStartTime;
+    endTime = optionsOrDate.newEndTime;
+    rsn = optionsOrDate.reason;
+    actor = optionsOrDate.actorName || 'Director';
+  } else {
+    newDate = optionsOrDate;
+    startTime = newStartTime;
+    endTime = newEndTime;
+    rsn = reason;
+    actor = typeof actorName === 'object' ? (actorName.name || actorName.actorName) : (actorName || 'Director');
+  }
+
+  const timeDisplay = `${startTime} – ${endTime}`;
+  const updated = current.map(s => {
+    if (s.id === sessionId || s.sessionId === sessionId) {
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const auditTrail = Array.isArray(s.auditTrail) ? [...s.auditTrail] : [];
+      auditTrail.unshift({
+        action: 'RESCHEDULED',
+        timestamp: now,
+        actor: actor,
+        details: `Rescheduled from ${s.date} (${s.time}) to ${newDate} (${timeDisplay}). Reason: ${rsn || 'Operational adjustment'}`
+      });
+      targetSession = {
+        ...s,
+        date: newDate,
+        startTime: startTime,
+        endTime: endTime,
+        time: timeDisplay,
+        status: 'Rescheduled',
+        updatedAt: now,
+        auditTrail
+      };
+      return targetSession;
+    }
+    return s;
+  });
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+
+  if (targetSession) {
+    broadcastPushNotification({
+      type: 'LIVE_SESSION_RESCHEDULED',
+      category: 'Session Rescheduled',
+      priority: 'High',
+      companyName: targetSession.companyName,
+      title: `Rescheduled: ${targetSession.companyName} – ${targetSession.title}`,
+      message: `Notice: The ${targetSession.sessionType || 'live session'} for ${targetSession.companyName} has been rescheduled to ${newDate} from ${startTime} to ${endTime}.${rsn ? ' Reason: ' + rsn : ''}`,
+      date: newDate,
+      time: timeDisplay,
+      platform: targetSession.platform,
+      joinUrl: targetSession.joinUrl,
+      driveId: targetSession.driveId,
+      targetRole: 'STUDENT',
+      targetStudentEmails: targetSession.eligibleStudentEmails || [],
+      actionRoute: 'live-sessions'
+    });
+
+    Object.assign(updated, targetSession);
+    updated.session = targetSession;
+  }
+
+  return updated;
+}
+
+export function cancelLiveSession(sessionId, reasonOrOptions, maybeActor) {
+  const current = getLiveSessions();
+  let targetSession = null;
+  let reason = '';
+  let actorName = 'Director';
+
+  if (typeof reasonOrOptions === 'object' && reasonOrOptions !== null) {
+    reason = reasonOrOptions.reason || '';
+    actorName = reasonOrOptions.actorName || actorName;
+  } else {
+    reason = reasonOrOptions || '';
+    actorName = typeof maybeActor === 'object' ? (maybeActor.name || maybeActor.actorName) : (maybeActor || actorName);
+  }
+
+  const updated = current.map(s => {
+    if (s.id === sessionId || s.sessionId === sessionId) {
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const auditTrail = Array.isArray(s.auditTrail) ? [...s.auditTrail] : [];
+      auditTrail.unshift({
+        action: 'CANCELLED',
+        timestamp: now,
+        actor: actorName,
+        details: `Cancelled session scheduled for ${s.date}. Reason: ${reason || 'Recruiter unavailable'}`
+      });
+      targetSession = {
+        ...s,
+        status: 'Cancelled',
+        updatedAt: now,
+        auditTrail
+      };
+      return targetSession;
+    }
+    return s;
+  });
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+
+  if (targetSession) {
+    broadcastPushNotification({
+      type: 'LIVE_SESSION_CANCELLED',
+      category: 'Session Cancelled',
+      priority: 'High',
+      companyName: targetSession.companyName,
+      title: `Cancelled: ${targetSession.companyName} – ${targetSession.title}`,
+      message: `Notice: The scheduled ${targetSession.sessionType || 'live session'} for ${targetSession.companyName} on ${targetSession.date} has been cancelled.${reason ? ' Reason: ' + reason : ''}`,
+      date: targetSession.date,
+      time: targetSession.time,
+      platform: targetSession.platform,
+      driveId: targetSession.driveId,
+      targetRole: 'STUDENT',
+      targetStudentEmails: targetSession.eligibleStudentEmails || [],
+      actionRoute: 'live-sessions'
+    });
+
+    Object.assign(updated, targetSession);
+    updated.session = targetSession;
+  }
+
+  return updated;
+}
+
+export function calculateEligibleStudentsForDrive(drive, allStudents = null) {
+  if (!drive) return { count: 0, eligibleEmails: [], students: [], details: { minCgpa: 6.0, maxBacklogs: 0 }, summary: '' };
+
+  const minCgpa = Number(drive.minCgpa ?? 6.0);
+  const maxBacklogs = parseInt(drive.maxBacklogs ?? 0, 10);
+  const allowedBranches = drive.allowedBranches || [];
+  const eligibleBatches = drive.eligibleBatches || drive.allowedBatches || [];
+
+  let count = 0;
+  const eligibleEmails = [];
+  const matchedStudents = [];
+
+  let pool = allStudents;
+  if (!pool || !Array.isArray(pool)) {
+    try {
+      pool = getAllStudents();
+    } catch {
+      pool = [];
+    }
+    if ((!pool || pool.length === 0) && typeof localStorage !== 'undefined') {
+      const dbCandidates = localStorage.getItem('placeprep_candidates_db');
+      if (dbCandidates) {
+        try { pool = JSON.parse(dbCandidates); } catch {}
+      }
+    }
+  }
+
+  if (Array.isArray(pool) && pool.length > 0) {
+    pool.forEach(st => {
+      const stCgpa = Number(st.cgpa || 0);
+      const stBacklogs = parseInt(st.activeBacklogs ?? st.backlogs ?? 0, 10);
+      const stBranch = st.branch || '';
+      const stBatch = String(st.graduationBatch || st.batch || '');
+
+      const cgpaOk = stCgpa >= minCgpa;
+      const backlogsOk = stBacklogs <= maxBacklogs;
+      const batchOk = eligibleBatches.length === 0 || eligibleBatches.map(String).includes(stBatch);
+      const branchOk = allowedBranches.length === 0 || allowedBranches.includes('All Engineering Branches') ||
+        allowedBranches.some(b => stBranch.toLowerCase().includes(b.toLowerCase()) || b.toLowerCase().includes(stBranch.toLowerCase()));
+
+      if (cgpaOk && backlogsOk && batchOk && branchOk) {
+        count++;
+        matchedStudents.push(st);
+        if (st.email) eligibleEmails.push(st.email);
+      }
+    });
+  }
+
+  // Fallback demo numbers ONLY when database student pool is completely uninitialized/empty
+  if (count === 0 && (!pool || pool.length === 0)) {
+    const driveName = (drive.companyName || drive.companyId || '').toLowerCase();
+    if (driveName.includes('tcs')) count = 250;
+    else if (driveName.includes('infosys')) count = 180;
+    else if (driveName.includes('wipro')) count = 160;
+    else if (driveName.includes('accenture')) count = 240;
+    else if (driveName.includes('capgemini')) count = 150;
+    else if (driveName.includes('cognizant')) count = 175;
+    else if (driveName.includes('hcl')) count = 140;
+    else if (driveName.includes('deloitte')) count = 190;
+    else count = 200;
+  }
+
+  const summary = `Min CGPA: ${minCgpa.toFixed(1)} • Max Backlogs: ${maxBacklogs} • Batches: ${eligibleBatches.length ? eligibleBatches.join(', ') : 'All'} • Streams: ${allowedBranches.length ? allowedBranches.join(', ') : 'All Branches'}`;
+
+  return { count, eligibleEmails, students: matchedStudents, details: { minCgpa, maxBacklogs, allowedBranches, eligibleBatches }, summary };
+}
+
+export function publishLiveSessionWithNotifications(sessionData, secondArg = null, thirdArg = null) {
+  if (!sessionData.joinUrl || !/^https?:\/\/.+/i.test(sessionData.joinUrl.trim())) {
+    throw new Error('Valid meeting URL starting with http:// or https:// is required.');
+  }
+
+  let drive = sessionData.associatedDrive;
+  let studentsPool = null;
+  let actorName = 'Director';
+
+  if (Array.isArray(secondArg)) {
+    studentsPool = secondArg;
+    actorName = typeof thirdArg === 'string' ? thirdArg : (thirdArg?.name || 'Director');
+  } else if (secondArg && typeof secondArg === 'object') {
+    drive = secondArg;
+    if (Array.isArray(thirdArg)) {
+      studentsPool = thirdArg;
+    } else {
+      actorName = typeof thirdArg === 'string' ? thirdArg : (thirdArg?.name || 'Director');
+    }
+  }
+
+  const eligibility = calculateEligibleStudentsForDrive(drive, studentsPool);
+  const eligibleCount = eligibility.count;
+  const eligibleEmails = eligibility.eligibleEmails;
+
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+  const timeDisplay = `${sessionData.startTime} – ${sessionData.endTime}`;
+
+  const newSession = {
+    id: `live-${Date.now()}`,
+    sessionId: `live-${Date.now()}`,
+    title: sessionData.title.trim(),
+    companyName: sessionData.companyName.trim(),
+    driveId: sessionData.driveId || drive?.id || drive?.driveId || drive?.companyId || 'general-drive',
+    driveTitle: sessionData.driveTitle || drive?.role || `${sessionData.companyName} Campus Drive`,
+    sessionType: sessionData.sessionType || 'Pre-Placement Talk',
+    platform: sessionData.platform || 'Google Meet',
+    joinUrl: sessionData.joinUrl.trim(),
+    date: sessionData.date,
+    startTime: sessionData.startTime,
+    endTime: sessionData.endTime,
+    time: timeDisplay,
+    speaker: sessionData.speaker?.trim() || 'Recruitment Engineering Lead',
+    agenda: sessionData.agenda?.trim() || 'Campus recruitment orientation, technical expectations and role breakdown.',
+    instructions: sessionData.instructions?.trim() || 'Join 5 minutes prior with college credentials.',
+    status: 'Published',
+    eligibleStudentsCount: eligibleCount,
+    notifiedCount: eligibleCount,
+    rsvpsCount: 0,
+    hasRsvp: false,
+    eligibleStudentEmails: eligibleEmails,
+    createdBy: actorName,
+    createdAt: now,
+    updatedAt: now,
+    auditTrail: [
+      {
+        action: 'CREATED_AND_PUBLISHED',
+        timestamp: now,
+        actor: actorName,
+        details: `Published ${sessionData.sessionType || 'Live Session'} for ${sessionData.companyName}. Dispatched smart notifications to ${eligibleCount} eligible candidates.`
+      }
+    ]
+  };
+
+  const updatedSessions = addLiveSession(newSession);
+
+  // Dispatch targeted push notification
+  broadcastPushNotification({
+    type: 'LIVE_SESSION',
+    category: sessionData.sessionType || 'Pre-Placement Talk',
+    priority: 'High',
+    company: newSession.companyName,
+    companyName: newSession.companyName,
+    sessionTitle: newSession.title,
+    sessionType: newSession.sessionType,
+    title: `${newSession.companyName} – ${newSession.sessionType}`,
+    message: `${newSession.companyName} is conducting a ${newSession.sessionType} for eligible candidates on ${newSession.date} (${timeDisplay}) via ${newSession.platform}.`,
+    date: newSession.date,
+    time: timeDisplay,
+    platform: newSession.platform,
+    joinUrl: newSession.joinUrl,
+    agenda: newSession.agenda,
+    driveId: newSession.driveId,
+    associatedDrive: newSession.driveTitle,
+    targetRole: 'STUDENT',
+    targetStudentEmails: eligibleEmails,
+    actionRoute: 'live-sessions'
+  });
+
+  return {
+    session: newSession,
+    sessions: updatedSessions,
+    count: eligibleCount,
+    message: `Live session published successfully! Notifications sent to ${eligibleCount} eligible students.`
+  };
+}
+
+export function getLiveSessionsForStudent(studentProfile, allDrives = []) {
+  const sessions = getLiveSessions();
+  if (!studentProfile || !studentProfile.email) return [];
+
+  return sessions.filter(session => {
+    if (Array.isArray(session.eligibleStudentEmails) && session.eligibleStudentEmails.length > 0) {
+      return session.eligibleStudentEmails.includes(studentProfile.email);
+    }
+    if (session.driveId && Array.isArray(allDrives) && allDrives.length > 0) {
+      const drive = allDrives.find(d => d.id === session.driveId || d.companyId === session.driveId || d.driveId === session.driveId);
+      if (drive) {
+        const studentCgpa = Number(studentProfile.cgpa || 0);
+        const studentBacklogs = parseInt(studentProfile.activeBacklogs ?? studentProfile.backlogs ?? 0, 10);
+        const minCgpa = Number(drive.minCgpa ?? 6.0);
+        const maxBacklogs = parseInt(drive.maxBacklogs ?? 0, 10);
+        if (studentCgpa < minCgpa) return false;
+        if (studentBacklogs > maxBacklogs) return false;
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+export function rsvpLiveSession(sessionId, studentEmail = null) {
+  const current = getLiveSessions();
+  let targetSession = null;
+  const updated = current.map(s => {
+    if (s.id === sessionId || s.sessionId === sessionId) {
+      const attendees = Array.isArray(s.attendeeEmails) ? [...s.attendeeEmails] : [];
+      let rsvpsCount = s.rsvpsCount || 0;
+      if (studentEmail && attendees.includes(studentEmail)) {
+        // already RSVPed
+      } else {
+        if (studentEmail) attendees.push(studentEmail);
+        rsvpsCount++;
+      }
+      targetSession = { ...s, rsvpsCount, hasRsvp: true, attendeeEmails: attendees };
+      return targetSession;
+    }
+    return s;
+  });
+  setStorageItem(STORAGE_KEYS.LIVE_SESSIONS, updated);
+  if (targetSession) {
+    Object.assign(updated, targetSession);
+    updated.session = targetSession;
+  }
   return updated;
 }
 
@@ -1046,7 +1458,7 @@ export function getPushNotifications() {
 export function broadcastPushNotification(notif) {
   const current = getPushNotifications();
   const newNotif = {
-    id: `notif-${Date.now()}`,
+    id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     timestamp: 'Just now',
     date: new Date().toISOString().split('T')[0],
     read: false,
@@ -1054,7 +1466,7 @@ export function broadcastPushNotification(notif) {
   };
   const updated = [newNotif, ...current];
   setStorageItem(STORAGE_KEYS.PUSH_NOTIFICATIONS, updated);
-  window.dispatchEvent(new CustomEvent('push-notification-broadcast', { detail: newNotif }));
+  dispatchSafeCustomEvent('push-notification-broadcast', newNotif);
   return updated;
 }
 
@@ -1085,18 +1497,7 @@ export function addFeedbackLoopEntry(entry) {
 // ----------------------------------------------------
 // Institute Location & Geofencing Persistence
 // ----------------------------------------------------
-export function getSavedInstituteLocation() {
-  return getStorageItem('placeprep_institute_location', {
-    instituteName: 'Delhi Technological University (DTU)',
-    instituteAddress: 'Shahbad Daulatpur, Main Bawana Road',
-    city: 'Delhi',
-    state: 'Delhi',
-    latitude: 28.7495,
-    longitude: 77.1180,
-    geofenceRadiusMeters: 100,
-    locationStatus: 'ACTIVE'
-  });
-}
+export function getSavedInstituteLocation() { return getStorageItem('placeprep_institute_location', { instituteName: '', instituteAddress: '', city: '', state: '', latitude: null, longitude: null, geofenceRadiusMeters: 100, locationStatus: 'NOT_CONFIGURED' }); }
 
 export function saveInstituteLocation(loc) {
   const current = getSavedInstituteLocation();

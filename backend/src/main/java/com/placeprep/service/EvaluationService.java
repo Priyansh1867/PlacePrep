@@ -1,8 +1,6 @@
 package com.placeprep.service;
 
 import com.placeprep.model.CandidateEvaluation;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.model.SelectionResult;
 import com.placeprep.model.StudentApplication;
 import com.placeprep.repository.CandidateEvaluationRepository;
@@ -10,7 +8,6 @@ import com.placeprep.repository.SelectionResultRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -31,8 +28,7 @@ public class EvaluationService {
     @Autowired
     private SelectionResultRepository selectionResultRepository;
 
-    @Transactional
-    public EntityResponseDto submitEvaluation(CandidateEvaluation evaluation) {
+    public CandidateEvaluation submitEvaluation(CandidateEvaluation evaluation) {
         validateScores(evaluation);
 
         Optional<StudentApplication> appOpt =
@@ -52,22 +48,14 @@ public class EvaluationService {
             evaluation.setVerdict(inferVerdict(evaluation));
         }
 
-        return EntityResponseMapper.toDto(evaluationRepository.save(evaluation));
+        return evaluationRepository.save(evaluation);
     }
 
-    @Transactional(readOnly = true)
-    public List<EntityResponseDto> getEvaluationsForCandidate(String applicationId, Integer roundNumber) {
-        return EntityResponseMapper.toDtoList(
-                evaluationRepository.findByApplicationIdAndRoundNumber(applicationId, roundNumber));
+    public List<CandidateEvaluation> getEvaluationsForCandidate(String applicationId, Integer roundNumber) {
+        return evaluationRepository.findByApplicationIdAndRoundNumber(applicationId, roundNumber);
     }
 
-    @Transactional(readOnly = true)
-    public Optional<EntityResponseDto> getLatestEvaluation(String applicationId, Integer roundNumber) {
-        return EntityResponseMapper.toDtoOptional(getLatestEvaluationEntity(applicationId, roundNumber));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<CandidateEvaluation> getLatestEvaluationEntity(String applicationId, Integer roundNumber) {
+    public Optional<CandidateEvaluation> getLatestEvaluation(String applicationId, Integer roundNumber) {
         return evaluationRepository.findTopByApplicationIdAndRoundNumberOrderBySubmittedAtDesc(
                 applicationId,
                 roundNumber

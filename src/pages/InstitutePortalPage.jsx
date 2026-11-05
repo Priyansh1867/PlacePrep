@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import ProfilePopover from '../components/profile/ProfilePopover';
+import OpportunitiesHubView from '../components/opportunities/OpportunitiesHubView';
+import Toast from '../components/ui/Toast';
+import { getProfileMetrics, attendancePercentage, displayValue } from '../services/profileMetrics';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   Bot,
   School,
@@ -37,8 +41,10 @@ import {
   LogOut,
   UserCheck,
   Compass,
-  Radio
+  Radio,
+  CalendarClock
 } from 'lucide-react';
+import StudentMasterTimetableView from '../components/timetable/StudentMasterTimetableView';
 import {
   getCurrentUser,
   getGraduationBatch,
@@ -75,7 +81,7 @@ import TimetableManagementView from '../components/timetable/TimetableManagement
 import StudentMasterTimetableView from '../components/timetable/StudentMasterTimetableView';
 import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
-export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
+export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
 
   useEffect(() => {
@@ -92,20 +98,68 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   }); 
   // 'student-data', 'curriculum-governance', 'reports-exporter', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus'
   
-  const studentBatch = getGraduationBatch() || '2028';
+  const studentBatch = getGraduationBatch() || '';
   const isFinalYear = studentBatch === '2025' || studentBatch === '2026';
 
   // Datasets from storage
   const [crtSessions, setCrtSessions] = useState(() => getCrtSessions() || []);
-  const [studentCrt, setStudentCrt] = useState(() => getStudentCrtAttendance() || { percentage: 80 });
+  const [studentCrt, setStudentCrt] = useState(() => getStudentCrtAttendance() || { percentage: null, records: [] });
   const [classAttendance, setClassAttendance] = useState(() => getClassAttendance() || []);
-  const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: 85 });
+  const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: null });
   const [studentRounds, setStudentRounds] = useState(() => getStudentRounds() || []);
   const [hackathons, setHackathons] = useState(() => getHackathons() || []);
   const [internships, setInternships] = useState(() => getInternships() || []);
   const [offCampusCompanies, setOffCampusCompanies] = useState(() => getOffCampusCompanies() || []);
   const [upcomingDrives, setUpcomingDrives] = useState(() => getUpcomingDrives() || []);
+  const DRIVES_PER_PAGE = 5;
+  const [instituteDrivesPage, setInstituteDrivesPage] = useState(1);
+
+  const sortedInstituteDrives = useMemo(() => {
+    const list = [...upcomingDrives];
+    list.sort((a, b) => {
+      const dateA = new Date(a.driveDate || 0).getTime();
+      const dateB = new Date(b.driveDate || 0).getTime();
+      if (!isNaN(dateA) && !isNaN(dateB) && dateB !== dateA) {
+        return dateB - dateA;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+    return list;
+  }, [upcomingDrives]);
+
+  const totalInstituteDrivesPages = Math.ceil(sortedInstituteDrives.length / DRIVES_PER_PAGE) || 1;
+  const paginatedInstituteDrives = useMemo(() => {
+    const startIndex = (instituteDrivesPage - 1) * DRIVES_PER_PAGE;
+    return sortedInstituteDrives.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [sortedInstituteDrives, instituteDrivesPage]);
+
+  const [hackathonsPage, setHackathonsPage] = useState(1);
+  const totalHackathonsPages = Math.ceil(hackathons.length / DRIVES_PER_PAGE) || 1;
+  const paginatedHackathons = useMemo(() => {
+    const startIndex = (hackathonsPage - 1) * DRIVES_PER_PAGE;
+    return hackathons.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [hackathons, hackathonsPage]);
+
+  const [internshipsPage, setInternshipsPage] = useState(1);
+  const totalInternshipsPages = Math.ceil(internships.length / DRIVES_PER_PAGE) || 1;
+  const paginatedInternships = useMemo(() => {
+    const startIndex = (internshipsPage - 1) * DRIVES_PER_PAGE;
+    return internships.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [internships, internshipsPage]);
+
+  const [offCampusPage, setOffCampusPage] = useState(1);
+  const totalOffCampusPages = Math.ceil(offCampusCompanies.length / DRIVES_PER_PAGE) || 1;
+  const paginatedOffCampus = useMemo(() => {
+    const startIndex = (offCampusPage - 1) * DRIVES_PER_PAGE;
+    return offCampusCompanies.slice(startIndex, startIndex + DRIVES_PER_PAGE);
+  }, [offCampusCompanies, offCampusPage]);
   const [questions, setQuestions] = useState(() => getInterviewQuestions() || []);
+
+  const academicMetrics = getProfileMetrics(currentUser);
+  const classPercentage = attendancePercentage(classAttendance);
+  const crtPercentage = studentCrt?.percentage;
+  const crtLabel = crtPercentage == null ? 'No attendance records' : `${crtPercentage}%`;
+  const atsLabel = displayValue(resumeStatus?.atsScore);
 
   // Search & Filter state
   const profileCompletion = useMemo(() => {
@@ -123,7 +177,15 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [isAnalyzingResume, setIsAnalyzingResume] = useState(false);
   const [resumeSuccessMsg, setResumeSuccessMsg] = useState('');
 
+  // Toast feedback state
+  const [toastMessage, setToastMessage] = useState('');
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4500);
+  };
+
   // Top-Right Profile & Backend Connection States
+  const profileTriggerRef = useRef(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isFullProfileModalOpen, setIsFullProfileModalOpen] = useState(false);
 
@@ -161,7 +223,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   };
 
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [databaseUsers, setDatabaseUsers] = useState([]);
+  const [databaseUsers, setDatabaseUsers] = useState(() => getFallbackStudents());
   const [isLoadingDatabaseUsers, setIsLoadingDatabaseUsers] = useState(false);
   const [databaseUsersError, setDatabaseUsersError] = useState(null);
 
@@ -186,7 +248,10 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     } catch (err) {
       console.error('Backend users fetch error:', err);
       setDatabaseUsersError(err?.message || 'Failed to fetch registered candidates from database');
-      setDatabaseUsers([]);
+      const fallbackList = getFallbackStudents();
+      if (fallbackList.length > 0) {
+        setDatabaseUsers(fallbackList);
+      }
     } finally {
       setIsLoadingDatabaseUsers(false);
     }
@@ -198,36 +263,36 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     if (DriveApi?.getAll) {
       DriveApi.getAll()
         .then((liveDrives) => {
-          if (Array.isArray(liveDrives) && liveDrives.length > 0) {
+          if (Array.isArray(liveDrives)) {
             setUpcomingDrives(liveDrives);
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend drives request failed:', err?.message));
+        .catch((err) => console.log('Backend drives fallback to local:', err?.message));
     }
 
     // 2. Fetch CRT training sessions from Spring Boot
     if (AttendanceApi?.getCrtSessions) {
       AttendanceApi.getCrtSessions()
         .then((liveSessions) => {
-          if (Array.isArray(liveSessions) && liveSessions.length > 0) {
+          if (Array.isArray(liveSessions)) {
             setCrtSessions(liveSessions);
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend CRT request failed:', err?.message));
+        .catch((err) => console.log('Backend CRT fallback to local:', err?.message));
     }
 
     // 3. Fetch interview questions from Spring Boot
     if (QuestionApi?.getAll) {
       QuestionApi.getAll()
         .then((liveQuestions) => {
-          if (Array.isArray(liveQuestions) && liveQuestions.length > 0) {
+          if (Array.isArray(liveQuestions)) {
             setQuestions(liveQuestions);
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend questions request failed:', err?.message));
+        .catch((err) => console.log('Backend questions fallback to local:', err?.message));
     }
 
     // 4. Fetch registered database users from Spring Boot
@@ -258,9 +323,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     name: '',
     email: '',
     rollNumber: '',
-    branch: 'Computer Science and Engineering',
-    batch: '2028',
-    cgpa: '8.5'
+    branch: '',
+    batch: '',
+    cgpa: ''
   });
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
   const [registrationErrorMsg, setRegistrationErrorMsg] = useState('');
@@ -274,8 +339,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       await AuthApi.registerStudent({
         name: newStudentForm.name,
         email: newStudentForm.email.trim().toLowerCase(),
-        password: 'password123',
-        college: currentUser?.college || 'Delhi Technological University (DTU)',
+        password: crypto.randomUUID(),
+        college: currentUser?.college || '',
         branch: newStudentForm.branch,
         graduationBatch: newStudentForm.batch,
         role: 'student',
@@ -289,15 +354,15 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     // 2. Also register in local storage / academic records
     const res = registerSingleStudent(newStudentForm, currentUser);
     if (res.success) {
-      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) registered successfully in database & Institute records!`);
+      setRegistrationSuccessMsg(`Student ${newStudentForm.name} (${newStudentForm.rollNumber}) saved to Institute records.`);
       setIsRegisterStudentModalOpen(false);
       setNewStudentForm({
         name: '',
         email: '',
         rollNumber: '',
-        branch: 'Computer Science and Engineering',
-        batch: '2028',
-        cgpa: '8.5'
+        branch: '',
+        batch: '',
+        cgpa: ''
       });
       setTimeout(() => setRegistrationSuccessMsg(''), 5000);
       // 3. Immediately refresh registered candidate records from database
@@ -307,6 +372,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     }
   };
 
+<<<<<<< HEAD
   const handleAnalyzeResume = () => {
     setIsAnalyzingResume(true);
     setTimeout(() => {
@@ -346,17 +412,41 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'faculty', 'hod'] },
     { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'faculty', 'hod'] }
   ];
+=======
+  const handleAnalyzeResume = () => onNavigate('resume-ats');
+>>>>>>> main
 
   const userRole = currentUser?.role || 'student';
-  const visibleNavTabs = navTabs.filter((tab) => {
-    if (tab.excludedRoles && tab.excludedRoles.includes(userRole)) {
-      return false;
-    }
-    if (tab.roles && !tab.roles.includes(userRole)) {
-      return false;
-    }
-    return true;
-  });
+  const visibleNavTabs = useMemo(() => {
+    const navTabs = [
+      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule' },
+      { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
+      { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
+      { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
+      { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
+      { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}`, excludedRoles: ['teacher', 'faculty'] },
+      { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
+      { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
+      { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: studentCrt?.percentage == null ? 'No records' : `${studentCrt.percentage}%` },
+      { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, badge: 'LIVE', roles: ['student'] },
+      { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
+      { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: resumeStatus?.atsScore == null ? 'Not assessed' : `${resumeStatus.atsScore}/100`, roles: ['student'] },
+      { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
+      { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'faculty', 'hod'] },
+      { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'faculty', 'hod'] },
+      { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'faculty', 'hod'] }
+    ];
+
+    return navTabs.filter((tab) => {
+      if (tab.excludedRoles && tab.excludedRoles.includes(userRole)) {
+        return false;
+      }
+      if (tab.roles && !tab.roles.includes(userRole)) {
+        return false;
+      }
+      return true;
+    });
+  }, [userRole, upcomingDrives?.length, studentCrt?.percentage, resumeStatus?.atsScore]);
 
   // Guard activeTab against unauthorized/hidden tabs for current role
   useEffect(() => {
@@ -364,7 +454,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
     if (!isAllowed && visibleNavTabs.length > 0) {
       setActiveTab(visibleNavTabs[0].id);
     }
-  }, [userRole, visibleNavTabs, activeTab]);
+  }, [visibleNavTabs, activeTab]);
 
   // Smooth scroll handler on module card selection
   const handleCardSelect = (tabId) => {
@@ -384,7 +474,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => onNavigate('gateway')}
+          onClick={() => onBack ? onBack('gateway') : onNavigate('gateway')}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-indigo-900 font-bold text-xs shadow-xs transition cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-indigo-600 transition-transform group-hover:-translate-x-0.5" />
@@ -443,6 +533,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               <div className="relative z-50">
                 <button
                   type="button"
+                  ref={profileTriggerRef}
+                  aria-expanded={isProfileDropdownOpen}
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center gap-3 p-1.5 pl-2 pr-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md transition shadow-md group text-left cursor-pointer"
                   aria-label="User profile menu"
@@ -463,7 +555,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
                 {/* Profile Dropdown Popup (Non-clipped) */}
                 {isProfileDropdownOpen && (
-                  <>
+                  <ProfilePopover anchorRef={profileTriggerRef} onClose={() => setIsProfileDropdownOpen(false)}>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-4 z-50 text-slate-900 text-xs max-h-[min(540px,calc(100vh-140px))] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                       {/* Header info */}
@@ -481,24 +573,24 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
 
                       {/* Profile details */}
-                      <div className="py-3 space-y-2.5 text-[11px] border-b border-slate-100">
-                        <div className="flex items-center justify-between gap-2 text-slate-500">
-                          <span className="shrink-0 font-medium">Institute:</span>
-                          <span className="font-semibold text-slate-800 truncate text-right max-w-[180px]">{currentUser.college || 'Not specified'}</span>
+                      <div className="py-3 space-y-2 text-[11px] border-b border-slate-100">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Institute:</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[160px]">{currentUser.college || ''}</span>
                         </div>
                         {currentUser.role === 'student' ? (
                           <>
-                            <div className="flex items-center justify-between gap-2 text-slate-500">
-                              <span className="shrink-0 font-medium">Roll Number:</span>
-                              <span className="font-bold text-slate-800 font-mono text-right truncate max-w-[180px]">{currentUser.rollNumber || 'Not specified'}</span>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Roll Number:</span>
+                              <span className="font-bold text-slate-800 font-mono">{currentUser.rollNumber || ''}</span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-slate-500">
-                              <span className="shrink-0 font-medium">Branch & Batch:</span>
-                              <span className="font-semibold text-slate-800 text-right truncate max-w-[180px]">{currentUser.branch || 'CSE'} ({studentBatch || '2028'})</span>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Branch & Batch:</span>
+                              <span className="font-semibold text-slate-800">{currentUser.branch || 'CSE'} ({studentBatch || ''})</span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-slate-500">
-                              <span className="shrink-0 font-medium">Academic Standing:</span>
-                              <span className="font-bold text-emerald-600 text-right">Active • 0 Backlogs</span>
+                            <div className="flex justify-between text-slate-500">
+                              <span>Academic Standing:</span>
+                              <span className="font-bold text-emerald-600">Backlogs: {displayValue(academicMetrics.backlogs)}</span>
                             </div>
                           </>
                         ) : (
@@ -551,7 +643,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                         </button>
                       </div>
                     </div>
-                  </>
+                  </ProfilePopover>
                 )}
               </div>
             </div>
@@ -562,12 +654,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             <div>
               <span className="text-indigo-300 block">CRT Attendance:</span>
               <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {studentCrt.percentage}% ({studentCrt.percentage >= 75 ? 'Eligible' : 'Warning'})
+                {crtLabel}
               </span>
             </div>
             <div>
               <span className="text-indigo-300 block">Class Attendance:</span>
-              <span className="font-black text-base text-white">86.8% Average</span>
+              <span className="font-black text-base text-white">{displayValue(classPercentage, '% Average')}</span>
             </div>
             <div>
               <span className="text-indigo-300 block">Resume ATS Score:</span>
@@ -660,6 +752,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
         
+        {/* MASTER TIMETABLE */}
+        {activeTab === 'master-timetable' && (
+          <div id="institute-tab-master-timetable" className="space-y-6 scroll-mt-24">
+            <StudentMasterTimetableView currentUser={currentUser} />
+          </div>
+        )}
+
         {/* TAB 1: STUDENT DATA */}
         {activeTab === 'student-data' && (
           <div id="institute-tab-student-data" className="scroll-mt-24">
@@ -674,7 +773,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <h3 className="font-black text-lg text-slate-900">{currentUser.name}</h3>
                   <p className="text-xs text-slate-500">{currentUser.email}</p>
                   <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] uppercase inline-block mt-1">
-                    Roll: {currentUser.rollNumber || '2024/CSE/084'}
+                    Roll: {currentUser.rollNumber || ''}
                   </span>
                 </div>
               </div>
@@ -682,7 +781,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
               <div className="space-y-3 text-xs border-t border-slate-100 pt-4">
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">College:</span>
-                  <span className="font-semibold text-slate-700">{currentUser.college || 'Delhi Technological University (DTU)'}</span>
+                  <span className="font-semibold text-slate-700">{currentUser.college || ''}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">Branch:</span>
@@ -694,15 +793,15 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">Current CGPA:</span>
-                  <span className="font-extrabold text-emerald-600">8.64 / 10.0</span>
+                  <span className="font-extrabold text-emerald-600">{displayValue(academicMetrics.cgpa)} / 10.0</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-400">Active Backlogs:</span>
-                  <span className="font-bold text-slate-700">0 (Clear Standing)</span>
+                  <span className="font-bold text-slate-700">{displayValue(academicMetrics.backlogs)}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">CRT Status:</span>
-                  <span className="font-bold text-emerald-600">Eligible (87.5%)</span>
+                  <span className="font-bold text-emerald-600">{crtLabel}</span>
                 </div>
               </div>
 
@@ -755,7 +854,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
                     </div>
                     <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                      87.5% - Cleared
+                      {crtLabel}
                     </span>
                   </div>
 
@@ -768,7 +867,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       </div>
                     </div>
                     <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                      86.8% - Cleared
+                      {displayValue(classPercentage, '%')}
                     </span>
                   </div>
 
@@ -777,11 +876,11 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                       <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                       <div>
                         <span className="font-bold text-slate-800 block">ATS Resume Verification</span>
-                        <span className="text-slate-500">Requirement: Verified by Department Placement Coordinator.</span>
+                        <span className="text-slate-500">Requirement: Reviewed after submission.</span>
                       </div>
                     </div>
                     <span className="font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                      Score: 88/100
+                      Score: {atsLabel}
                     </span>
                   </div>
                 </div>
@@ -887,67 +986,146 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         {/* TAB 2: UPCOMING DRIVES (STUDENTS) */}
         {activeTab === 'upcoming-drives' && (
           <div id="institute-tab-upcoming-drives" className="space-y-6 scroll-mt-24">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200">
-              <div>
-                <h3 className="font-bold text-slate-900 text-lg">Upcoming Campus Recruitment Drives</h3>
-                <p className="text-xs text-slate-500">Filtered for your batch ({studentBatch}) and academic branch ({currentUser.branch || 'CSE'}).</p>
+            {/* Header Bar with Attractive Dark Texture Background */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">
+                    Upcoming Campus Recruitment Drives
+                  </h3>
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
+                    Batch Verified
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
+                  Filtered for your batch ({studentBatch}) and academic branch ({currentUser.branch || 'Computer Science and Engineering'}).
+                </p>
               </div>
-              <button
-                onClick={() => onNavigate('drives')}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0"
-              >
-                <span>View Full Drive Calendar</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-2.5 shrink-0 relative z-10">
+                <button
+                  onClick={() => onNavigate('drives')}
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm hover:shadow-md cursor-pointer group"
+                >
+                  <span>View Full Drive Calendar</span>
+                  <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingDrives.map(drive => {
+            {/* Drives Stack (Line / Row Layout) */}
+            <div className="space-y-4">
+              {paginatedInstituteDrives.map(drive => {
                 const isBatchEligible = drive.eligibleBatches?.includes(studentBatch);
                 return (
                   <div
                     key={drive.id}
-                    className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-indigo-400 hover:shadow-md transition flex flex-col justify-between"
+                    className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 hover:border-indigo-500 hover:shadow-lg transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-black text-xs text-slate-900">{drive.companyName}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isBatchEligible ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700'
+                    {/* Left: Company, Role & Package */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2.5 mb-2">
+                        <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-indigo-700 transition-colors">
+                          {drive.companyName}
+                        </span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          isBatchEligible ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}>
                           {isBatchEligible ? 'Eligible for You' : 'Batch Ineligible'}
                         </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
+                          CTC: {drive.ctc}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          • Date: {drive.driveDate}
+                        </span>
                       </div>
 
-                      <h4 className="font-bold text-slate-900 text-base mb-1">{drive.role}</h4>
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 mb-4">
-                        <span>CTC: {drive.ctc}</span>
-                        <span>•</span>
-                        <span className="text-slate-500 font-normal">Date: {drive.driveDate}</span>
-                      </div>
+                      <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-3">
+                        {drive.role}
+                      </h4>
 
-                      <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1 mb-4">
-                        <div className="flex justify-between text-slate-500">
-                          <span>Min CGPA:</span>
-                          <span className="font-semibold text-slate-800">{drive.criteria?.cgpa || '6.5'}</span>
+                      {/* Line metadata items */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Min CGPA</span>
+                          <span className="font-bold text-slate-800 truncate">{drive.criteria?.cgpa || '6.5'} CGPA</span>
                         </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Batches:</span>
-                          <span className="font-semibold text-slate-800">{drive.eligibleBatches?.join(', ')}</span>
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Eligible Batches</span>
+                          <span className="font-bold text-slate-800 truncate">{drive.eligibleBatches?.join(', ') || 'All Batches'}</span>
+                        </div>
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Venue / Mode</span>
+                          <span className="font-bold text-slate-800 truncate" title={drive.venue || 'Campus Auditorium & Labs'}>
+                            {drive.venue || 'Campus Auditorium & Labs'}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => onSelectCompany && onSelectCompany({ id: drive.companyId, name: drive.companyName })}
-                      className="w-full py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition"
-                    >
-                      Prepare for {drive.companyName}
-                    </button>
+                    {/* Right: Action */}
+                    <div className="flex items-center gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                      <button
+                        onClick={() => onSelectCompany && onSelectCompany({ id: drive.companyId, name: drive.companyName })}
+                        className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-xs hover:shadow cursor-pointer"
+                      >
+                        Prepare for {drive.companyName}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
+
+              {paginatedInstituteDrives.length === 0 && (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+                  No upcoming drives found matching your profile.
+                </div>
+              )}
             </div>
+
+            {/* Pagination Controls Bar */}
+            {sortedInstituteDrives.length > DRIVES_PER_PAGE && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 border-t border-slate-200/80">
+                <span className="text-xs font-semibold text-slate-500">
+                  Page <span className="font-bold text-slate-800">{instituteDrivesPage}</span> of <span className="font-bold text-slate-800">{totalInstituteDrivesPages}</span>{' '}
+                  <span className="text-slate-400">
+                    (Showing {(instituteDrivesPage - 1) * DRIVES_PER_PAGE + 1}–{Math.min(instituteDrivesPage * DRIVES_PER_PAGE, sortedInstituteDrives.length)} of {sortedInstituteDrives.length} Drives)
+                  </span>
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={instituteDrivesPage === 1}
+                    onClick={() => {
+                      setInstituteDrivesPage(prev => Math.max(prev - 1, 1));
+                      const el = document.getElementById('institute-tab-upcoming-drives');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <span>← Previous</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={instituteDrivesPage === totalInstituteDrivesPages}
+                    onClick={() => {
+                      setInstituteDrivesPage(prev => Math.min(prev + 1, totalInstituteDrivesPages));
+                      const el = document.getElementById('institute-tab-upcoming-drives');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-white transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <span>Next Drives →</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1267,185 +1445,45 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 8: UPCOMING HACKATHONS */}
+        {/* TAB 8: HACKATHONS */}
         {activeTab === 'hackathons' && (
           <div id="institute-tab-hackathons" className="space-y-6 scroll-mt-24">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-1">National & Campus Hackathons</h3>
-              <p className="text-xs text-slate-500 mb-6">Build real-world projects, win cash prizes, and secure direct PPI/PPO interview calls.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {hackathons.map(hack => (
-                  <div key={hack.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
-                          {hack.status}
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-400">Deadline: {hack.registrationDeadline}</span>
-                      </div>
-
-                      <h4 className="font-black text-slate-900 text-base mb-1">{hack.title}</h4>
-                      <p className="text-xs text-slate-500 mb-3">{hack.organizer}</p>
-
-                      <div className="space-y-1.5 text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-100 mb-4">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Prize Pool:</span>
-                          <span className="font-bold text-emerald-600">{hack.prizePool}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Team Size:</span>
-                          <span className="font-semibold text-slate-800">{hack.teamSize}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <a
-                      href={hack.registrationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-sm"
-                    >
-                      <span>Register for Hackathon</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <OpportunitiesHubView
+              initialTab="hackathons"
+              userRole={userRole}
+              studentBatch={studentBatch}
+              isFinalYear={isFinalYear}
+              onNavigate={onNavigate}
+              showToast={showToast}
+            />
           </div>
         )}
 
         {/* TAB 9: UPCOMING INTERNSHIPS */}
         {activeTab === 'internships' && (
           <div id="institute-tab-internships" className="space-y-6 scroll-mt-24">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-1">Corporate Summer & Winter Internships</h3>
-              <p className="text-xs text-slate-500 mb-6">Gain industry experience with high Pre-Placement Offer (PPO) conversion rates.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {internships.map(intern => (
-                  <div key={intern.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-black text-xs text-slate-900">{intern.companyName}</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                          {intern.status}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-slate-900 text-sm mb-1">{intern.role}</h4>
-                      <p className="text-xs font-black text-emerald-600 mb-3">{intern.stipend}</p>
-
-                      <div className="space-y-1.5 text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-100 mb-4">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Duration:</span>
-                          <span className="font-semibold text-slate-800">{intern.duration}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Location:</span>
-                          <span className="font-semibold text-slate-800">{intern.location}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">PPO Rate:</span>
-                          <span className="font-bold text-indigo-600">High (&gt;85%)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <a
-                      href={intern.applicationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-sm"
-                    >
-                      <span>Apply for Internship</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <OpportunitiesHubView
+              initialTab="internships"
+              userRole={userRole}
+              studentBatch={studentBatch}
+              isFinalYear={isFinalYear}
+              onNavigate={onNavigate}
+              showToast={showToast}
+            />
           </div>
         )}
 
-        {/* TAB 10: OFF-CAMPUS COMPANIES (ONLY FOR FINAL YEAR STUDENTS) */}
+        {/* TAB 10: OFF-CAMPUS HIRING DRIVES */}
         {activeTab === 'off-campus' && (
           <div id="institute-tab-off-campus" className="space-y-6 scroll-mt-24">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider">
-                      Only for Final Year Students
-                    </span>
-                    <span className="text-xs text-slate-500">Batches 2025 & 2026</span>
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-900">Verified Off-Campus Hiring Drives</h3>
-                </div>
-
-                <div className={`px-4 py-2 rounded-xl text-xs font-bold ${
-                  isFinalYear ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-                }`}>
-                  {isFinalYear ? '✅ You are Eligible to Apply' : `ℹ️ Viewing in Advisory Mode (Batch ${studentBatch})`}
-                </div>
-              </div>
-
-              {!isFinalYear && (
-                <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                  <div>
-                    <span className="font-bold block">Off-Campus Policy Restriction:</span>
-                    <span>These opportunities are strictly reserved for graduating/final-year batches. Pre-final year students can review syllabus and pattern to prepare ahead.</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {offCampusCompanies.map(comp => (
-                  <div key={comp.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-black text-xs text-slate-900">{comp.companyName}</span>
-                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
-                          Final Year Only
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-slate-900 text-sm mb-1">{comp.role}</h4>
-                      <p className="text-xs font-bold text-emerald-600 mb-3">{comp.ctc}</p>
-
-                      <p className="text-xs text-slate-600 mb-4 leading-relaxed">{comp.description}</p>
-
-                      <div className="space-y-1 text-xs text-slate-500 bg-white p-3 rounded-xl border border-slate-100 mb-4">
-                        <div className="flex justify-between">
-                          <span>Exam Date:</span>
-                          <span className="font-semibold text-slate-800">{comp.examDate}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Deadline:</span>
-                          <span className="font-semibold text-slate-800">{comp.applicationDeadline}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <a
-                      href={comp.applyLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`w-full py-2.5 rounded-xl font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-sm ${
-                        isFinalYear
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                      }`}
-                    >
-                      <span>{isFinalYear ? 'Apply on Official Portal' : 'View Drive Syllabus'}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <OpportunitiesHubView
+              initialTab="jobs"
+              userRole={userRole}
+              studentBatch={studentBatch}
+              isFinalYear={isFinalYear}
+              onNavigate={onNavigate}
+              showToast={showToast}
+            />
           </div>
         )}
 
@@ -1512,7 +1550,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   required
                   value={newStudentForm.name}
                   onChange={(e) => setNewStudentForm({ ...newStudentForm, name: e.target.value })}
-                  placeholder="e.g. Ananya Sharma"
+                  placeholder="Enter student name"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -1545,7 +1583,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <label className="block font-semibold text-slate-700 mb-1">Graduation Batch *</label>
                   <select
                     value={newStudentForm.batch}
-                    onChange={(e) => setNewStudentForm({ ...newStudentForm, batch: e.target.value })}
+                    onChange={(e) => setNewStudentForm({ ...newStudentForm, batch: '' })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   >
                     <option value="2025">2025 (Final Year)</option>
@@ -1562,7 +1600,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                   <input
                     type="text"
                     value={newStudentForm.branch}
-                    onChange={(e) => setNewStudentForm({ ...newStudentForm, branch: e.target.value })}
+                    onChange={(e) => setNewStudentForm({ ...newStudentForm, branch: '' })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -1572,7 +1610,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                     type="number"
                     step="0.01"
                     value={newStudentForm.cgpa}
-                    onChange={(e) => setNewStudentForm({ ...newStudentForm, cgpa: e.target.value })}
+                    onChange={(e) => setNewStudentForm({ ...newStudentForm, cgpa: '' })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -1614,6 +1652,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         onClose={() => setIsFullProfileModalOpen(false)}
         onProfileUpdated={() => setCurrentUser(getCurrentUser() || {})}
       />
+
+      {/* Toast Notification */}
+      <Toast message={toastMessage} onClose={() => setToastMessage('')} />
 
     </div>
   );

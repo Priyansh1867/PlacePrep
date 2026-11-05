@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.Company;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.CompanyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,14 +33,15 @@ public class CompanyController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EntityResponseDto>> getCompanies(@RequestParam(required = false) String batch) {
+    public ResponseEntity<List<Company>> getCompanies(@RequestParam(required = false) String batch) {
         return ResponseEntity.ok(companyService.getAll(batch));
     }
 
     @GetMapping("/{companyId}")
     public ResponseEntity<?> getCompanyById(@PathVariable String companyId) {
         try {
-            return ResponseEntity.ok(companyService.getByCompanyId(companyId));
+            Company company = companyService.getByCompanyId(companyId);
+            return ResponseEntity.ok(company);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -52,14 +51,16 @@ public class CompanyController {
     }
 
     @PostMapping
-    public ResponseEntity<EntityResponseDto> createCompany(@RequestBody Company company) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(companyService.create(company));
+    public ResponseEntity<Company> createCompany(@RequestBody Company company) {
+        Company created = companyService.create(company);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @org.springframework.web.bind.annotation.PutMapping("/{companyId}")
     public ResponseEntity<?> updateCompany(@PathVariable String companyId, @RequestBody Company company) {
         try {
-            return ResponseEntity.ok(companyService.update(companyId, company));
+            Company updated = companyService.update(companyId, company);
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {

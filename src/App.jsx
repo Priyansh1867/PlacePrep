@@ -37,6 +37,7 @@ const ResumeAtsCheckerPage = lazy(() => import('./pages/ResumeAtsCheckerPage'));
 const AcademicProfilePage = lazy(() => import('./pages/AcademicProfilePage'));
 const MyApplicationsPage = lazy(() => import('./pages/MyApplicationsPage'));
 const StudentOnboardingPage = lazy(() => import('./pages/StudentOnboardingPage'));
+const OpportunitiesHubView = lazy(() => import('./components/opportunities/OpportunitiesHubView'));
 
 import { getCompanies, getCurrentUser } from './services/storage';
 import { getRoleDefaultDashboard } from './components/ui/BackNavButton';
@@ -47,7 +48,8 @@ const VALID_ROUTES = new Set([
   'prep', 'experiences', 'ai-insights', 'mock-interview', 'dashboard', 'academic-records',
   'admin', 'attendance', 'daily-attendance', 'class-attendance', 'crt-attendance',
   'crt-training-attendance', 'reports', 'reports-exporter', 'curriculum-governance',
-  'syllabus-governance', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker', 'ats-checker'
+  'syllabus-governance', 'dsa-studio', 'dsa-practice', 'resume-ats', 'resume-checker', 'ats-checker',
+  'opportunities', 'off-campus', 'hackathons', 'internships'
 ]);
 
 function getInitialRoute() {
@@ -538,6 +540,16 @@ export default function App() {
             onBack={handleBack}
             onSelectCompany={handleSelectCompany}
           />
+        )}
+
+        {/* 24. OPPORTUNITIES & HACKATHONS HUB */}
+        {(currentRoute === 'opportunities' || currentRoute === 'off-campus' || currentRoute === 'hackathons' || currentRoute === 'internships') && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+            <OpportunitiesHubView
+              initialTab={currentRoute === 'hackathons' ? 'hackathons' : (currentRoute === 'internships' ? 'internships' : (currentRoute === 'off-campus' ? 'jobs' : 'all'))}
+              onNavigate={handleNavigate}
+            />
+          </div>
         )}
 
         

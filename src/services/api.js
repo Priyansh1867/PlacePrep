@@ -1,4 +1,20 @@
-import { getSavedInstituteLocation, saveInstituteLocation } from './storage.js';
+import {
+  getSavedInstituteLocation,
+  saveInstituteLocation,
+  getHackathons as getStorageHackathons,
+  addHackathon as addStorageHackathon,
+  updateHackathon as updateStorageHackathon,
+  deleteHackathon as deleteStorageHackathon,
+  getInternships as getStorageInternships,
+  addInternship as addStorageInternship,
+  updateInternship as updateStorageInternship,
+  deleteInternship as deleteStorageInternship,
+  getOffCampusCompanies as getStorageOffCampus,
+  addOffCampusCompany as addStorageOffCampus,
+  updateOffCampusCompany as updateStorageOffCampus,
+  deleteOffCampusCompany as deleteStorageOffCampus,
+  resetOpportunitiesToVerifiedDefaults
+} from './storage.js';
 // PlacePrep REST API Client
 // API requests are routed through the Vite proxy to the Spring Boot backend.
 // Attaches auth tokens and provides clean, explicit error handling.
@@ -1052,7 +1068,163 @@ export const DirectorApi = {
   }
 };
 
-// 28. Live Sessions API
+// 29. Opportunities & Hackathons API (with graceful fallback to local verified storage)
+export const OpportunityApi = {
+  async getHackathons() {
+    try {
+      const res = await request('/opportunities/hackathons');
+      if (Array.isArray(res) && res.length > 0) return res;
+    } catch {
+      // Offline fallback
+    }
+    return getStorageHackathons();
+  },
+
+  async createHackathon(hackathon) {
+    try {
+      const res = await request('/opportunities/hackathons', {
+        method: 'POST',
+        body: JSON.stringify(hackathon)
+      });
+      addStorageHackathon(res || hackathon);
+      return res || hackathon;
+    } catch {
+      return addStorageHackathon(hackathon);
+    }
+  },
+
+  async updateHackathon(id, updates) {
+    try {
+      await request(`/opportunities/hackathons/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+    } catch {
+      // Update local storage
+    }
+    return updateStorageHackathon(id, updates);
+  },
+
+  async deleteHackathon(id) {
+    try {
+      await request(`/opportunities/hackathons/${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+    } catch {
+      // Delete local storage
+    }
+    return deleteStorageHackathon(id);
+  },
+
+  async getInternships(batch = null) {
+    try {
+      const qs = batch ? `?batch=${encodeURIComponent(batch)}` : '';
+      const res = await request(`/opportunities/internships${qs}`);
+      if (Array.isArray(res) && res.length > 0) return res;
+    } catch {
+      // Offline fallback
+    }
+    const all = getStorageInternships();
+    if (!batch) return all;
+    return all.filter(i => !i.eligibleBatches || i.eligibleBatches.includes(batch));
+  },
+
+  async createInternship(internship) {
+    try {
+      const res = await request('/opportunities/internships', {
+        method: 'POST',
+        body: JSON.stringify(internship)
+      });
+      addStorageInternship(res || internship);
+      return res || internship;
+    } catch {
+      return addStorageInternship(internship);
+    }
+  },
+
+  async updateInternship(id, updates) {
+    try {
+      await request(`/opportunities/internships/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+    } catch {
+      // Update local storage
+    }
+    return updateStorageInternship(id, updates);
+  },
+
+  async deleteInternship(id) {
+    try {
+      await request(`/opportunities/internships/${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+    } catch {
+      // Delete local storage
+    }
+    return deleteStorageInternship(id);
+  },
+
+  async getOffCampus(studentEmailOrId = null) {
+    try {
+      const qs = studentEmailOrId ? `?studentEmailOrId=${encodeURIComponent(studentEmailOrId)}` : '';
+      const res = await request(`/opportunities/off-campus${qs}`);
+      if (res && Array.isArray(res.opportunities) && res.opportunities.length > 0) {
+        return res;
+      }
+    } catch {
+      // Offline fallback
+    }
+    const companies = getStorageOffCampus();
+    return {
+      status: 'ACCESS_GRANTED',
+      opportunities: companies,
+      isFinalYearEligible: true
+    };
+  },
+
+  async createOffCampus(comp) {
+    try {
+      const res = await request('/opportunities/off-campus', {
+        method: 'POST',
+        body: JSON.stringify(comp)
+      });
+      addStorageOffCampus(res || comp);
+      return res || comp;
+    } catch {
+      return addStorageOffCampus(comp);
+    }
+  },
+
+  async updateOffCampus(id, updates) {
+    try {
+      await request(`/opportunities/off-campus/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+    } catch {
+      // Update local storage
+    }
+    return updateStorageOffCampus(id, updates);
+  },
+
+  async deleteOffCampus(id) {
+    try {
+      await request(`/opportunities/off-campus/${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+    } catch {
+      // Delete local storage
+    }
+    return deleteStorageOffCampus(id);
+  },
+
+  refreshVerifiedDefaults() {
+    return resetOpportunitiesToVerifiedDefaults();
+  }
+};
+
+// 30. Live Sessions API
 export const LiveSessionApi = {
   async getAll(role = null, studentEmail = null) {
     const params = new URLSearchParams();

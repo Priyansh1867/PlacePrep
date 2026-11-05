@@ -376,7 +376,8 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
   const userRole = currentUser?.role || 'student';
   const visibleNavTabs = useMemo(() => {
     const navTabs = [
-      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule' },
+      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['student'] },
+      { id: 'timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
       { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
@@ -1205,6 +1206,11 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
                 }}
               />
             </div>
+          </div>
+        )}
+        {activeTab === 'master-timetable' && (
+          <div id="institute-tab-master-timetable" className="space-y-6 scroll-mt-24">
+            <StudentMasterTimetableView currentUser={currentUser} />
           </div>
         )}
         {activeTab === 'timetable' && (

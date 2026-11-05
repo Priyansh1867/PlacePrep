@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/management/timetables")
+@RequestMapping("/api/management/legacy-timetables")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class MasterTimetableController {
 

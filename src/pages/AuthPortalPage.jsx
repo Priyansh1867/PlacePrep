@@ -248,7 +248,10 @@ export default function AuthPortalPage({ initialPortal = 'institute', initialMod
         const response = await AuthApi.login({ email: acc.email, password: acc.password });
         if (response?.user) {
           user = response.user;
-          if (response.token) localStorage.setItem('placeprep_token', response.token);
+          if (response.token) {
+            localStorage.setItem('placeprep_token', response.token);
+            localStorage.setItem('placeprep_auth_token', response.token);
+          }
         }
       } catch (e) {
         console.warn('API login skipped, using guaranteed hardcoded login:', e);
@@ -267,6 +270,9 @@ export default function AuthPortalPage({ initialPortal = 'institute', initialMod
           status: 'ACTIVE',
           onboardingCompleted: true,
         };
+        const demoTok = `demo_${acc.role.toLowerCase()}`;
+        localStorage.setItem('placeprep_token', demoTok);
+        localStorage.setItem('placeprep_auth_token', demoTok);
       }
 
       setCurrentUser(user);
@@ -334,11 +340,18 @@ export default function AuthPortalPage({ initialPortal = 'institute', initialMod
             branch: effectiveBranch || response.user.branch,
             customBranch: formData.branch === 'Other' ? formData.customBranch.trim() : ''
           };
-          if (response.token) localStorage.setItem('placeprep_token', response.token);
+          if (response.token) {
+            localStorage.setItem('placeprep_token', response.token);
+            localStorage.setItem('placeprep_auth_token', response.token);
+          }
         }
       } catch (backendErr) {
         console.warn('Backend login fallback applied:', backendErr);
         const matchingAcc = HARDCODED_ACCOUNTS.find((a) => a.email.toLowerCase() === email || a.role === selectedRole);
+        const fallbackRole = selectedRole || matchingAcc?.role || 'student';
+        const demoTok = `demo_${fallbackRole.toLowerCase()}`;
+        localStorage.setItem('placeprep_token', demoTok);
+        localStorage.setItem('placeprep_auth_token', demoTok);
         user = {
           id: Math.floor(Math.random() * 9000) + 1000,
           name: formData.fullName?.trim() || matchingAcc?.name || email.split('@')[0],

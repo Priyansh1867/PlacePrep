@@ -166,7 +166,7 @@ class TimetableLifecycleServiceTest {
         List<String> auditLogs = new ArrayList<>();
         AuditLogService auditLogService = new AuditLogService() {
             @Override
-            public com.placeprep.dto.EntityResponseDto logAction(String action, String performedBy, String performerRole, String targetResource, String details) {
+            public com.placeprep.model.AuditLog logAction(String action, String performedBy, String performerRole, String targetResource, String details) {
                 auditLogs.add(action + ":" + performedBy);
                 return null;
             }

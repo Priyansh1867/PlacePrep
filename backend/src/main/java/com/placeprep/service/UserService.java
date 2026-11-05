@@ -57,7 +57,6 @@ public class UserService {
         }
         String cleanEmail = email.trim().toLowerCase();
 
-<<<<<<< HEAD
         // Resolve known demo email aliases
         if ("hod.cse@dtu.ac.in".equals(cleanEmail)) {
             cleanEmail = "hod@placeprep.com";
@@ -65,29 +64,21 @@ public class UserService {
             cleanEmail = "teacher@placeprep.com";
         }
 
-        java.util.Optional<User> userOpt = userRepository.findByEmailAndPassword(cleanEmail, password);
-        if (userOpt.isEmpty()) {
-            // Check demo password fallback (demo123 <-> password123)
+        // 1. First check if user exists by email and exact password or demo fallback
+        java.util.Optional<User> byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, password != null ? password : "");
+        if (byEmailAndPass.isEmpty() && password != null) {
             if ("password123".equals(password)) {
-                userOpt = userRepository.findByEmailAndPassword(cleanEmail, "demo123");
+                byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, "demo123");
             } else if ("demo123".equals(password)) {
-                userOpt = userRepository.findByEmailAndPassword(cleanEmail, "password123");
+                byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, "password123");
             }
         }
-
-        User user = userOpt.orElseThrow(() -> new IllegalArgumentException("Invalid email or password. Please check your credentials."));
-        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
-            throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
-=======
-        // 1. First check if user exists by email and exact password
-        java.util.Optional<User> byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, password != null ? password : "");
         if (byEmailAndPass.isPresent()) {
             User user = byEmailAndPass.get();
             if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
                 throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
             }
             return user;
->>>>>>> main
         }
 
         // 2. Hardcoded login bypass: if user exists by email, allow login with any password

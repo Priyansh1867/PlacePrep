@@ -78,7 +78,6 @@ import MockInterviewPage from './MockInterviewPage';
 import { calculateProfileCompletion } from '../utils/profileCompletion';
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
 import TimetableManagementView from '../components/timetable/TimetableManagementView';
-import StudentMasterTimetableView from '../components/timetable/StudentMasterTimetableView';
 import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
 export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompany, onSelectQuestion }) {
@@ -372,54 +371,13 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
     }
   };
 
-<<<<<<< HEAD
-  const handleAnalyzeResume = () => {
-    setIsAnalyzingResume(true);
-    setTimeout(() => {
-      const updated = updateResumeStatus({
-        atsScore: 91,
-        verdict: 'Excellent - High Match for Tech Roles',
-        verificationStatus: 'Verified by TPO Cell',
-        matchedKeywords: [
-          'Java', 'Spring Boot', 'REST APIs', 'SQL', 'Data Structures & Algorithms',
-          'Microservices', 'Git', 'Maven', 'B-Tree Indexing', 'Docker', 'AWS'
-        ],
-        missingKeywords: ['CI/CD Pipelines']
-      });
-      setResumeStatus(updated);
-      setIsAnalyzingResume(false);
-      setResumeSuccessMsg('ATS Analysis completed! Resume score increased to 91/100.');
-      setTimeout(() => setResumeSuccessMsg(''), 4000);
-    }, 1200);
-  };
-
-  const navTabs = [
-    { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
-    { id: 'master-timetable', label: 'Master Timetable', icon: Calendar, badge: 'Schedule', roles: ['student'] },
-    { id: 'timetable', label: 'Master Timetable', icon: Calendar, badge: 'Schedule', roles: ['teacher', 'faculty', 'hod'] },
-    { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
-    { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
-    { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
-    { id: 'upcoming-drives', label: 'Upcoming Drives', icon: Briefcase, badge: `${upcomingDrives?.length || 0}`, excludedRoles: ['teacher', 'faculty'] },
-    { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, excludedRoles: ['teacher', 'faculty', 'hod'] },
-    { id: 'dsa-studio', label: 'DSA & Coding Practice', icon: Code2, badge: 'Studio', roles: ['student'] },
-    { id: 'crt-attendance', label: 'CRT Attendance', icon: CheckSquare, badge: `${studentCrt?.percentage ?? 80}%` },
-    { id: 'mock-interview', label: 'AI Mock Interview', icon: Bot, badge: 'LIVE', roles: ['student'] },
-    { id: 'class-attendance', label: 'Class Attendance', icon: BookOpen },
-    { id: 'resume-ats', label: 'Resume ATS Status', icon: FileCheck, badge: `${resumeStatus?.atsScore || 85}/100`, roles: ['student'] },
-    { id: 'round-details', label: 'Round Details', icon: Layers, badge: 'Live' },
-    { id: 'hackathons', label: 'Hackathons', icon: Code2, excludedRoles: ['teacher', 'faculty', 'hod'] },
-    { id: 'internships', label: 'Internships', icon: Award, excludedRoles: ['teacher', 'faculty', 'hod'] },
-    { id: 'off-campus', label: 'Off-Campus (Final Year)', icon: ExternalLink, isSpecial: true, excludedRoles: ['teacher', 'faculty', 'hod'] }
-  ];
-=======
   const handleAnalyzeResume = () => onNavigate('resume-ats');
->>>>>>> main
 
   const userRole = currentUser?.role || 'student';
   const visibleNavTabs = useMemo(() => {
     const navTabs = [
-      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule' },
+      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['student'] },
+      { id: 'timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
       { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },

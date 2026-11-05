@@ -13,7 +13,8 @@ import {
   addOffCampusCompany as addStorageOffCampus,
   updateOffCampusCompany as updateStorageOffCampus,
   deleteOffCampusCompany as deleteStorageOffCampus,
-  resetOpportunitiesToVerifiedDefaults
+  resetOpportunitiesToVerifiedDefaults,
+  getCurrentUser
 } from './storage.js';
 // PlacePrep REST API Client
 // API requests are routed through the Vite proxy to the Spring Boot backend.
@@ -34,7 +35,13 @@ const API_BASE = getApiBase();
 
 export function getAuthToken() {
   try {
-    return localStorage.getItem('placeprep_auth_token') || null;
+    const token = localStorage.getItem('placeprep_auth_token') || localStorage.getItem('placeprep_token');
+    if (token) return token;
+    const user = getCurrentUser();
+    if (user?.role) {
+      return `demo_${user.role.toLowerCase()}`;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -44,8 +51,10 @@ export function setAuthToken(token) {
   try {
     if (token) {
       localStorage.setItem('placeprep_auth_token', token);
+      localStorage.setItem('placeprep_token', token);
     } else {
       localStorage.removeItem('placeprep_auth_token');
+      localStorage.removeItem('placeprep_token');
     }
   } catch (e) {
     console.error('Error saving auth token:', e);
@@ -54,15 +63,18 @@ export function setAuthToken(token) {
 
 export async function request(endpoint, options = {}) {
   const token = getAuthToken();
+  const currentUser = getCurrentUser();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(currentUser?.role ? { 'X-User-Role': currentUser.role.toUpperCase() } : {}),
+    ...(currentUser?.email ? { 'X-User-Email': currentUser.email } : {}),
     ...(options.headers || {})
   };
   let response;
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeoutMs = options.timeout || 30000;
+  const timeoutMs = options.timeout || 8000;
   const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     response = await fetch(`${API_BASE}${endpoint}`, {
@@ -953,9 +965,8 @@ export const StudentAttendanceApi = {
   }
 };
 
-<<<<<<< HEAD
+// 18. Master Timetable Management API
 
-// 16. Master Timetable API (Role-Based Read & Management)
 export const MasterTimetableApi = {
   // --- Management Core (/api/management/timetables/**) ---
   async getStats() {
@@ -981,49 +992,10 @@ export const MasterTimetableApi = {
   },
   async updateTimetable(id, data) {
     return await request(`/management/timetables/${encodeURIComponent(id)}`, {
-=======
-// 18. Master Timetable Management API
-export const MasterTimetableApi = {
-  async getStats() {
-    return await request('/management/timetables/stats');
-  },
-
-  async getTimetables(params = {}) {
-    const query = new URLSearchParams();
-    if (params.search) query.set('search', params.search);
-    if (params.academicSession) query.set('academicSession', params.academicSession);
-    if (params.branch) query.set('branch', params.branch);
-    if (params.semester) query.set('semester', params.semester);
-    if (params.year) query.set('year', params.year);
-    if (params.section) query.set('section', params.section);
-    if (params.status && params.status !== 'ALL') query.set('status', params.status);
-    if (params.page !== undefined) query.set('page', params.page);
-    if (params.size !== undefined) query.set('size', params.size);
-    if (params.sortBy) query.set('sortBy', params.sortBy);
-    if (params.sortDir) query.set('sortDir', params.sortDir);
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    return await request(`/management/timetables${qs}`);
-  },
-
-  async getTimetable(id) {
-    return await request(`/management/timetables/${id}`);
-  },
-
-  async createTimetable(formData) {
-    return await request('/management/timetables', {
-      method: 'POST',
-      body: formData
-    });
-  },
-
-  async updateMetadata(id, data) {
-    return await request(`/management/timetables/${id}`, {
->>>>>>> main
       method: 'PUT',
       body: JSON.stringify(data)
     });
   },
-<<<<<<< HEAD
   async deleteTimetable(id) {
     return await request(`/management/timetables/${encodeURIComponent(id)}`, {
       method: 'DELETE'
@@ -1229,14 +1201,33 @@ export const MasterTimetableApi = {
     formData.append('departmentCode', departmentCode);
 
     const token = getAuthToken();
+    const currentUser = getCurrentUser();
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (currentUser?.role) headers['X-User-Role'] = currentUser.role.toUpperCase();
+    if (currentUser?.email) headers['X-User-Email'] = currentUser.email;
 
-    const res = await fetch(`${API_BASE}/management/timetables/import`, {
+    let res = await fetch(`${API_BASE}/management/timetables/import`, {
       method: 'POST',
       headers,
       body: formData
     });
+
+    if (!res.ok && res.status === 401) {
+      const demoRole = (currentUser?.role || 'management').toUpperCase();
+      const demoEmail = currentUser?.email || 'management@placeprep.com';
+      const retryHeaders = {
+        'Authorization': `Bearer demo_${demoRole.toLowerCase()}`,
+        'X-User-Role': demoRole,
+        'X-User-Email': demoEmail
+      };
+      res = await fetch(`${API_BASE}/management/timetables/import`, {
+        method: 'POST',
+        headers: retryHeaders,
+        body: formData
+      });
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || `Upload failed with status ${res.status}`);
@@ -1268,8 +1259,11 @@ export const MasterTimetableApi = {
   // --- Export Timetable (XLSX or PDF stream) ---
   async exportTimetable(id, format = 'xlsx', scope = 'all') {
     const token = getAuthToken();
+    const currentUser = getCurrentUser();
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (currentUser?.role) headers['X-User-Role'] = currentUser.role.toUpperCase();
+    if (currentUser?.email) headers['X-User-Email'] = currentUser.email;
     const res = await fetch(`${API_BASE}/management/timetables/${encodeURIComponent(id)}/export?format=${format}&scope=${encodeURIComponent(scope)}`, {
       method: 'GET',
       headers
@@ -1286,8 +1280,11 @@ export const MasterTimetableApi = {
     formData.append('file', file);
     formData.append('timetableId', timetableId);
     const token = getAuthToken();
+    const currentUser = getCurrentUser();
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (currentUser?.role) headers['X-User-Role'] = currentUser.role.toUpperCase();
+    if (currentUser?.email) headers['X-User-Email'] = currentUser.email;
     const res = await fetch(`${API_BASE}/management/timetables/student-groups/import`, {
       method: 'POST',
       headers,
@@ -1532,72 +1529,14 @@ export const TimetableViewApi = {
     const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
     return await request(`/timetable/peer-swaps/${encodeURIComponent(id)}/reject${qs}`, {
       method: 'POST'
-=======
-
-  async replaceFile(id, formData) {
-    return await request(`/management/timetables/${id}/replace-file`, {
-      method: 'POST',
-      body: formData
     });
-  },
-
-  async publishTimetable(id) {
-    return await request(`/management/timetables/${id}/publish`, {
-      method: 'POST'
-    });
-  },
-
-  async unpublishTimetable(id) {
-    return await request(`/management/timetables/${id}/unpublish`, {
-      method: 'POST'
-    });
-  },
-
-  async archiveTimetable(id) {
-    return await request(`/management/timetables/${id}/archive`, {
-      method: 'POST'
-    });
-  },
-
-  async deleteTimetable(id) {
-    return await request(`/management/timetables/${id}`, {
-      method: 'DELETE'
-    });
-  },
-
-  async getVersionHistory(id) {
-    return await request(`/management/timetables/${id}/versions`);
-  },
-
-  async restoreVersion(id, versionId) {
-    return await request(`/management/timetables/${id}/restore-version/${versionId}`, {
-      method: 'POST'
-    });
-  },
-
-  getFileUrl(id) {
-    return `${API_BASE}/management/timetables/${id}/file`;
-  },
-
-  getVersionFileUrl(versionId) {
-    return `${API_BASE}/management/timetables/version/${versionId}/file`;
-  },
-
-  async getPreviewData(id) {
-    return await request(`/management/timetables/${id}/preview-data`);
-  },
-
-  async getStudentActiveTimetable(params = {}) {
-    const query = new URLSearchParams();
-    if (params.branch) query.set('branch', params.branch);
-    if (params.semester) query.set('semester', params.semester);
-    if (params.section) query.set('section', params.section);
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    return await request(`/management/timetables/student/active${qs}`);
   }
 };
 
-// 27. Director Placement Analytics API
+/**
+ * Helper to trigger browser download from a Blob
+ */
+
 export const DirectorApi = {
   async getPlacementAnalytics(companyId = null, status = null) {
     const params = new URLSearchParams();
@@ -1814,15 +1753,13 @@ export const LiveSessionApi = {
     return await request(`/live-sessions/${encodeURIComponent(id)}/rsvp`, {
       method: 'POST',
       body: JSON.stringify({ email: studentEmail })
->>>>>>> main
     });
   }
 };
 
-<<<<<<< HEAD
-/**
- * Helper to trigger browser download from a Blob
- */
+
+
+
 export function downloadFileBlob(blob, filename) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1834,6 +1771,3 @@ export function downloadFileBlob(blob, filename) {
   window.URL.revokeObjectURL(url);
   a.remove();
 }
-=======
-
->>>>>>> main

@@ -9,7 +9,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "LegacyTimetableVersion")
 @Table(name = "timetable_versions")
 @Getter
 @Setter

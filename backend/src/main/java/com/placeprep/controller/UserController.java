@@ -2,7 +2,6 @@ package com.placeprep.controller;
 
 import com.placeprep.model.User;
 import com.placeprep.service.UserService;
-import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,7 +49,7 @@ public class UserController {
     public ResponseEntity<?> getMe(Principal principal) {
         try {
             User user = getCurrentAuthenticatedUser(principal);
-            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
+            return ResponseEntity.ok(user);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", e.getMessage()));
         }

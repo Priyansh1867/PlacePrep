@@ -53,6 +53,7 @@ const SECTIONS = [
   { id: 'geofence', label: 'Geofencing Settings', icon: Shield, badge: '100m Fixed' },
   { id: 'attendance-overview', label: 'Attendance Overview', icon: BarChart3 },
   { id: 'attendance-sessions', label: 'Attendance Sessions', icon: Calendar },
+  { id: 'master-timetable', label: 'Master Timetable', icon: Calendar, badge: 'New' },
   { id: 'location-history', label: 'Location Update History', icon: History },
 ];
 
@@ -329,6 +330,11 @@ export default function ManagementPortalPage({ onNavigate }) {
         {/* ATTENDANCE SESSIONS */}
         {activeTab === 'attendance-sessions' && (
           <AttendanceSessionsSection />
+        )}
+
+        {/* MASTER TIMETABLE */}
+        {activeTab === 'master-timetable' && (
+          <MasterTimetableManagement currentUser={currentUser} />
         )}
 
         {/* LOCATION HISTORY */}

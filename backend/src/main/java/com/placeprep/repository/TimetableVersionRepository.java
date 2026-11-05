@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
+@Repository("legacyTimetableVersionRepository")
 public interface TimetableVersionRepository extends JpaRepository<TimetableVersion, Long> {
     List<TimetableVersion> findByTimetableIdOrderByVersionNumberDesc(Long timetableId);
 }

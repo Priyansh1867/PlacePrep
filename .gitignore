@@ -18,6 +18,9 @@ backend/target/
 *.class
 *.jar
 *.war
+uploads/
+backend/uploads/
+backend/backend/
 
 # Environment variables & secrets
 .env

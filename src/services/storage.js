@@ -868,40 +868,196 @@ export function updateStudentRounds(rounds) {
   return rounds;
 }
 
+// Opportunities Status Calculator (Active, Closing Soon, Expired)
+export function getOpportunityStatus(opportunityOrDeadline) {
+  if (!opportunityOrDeadline) return 'Active';
+  const rawDeadline = typeof opportunityOrDeadline === 'string'
+    ? opportunityOrDeadline
+    : (opportunityOrDeadline.applicationDeadline || opportunityOrDeadline.registrationDeadline || opportunityOrDeadline.deadline);
+
+  if (!rawDeadline) {
+    if (typeof opportunityOrDeadline === 'object' && opportunityOrDeadline.status) {
+      return opportunityOrDeadline.status;
+    }
+    return 'Active';
+  }
+
+  try {
+    const deadlineDate = new Date(rawDeadline);
+    if (isNaN(deadlineDate.getTime())) {
+      return typeof opportunityOrDeadline === 'object' ? (opportunityOrDeadline.status || 'Active') : 'Active';
+    }
+    const today = new Date();
+    // Reset hours to compare calendar days accurately
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(23, 59, 59, 999);
+
+    const diffMs = deadlineDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return 'Expired';
+    }
+    if (diffDays <= 10) {
+      return 'Closing Soon';
+    }
+    return 'Active';
+  } catch {
+    return 'Active';
+  }
+}
+
 // Hackathons
 export function getHackathons() {
-  return getStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+  const list = getStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+  return (list || []).map(h => ({
+    ...h,
+    status: getOpportunityStatus(h)
+  }));
 }
 
 export function addHackathon(hackathon) {
   const current = getHackathons();
-  const updated = [hackathon, ...current];
+  const newEntry = {
+    ...hackathon,
+    id: hackathon.id || `hack-${Date.now()}`,
+    status: getOpportunityStatus(hackathon),
+    isPublished: hackathon.isPublished !== false,
+    lastVerifiedDate: hackathon.lastVerifiedDate || new Date().toISOString().split('T')[0]
+  };
+  const updated = [newEntry, ...current];
   setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  dispatchSafeCustomEvent('hackathons-updated', updated);
+  return updated;
+}
+
+export function updateHackathon(id, updates) {
+  const current = getHackathons();
+  const updated = current.map(item => {
+    if (String(item.id) === String(id)) {
+      const merged = { ...item, ...updates, lastVerifiedDate: new Date().toISOString().split('T')[0] };
+      return { ...merged, status: getOpportunityStatus(merged) };
+    }
+    return item;
+  });
+  setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  dispatchSafeCustomEvent('hackathons-updated', updated);
+  return updated;
+}
+
+export function deleteHackathon(id) {
+  const current = getHackathons();
+  const updated = current.filter(item => String(item.id) !== String(id));
+  setStorageItem(STORAGE_KEYS.HACKATHONS, updated);
+  dispatchSafeCustomEvent('hackathons-updated', updated);
   return updated;
 }
 
 // Internships
 export function getInternships() {
-  return getStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+  const list = getStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+  return (list || []).map(i => ({
+    ...i,
+    status: getOpportunityStatus(i)
+  }));
 }
 
 export function addInternship(internship) {
   const current = getInternships();
-  const updated = [internship, ...current];
+  const newEntry = {
+    ...internship,
+    id: internship.id || `intern-${Date.now()}`,
+    status: getOpportunityStatus(internship),
+    isPublished: internship.isPublished !== false,
+    lastVerifiedDate: internship.lastVerifiedDate || new Date().toISOString().split('T')[0]
+  };
+  const updated = [newEntry, ...current];
   setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  dispatchSafeCustomEvent('internships-updated', updated);
   return updated;
 }
 
-// Off-Campus Companies (Final Year Only)
+export function updateInternship(id, updates) {
+  const current = getInternships();
+  const updated = current.map(item => {
+    if (String(item.id) === String(id)) {
+      const merged = { ...item, ...updates, lastVerifiedDate: new Date().toISOString().split('T')[0] };
+      return { ...merged, status: getOpportunityStatus(merged) };
+    }
+    return item;
+  });
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  dispatchSafeCustomEvent('internships-updated', updated);
+  return updated;
+}
+
+export function deleteInternship(id) {
+  const current = getInternships();
+  const updated = current.filter(item => String(item.id) !== String(id));
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, updated);
+  dispatchSafeCustomEvent('internships-updated', updated);
+  return updated;
+}
+
+// Off-Campus Companies (Verified Full-Time Drives)
 export function getOffCampusCompanies() {
-  return getStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+  const list = getStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+  return (list || []).map(c => ({
+    ...c,
+    status: getOpportunityStatus(c)
+  }));
 }
 
 export function addOffCampusCompany(comp) {
   const current = getOffCampusCompanies();
-  const updated = [comp, ...current];
+  const newEntry = {
+    ...comp,
+    id: comp.id || `offcampus-${Date.now()}`,
+    status: getOpportunityStatus(comp),
+    isPublished: comp.isPublished !== false,
+    lastVerifiedDate: comp.lastVerifiedDate || new Date().toISOString().split('T')[0]
+  };
+  const updated = [newEntry, ...current];
   setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  dispatchSafeCustomEvent('offcampus-updated', updated);
   return updated;
+}
+
+export function updateOffCampusCompany(id, updates) {
+  const current = getOffCampusCompanies();
+  const updated = current.map(item => {
+    if (String(item.id) === String(id)) {
+      const merged = { ...item, ...updates, lastVerifiedDate: new Date().toISOString().split('T')[0] };
+      return { ...merged, status: getOpportunityStatus(merged) };
+    }
+    return item;
+  });
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  dispatchSafeCustomEvent('offcampus-updated', updated);
+  return updated;
+}
+
+export function deleteOffCampusCompany(id) {
+  const current = getOffCampusCompanies();
+  const updated = current.filter(item => String(item.id) !== String(id));
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, updated);
+  dispatchSafeCustomEvent('offcampus-updated', updated);
+  return updated;
+}
+
+// Reset opportunities to latest verified defaults
+export function resetOpportunitiesToVerifiedDefaults() {
+  setStorageItem(STORAGE_KEYS.HACKATHONS, INITIAL_HACKATHONS);
+  setStorageItem(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+  setStorageItem(STORAGE_KEYS.OFF_CAMPUS, INITIAL_OFF_CAMPUS_COMPANIES);
+  dispatchSafeCustomEvent('hackathons-updated', INITIAL_HACKATHONS);
+  dispatchSafeCustomEvent('internships-updated', INITIAL_INTERNSHIPS);
+  dispatchSafeCustomEvent('offcampus-updated', INITIAL_OFF_CAMPUS_COMPANIES);
+  return {
+    hackathons: INITIAL_HACKATHONS,
+    internships: INITIAL_INTERNSHIPS,
+    offCampus: INITIAL_OFF_CAMPUS_COMPANIES
+  };
 }
 
 // Eligibility Matrix

@@ -1,4 +1,6 @@
 import ProfilePopover from '../components/profile/ProfilePopover';
+import OpportunitiesHubView from '../components/opportunities/OpportunitiesHubView';
+import Toast from '../components/ui/Toast';
 import { getProfileMetrics, attendancePercentage, displayValue } from '../services/profileMetrics';
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
@@ -174,6 +176,13 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const [resumeTextInput, setResumeTextInput] = useState('');
   const [isAnalyzingResume, setIsAnalyzingResume] = useState(false);
   const [resumeSuccessMsg, setResumeSuccessMsg] = useState('');
+
+  // Toast feedback state
+  const [toastMessage, setToastMessage] = useState('');
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4500);
+  };
 
   // Top-Right Profile & Backend Connection States
   const profileTriggerRef = useRef(null);
@@ -405,7 +414,8 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   const userRole = currentUser?.role || 'student';
   const visibleNavTabs = useMemo(() => {
     const navTabs = [
-      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule' },
+      { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['student'] },
+      { id: 'timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
       { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
@@ -1236,6 +1246,11 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             </div>
           </div>
         )}
+        {activeTab === 'master-timetable' && (
+          <div id="institute-tab-master-timetable" className="space-y-6 scroll-mt-24">
+            <StudentMasterTimetableView currentUser={currentUser} />
+          </div>
+        )}
         {activeTab === 'timetable' && (
           <div id="institute-tab-timetable" className="space-y-6 scroll-mt-24">
             <TimetableManagementView currentUser={currentUser} />
@@ -1426,411 +1441,45 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
-        {/* TAB 8: UPCOMING HACKATHONS */}
+        {/* TAB 8: HACKATHONS */}
         {activeTab === 'hackathons' && (
           <div id="institute-tab-hackathons" className="space-y-6 scroll-mt-24">
-            {/* Header Bar with Attractive Dark Texture Background */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">
-                    National & Campus Hackathons
-                  </h3>
-                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
-                    PPI & Cash Prizes
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
-                  Build real-world projects, win cash prizes, and secure direct PPI/PPO interview calls.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2.5 shrink-0 relative z-10">
-                <span className="px-3.5 py-1.5 bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
-                  <Award className="w-4 h-4 text-amber-400" />
-                  <span>{hackathons.length} Hackathon Listings</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Hackathons Stack (Line / Row Layout) */}
-            <div className="space-y-4">
-              {paginatedHackathons.map(hack => (
-                <div
-                  key={hack.id}
-                  className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 hover:border-indigo-500 hover:shadow-lg transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
-                >
-                  {/* Left: Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2.5 mb-2">
-                      <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-indigo-700 transition-colors">
-                        {hack.organizer}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
-                        Prize: {hack.prizePool}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        • Deadline: {hack.registrationDeadline}
-                      </span>
-                    </div>
-
-                    <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-3">
-                      {hack.title}
-                    </h4>
-
-                    {/* Line metadata items */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Prize Pool</span>
-                        <span className="font-bold text-emerald-600 truncate">{hack.prizePool}</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Team Size</span>
-                        <span className="font-bold text-slate-800 truncate">{hack.teamSize}</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Deadline</span>
-                        <span className="font-bold text-purple-700 truncate">{hack.registrationDeadline || 'Not provided'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Action */}
-                  <div className="flex items-center gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                    {hack.registrationUrl ? (
-                      <a href={hack.registrationUrl} target="_blank" rel="noreferrer"
-                        className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-xs hover:shadow flex items-center gap-1.5 cursor-pointer">
-                        <span>Register for Hackathon</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    ) : <span className="text-xs font-medium text-slate-500">Registration link unavailable</span>}
-                  </div>
-                </div>
-              ))}
-
-              {isLoadingHackathons && <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">Loading hackathons...</div>}
-              {hackathonsError && (
-                <div className="p-6 bg-white rounded-2xl border border-red-200 text-red-700 text-sm" role="alert">
-                  Could not load hackathons: {hackathonsError}
-                  <button type="button" onClick={refreshHackathons} className="ml-3 font-bold underline">Retry</button>
-                </div>
-              )}
-              {!isLoadingHackathons && !hackathonsError && paginatedHackathons.length === 0 && (
-                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
-                  No active hackathons found.
-                </div>
-              )}
-            </div>
-
-            {/* Pagination Controls Bar */}
-            {hackathons.length > DRIVES_PER_PAGE && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 border-t border-slate-200/80">
-                <span className="text-xs font-semibold text-slate-500">
-                  Page <span className="font-bold text-slate-800">{hackathonsPage}</span> of <span className="font-bold text-slate-800">{totalHackathonsPages}</span>{' '}
-                  <span className="text-slate-400">
-                    (Showing {(hackathonsPage - 1) * DRIVES_PER_PAGE + 1}–{Math.min(hackathonsPage * DRIVES_PER_PAGE, hackathons.length)} of {hackathons.length} Hackathons)
-                  </span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setHackathonsPage(prev => Math.max(prev - 1, 1))}
-                    disabled={hackathonsPage === 1}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Previous</span>
-                  </button>
-                  <button
-                    onClick={() => setHackathonsPage(prev => Math.min(prev + 1, totalHackathonsPages))}
-                    disabled={hackathonsPage === totalHackathonsPages}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Next Hackathons</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <OpportunitiesHubView
+              initialTab="hackathons"
+              userRole={userRole}
+              studentBatch={studentBatch}
+              isFinalYear={isFinalYear}
+              onNavigate={onNavigate}
+              showToast={showToast}
+            />
           </div>
         )}
 
         {/* TAB 9: UPCOMING INTERNSHIPS */}
         {activeTab === 'internships' && (
           <div id="institute-tab-internships" className="space-y-6 scroll-mt-24">
-            {/* Header Bar with Attractive Dark Texture Background */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">
-                    Corporate Summer & Winter Internships
-                  </h3>
-                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
-                    PPO Fast-Track
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
-                  Gain industry experience with high Pre-Placement Offer (PPO) conversion rates.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2.5 shrink-0 relative z-10">
-                <span className="px-3.5 py-1.5 bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
-                  <Briefcase className="w-4 h-4 text-emerald-400" />
-                  <span>{internships.length} Open Roles</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Internships Stack (Line / Row Layout) */}
-            <div className="space-y-4">
-              {paginatedInternships.map(intern => (
-                <div
-                  key={intern.id}
-                  className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 hover:border-indigo-500 hover:shadow-lg transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
-                >
-                  {/* Left: Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2.5 mb-2">
-                      <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-indigo-700 transition-colors">
-                        {intern.companyName}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {intern.status}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
-                        Stipend: {intern.stipend}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        • Duration: {intern.duration}
-                      </span>
-                    </div>
-
-                    <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-3">
-                      {intern.role}
-                    </h4>
-
-                    {/* Line metadata items */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Duration</span>
-                        <span className="font-bold text-slate-800 truncate">{intern.duration}</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Location</span>
-                        <span className="font-bold text-slate-800 truncate">{intern.location}</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">PPO Conversion</span>
-                        <span className="font-bold text-indigo-600 truncate">High (&gt;85%)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Action */}
-                  <div className="flex items-center gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                    <a
-                      href={intern.applicationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-xs hover:shadow flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Apply for Internship</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              ))}
-
-              {paginatedInternships.length === 0 && (
-                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
-                  No internship openings found.
-                </div>
-              )}
-            </div>
-
-            {/* Pagination Controls Bar */}
-            {internships.length > DRIVES_PER_PAGE && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 border-t border-slate-200/80">
-                <span className="text-xs font-semibold text-slate-500">
-                  Page <span className="font-bold text-slate-800">{internshipsPage}</span> of <span className="font-bold text-slate-800">{totalInternshipsPages}</span>{' '}
-                  <span className="text-slate-400">
-                    (Showing {(internshipsPage - 1) * DRIVES_PER_PAGE + 1}–{Math.min(internshipsPage * DRIVES_PER_PAGE, internships.length)} of {internships.length} Internships)
-                  </span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setInternshipsPage(prev => Math.max(prev - 1, 1))}
-                    disabled={internshipsPage === 1}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Previous</span>
-                  </button>
-                  <button
-                    onClick={() => setInternshipsPage(prev => Math.min(prev + 1, totalInternshipsPages))}
-                    disabled={internshipsPage === totalInternshipsPages}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Next Internships</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <OpportunitiesHubView
+              initialTab="internships"
+              userRole={userRole}
+              studentBatch={studentBatch}
+              isFinalYear={isFinalYear}
+              onNavigate={onNavigate}
+              showToast={showToast}
+            />
           </div>
         )}
 
-        {/* TAB 10: OFF-CAMPUS COMPANIES (ONLY FOR FINAL YEAR STUDENTS) */}
+        {/* TAB 10: OFF-CAMPUS HIRING DRIVES */}
         {activeTab === 'off-campus' && (
           <div id="institute-tab-off-campus" className="space-y-6 scroll-mt-24">
-            {/* Header Bar with Attractive Dark Texture Background */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">
-                    Verified Off-Campus Hiring Drives
-                  </h3>
-                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-red-600 text-white shadow-xs tracking-wide">
-                    Final Year Verified
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
-                  Curated direct corporate hiring drives and nationwide off-campus examinations.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2.5 shrink-0 relative z-10">
-                <div className={`px-4 py-2 rounded-xl text-xs font-bold ${
-                  isFinalYear ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-800/90 text-amber-300 border border-amber-500/30'
-                }`}>
-                  {isFinalYear ? '✅ You are Eligible to Apply' : `ℹ️ Viewing in Advisory Mode (Batch ${studentBatch})`}
-                </div>
-              </div>
-            </div>
-
-            {!isFinalYear && (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                <div>
-                  <span className="font-bold block">Off-Campus Policy Restriction:</span>
-                  <span>These opportunities are strictly reserved for graduating/final-year batches. Pre-final year students can review syllabus and pattern to prepare ahead.</span>
-                </div>
-              </div>
-            )}
-
-            {/* Off-Campus Stack (Line / Row Layout) */}
-            <div className="space-y-4">
-              {paginatedOffCampus.map(comp => (
-                <div
-                  key={comp.id}
-                  className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 hover:border-indigo-500 hover:shadow-lg transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
-                >
-                  {/* Left: Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2.5 mb-2">
-                      <span className="font-black text-base text-slate-900 tracking-tight group-hover:text-indigo-700 transition-colors">
-                        {comp.companyName}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                        Final Year Only
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900">
-                        CTC: {comp.ctc}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        • Exam: {comp.examDate}
-                      </span>
-                    </div>
-
-                    <h4 className="font-extrabold text-slate-800 text-sm sm:text-base mb-1.5">
-                      {comp.role}
-                    </h4>
-
-                    <p className="text-xs text-slate-600 mb-3 leading-relaxed line-clamp-2">
-                      {comp.description}
-                    </p>
-
-                    {/* Line metadata items */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Exam Date</span>
-                        <span className="font-bold text-slate-800 truncate">{comp.examDate}</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Deadline</span>
-                        <span className="font-bold text-slate-800 truncate">{comp.applicationDeadline}</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Eligible Batches</span>
-                        <span className="font-bold text-slate-800 truncate">2025 & 2026</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Action */}
-                  <div className="flex items-center gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                    <a
-                      href={comp.applyLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`px-5 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-xs hover:shadow cursor-pointer ${
-                        isFinalYear
-                          ? 'bg-red-600 hover:bg-red-700 text-white'
-                          : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                      }`}
-                    >
-                      <span>{isFinalYear ? 'Apply on Official Portal' : 'View Drive Syllabus'}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              ))}
-
-              {paginatedOffCampus.length === 0 && (
-                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
-                  No off-campus drives currently listed.
-                </div>
-              )}
-            </div>
-
-            {/* Pagination Controls Bar */}
-            {offCampusCompanies.length > DRIVES_PER_PAGE && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 border-t border-slate-200/80">
-                <span className="text-xs font-semibold text-slate-500">
-                  Page <span className="font-bold text-slate-800">{offCampusPage}</span> of <span className="font-bold text-slate-800">{totalOffCampusPages}</span>{' '}
-                  <span className="text-slate-400">
-                    (Showing {(offCampusPage - 1) * DRIVES_PER_PAGE + 1}–{Math.min(offCampusPage * DRIVES_PER_PAGE, offCampusCompanies.length)} of {offCampusCompanies.length} Drives)
-                  </span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setOffCampusPage(prev => Math.max(prev - 1, 1))}
-                    disabled={offCampusPage === 1}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Previous</span>
-                  </button>
-                  <button
-                    onClick={() => setOffCampusPage(prev => Math.min(prev + 1, totalOffCampusPages))}
-                    disabled={offCampusPage === totalOffCampusPages}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Next Drives</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <OpportunitiesHubView
+              initialTab="jobs"
+              userRole={userRole}
+              studentBatch={studentBatch}
+              isFinalYear={isFinalYear}
+              onNavigate={onNavigate}
+              showToast={showToast}
+            />
           </div>
         )}
 
@@ -1999,6 +1648,9 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         onClose={() => setIsFullProfileModalOpen(false)}
         onProfileUpdated={() => setCurrentUser(getCurrentUser() || {})}
       />
+
+      {/* Toast Notification */}
+      <Toast message={toastMessage} onClose={() => setToastMessage('')} />
 
     </div>
   );

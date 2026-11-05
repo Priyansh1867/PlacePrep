@@ -1,8 +1,6 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.User;
-import com.placeprep.dto.EntityResponseDto;
-import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -44,7 +42,7 @@ public class AuthController {
     private Map<String, Object> buildAuthResponse(User user, String token) {
         Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("token", token);
-        resp.put("user", EntityResponseMapper.toDto(user));
+        resp.put("user", user);
         resp.put("id", user.getId());
         resp.put("name", user.getName());
         resp.put("email", user.getEmail());
@@ -70,8 +68,8 @@ public class AuthController {
         }
         String clean = passphrase.trim().toUpperCase();
         // Accepted college placement cell passphrases (campus codes e.g. PLACEPREP2026, CAMPUS2026, TPO2026, etc.)
-        boolean valid = clean.equals("PLACEPREP2026") || clean.equals("CAMPUS2026")
-                     || clean.equals("TPO2026") || clean.equals("IIT2026")
+        boolean valid = clean.equals("PLACEPREP2026") || clean.equals("CAMPUS2026") 
+                     || clean.equals("TPO2026") || clean.equals("IIT2026") 
                      || clean.equals("NIT2026") || clean.equals("CAMPUS_PLACEMENT_2026")
                      || clean.startsWith("TPO-") || clean.startsWith("CAMPUS-");
 
@@ -119,68 +117,16 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(java.security.Principal principal) {
-        if (principal == null || principal.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "Not authenticated"));
-        }
-        try {
-            User user = userService.getUserByEmail(principal.getName());
-            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
-        }
-    }
-
     @GetMapping("/users")
-    public ResponseEntity<List<EntityResponseDto>> getAllUsers(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String role,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String search) {
-        return ResponseEntity.ok(userService.getAllUsers(role, search));
-    }
-
-    @PostMapping("/bulk-register")
-    public ResponseEntity<?> bulkRegister(@RequestBody List<Map<String, Object>> students) {
-        if (students == null || students.isEmpty()) {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "No students provided"));
-        }
-        int count = 0;
-        for (Map<String, Object> s : students) {
-            String email = s.get("email") != null ? String.valueOf(s.get("email")).trim().toLowerCase() : null;
-            if (email == null || email.isEmpty()) continue;
-            try {
-                try {
-                    userService.getUserByEmail(email);
-                    continue;
-                } catch (IllegalArgumentException notFound) {
-                    User newUser = new User();
-                    newUser.setEmail(email);
-                    String name = s.get("fullName") != null ? String.valueOf(s.get("fullName")) : (s.get("name") != null ? String.valueOf(s.get("name")) : email.split("@")[0]);
-                    newUser.setName(name);
-                    newUser.setPassword(s.get("password") != null ? String.valueOf(s.get("password")) : "PlacePrep@2026");
-                    newUser.setRole("student");
-                    if (s.get("rollNumber") != null) newUser.setRollNumber(String.valueOf(s.get("rollNumber")));
-                    if (s.get("college") != null) newUser.setCollege(String.valueOf(s.get("college")));
-                    if (s.get("branch") != null) newUser.setBranch(String.valueOf(s.get("branch")));
-                    if (s.get("graduationBatch") != null) newUser.setGraduationBatch(String.valueOf(s.get("graduationBatch")));
-                    userService.register(newUser);
-                    count++;
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        Map<String, Object> resp = new java.util.HashMap<>();
-        resp.put("success", true);
-        resp.put("registeredCount", count);
-        resp.put("total", students.size());
-        return ResponseEntity.ok(resp);
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers(null, null));
     }
 
     @GetMapping("/user/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         try {
             User user = userService.getUserById(id);
-            return ResponseEntity.ok(EntityResponseMapper.toDto(user));
+            return ResponseEntity.ok(user);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
@@ -191,9 +137,19 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
-        // Reset tokens must never be returned to a requester. Re-enable only with a delivery channel.
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Collections.singletonMap("error", "Password recovery is temporarily unavailable."));
+        try {
+            String email = body != null ? body.get("email") : null;
+            String token = userService.generatePasswordResetToken(email);
+            Map<String, Object> resp = new java.util.HashMap<>();
+            resp.put("message", "Password reset token generated successfully");
+            resp.put("resetToken", token);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/reset-password")

@@ -84,6 +84,7 @@ import ReportsExporterPage from './ReportsExporterPage';
 import UserProfileModal from '../components/profile/UserProfileModal';
 import DirectorPlacementAnalytics from '../components/placement/DirectorPlacementAnalytics';
 import DirectorLiveSessionsView from '../components/placement/DirectorLiveSessionsView';
+import OpportunitiesHubView from '../components/opportunities/OpportunitiesHubView';
 import placementWorkflowHero from '../assets/images/placement-workflow-hero.png';
 
 // Standard Role Metadata for labels
@@ -1708,115 +1709,12 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'internships' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 mb-1">Corporate Internship & PPO Analytics</h3>
-                  <p className="text-xs text-slate-500">Summer & winter internships, stipend payouts, and full-time conversion rates.</p>
-                </div>
-                {(isTPO || isCoordinator || isRecruiter) && (
-                  <button
-                    onClick={() => setIsInternModalOpen(true)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Post Internship</span>
-                  </button>
-                )}
-              </div>
-
-              {/* High-level stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Total Active Interns:</span>
-                  <span className="text-3xl font-black text-indigo-600">{internships.length} Internship records</span>
-                  <p className="text-xs text-slate-500 mt-2">Engaged in Microsoft, Goldman Sachs, Amazon, and DRDO.</p>
-                </div>
-                <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Average Stipend:</span>
-                  <span className="text-3xl font-black text-emerald-600">Not reported</span>
-                  <p className="text-xs text-slate-500 mt-2">No verified stipend summary.</p>
-                </div>
-                <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 uppercase block mb-1">PPO Conversion Rate:</span>
-                  <span className="text-3xl font-black text-purple-600">Not reported</span>
-                  <p className="text-xs text-slate-500 mt-2">No verified conversion summary.</p>
-                </div>
-              </div>
-
-              {/* Internship Openings List */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-slate-900 text-sm">Active Internship Openings:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {internships.map(intern => {
-                    const isApplied = appliedInternships[intern.id];
-                    return (
-                      <div key={intern.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-black text-sm text-slate-900">{intern.companyName}</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
-                              {intern.status}
-                            </span>
-                          </div>
-                          <h5 className="font-bold text-slate-800 text-sm mb-1">{intern.role}</h5>
-                          <p className="text-xs font-bold text-emerald-600 mb-3">{intern.stipend}</p>
-
-                          <div className="p-3 bg-white rounded-xl text-xs space-y-1 text-slate-500 border border-slate-100 mb-4">
-                            <div className="flex justify-between">
-                              <span>Duration:</span>
-                              <span className="font-semibold text-slate-800">{intern.duration}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Location:</span>
-                              <span className="font-semibold text-slate-800">{intern.location}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Deadline:</span>
-                              <span className="font-semibold text-rose-600">{intern.deadline}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {isStudent ? (
-                          <button
-                            disabled={isApplied}
-                            onClick={() => handleApplyInternship(intern.id, intern.companyName)}
-                            className={`w-full py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 ${
-                              isApplied
-                                ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                            }`}
-                          >
-                            {isApplied ? (
-                              <>
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Applied for Review</span>
-                              </>
-                            ) : (
-                              <>
-                                <Award className="w-3.5 h-3.5" />
-                                <span>Apply for Internship</span>
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <a
-                            href={intern.applicationUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-full py-2 rounded-xl bg-slate-800 text-white font-bold text-xs text-center hover:bg-slate-900 transition flex items-center justify-center gap-1.5"
-                          >
-                            <span>Manage Opportunity</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            <OpportunitiesHubView
+              initialTab="internships"
+              userRole={activeRole}
+              showToast={showToast}
+              onNavigate={onNavigate}
+            />
           </div>
         )}
 
@@ -1888,107 +1786,12 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         {/* ========================================================================= */}
         {activeTab === 'off-campus' && (
           <div className="space-y-6">
-
-            {/* Student personal off-campus tracker */}
-            {isStudent && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900 mb-1">My Off-Campus Applications Tracker</h3>
-                    <p className="text-xs text-slate-500">Record your national drives, referral links, and outcome milestones.</p>
-                  </div>
-                  <button
-                    onClick={() => setIsOffCampusModalOpen(true)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Log New Application</span>
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase">
-                      <tr>
-                        <th className="p-3">Company</th>
-                        <th className="p-3">Role</th>
-                        <th className="p-3">Package (CTC)</th>
-                        <th className="p-3">Applied Date</th>
-                        <th className="p-3">Current Status</th>
-                        <th className="p-3 text-right">Portal Link</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {studentOffCampusList.map(item => (
-                        <tr key={item.id} className="hover:bg-slate-50 transition">
-                          <td className="p-3 font-bold text-slate-900">{item.companyName}</td>
-                          <td className="p-3 font-semibold text-slate-700">{item.role}</td>
-                          <td className="p-3 font-bold text-emerald-600">{item.ctc}</td>
-                          <td className="p-3 text-slate-500">{item.appliedDate}</td>
-                          <td className="p-3">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800">
-                              {item.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right">
-                            <a href={item.link || '#'} target="_blank" rel="noreferrer" className="text-indigo-600 font-bold hover:underline">
-                              Careers Portal â†—
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* National Verified Off-Campus Catalog */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 mb-1">National Off-Campus Drives & Contests</h3>
-                  <p className="text-xs text-slate-500">Verified national drives (TCS NQT, Cognizant GenC, Infosys HackWithInfy) published for graduating cohorts.</p>
-                </div>
-                {(isTPO || isCoordinator) && (
-                  <button
-                    onClick={() => showToast('New off-campus listing publisher enabled for placement officers.')}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Post Off-Campus Drive</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {offCampus.map(comp => (
-                  <div key={comp.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-xs text-slate-900">{comp.companyName}</span>
-                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
-                          Final Year Verified
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-slate-900 text-sm mb-1">{comp.role}</h4>
-                      <p className="text-xs font-bold text-emerald-600 mb-2">{comp.ctc}</p>
-                      <p className="text-xs text-slate-500 mb-3">{comp.description}</p>
-                    </div>
-
-                    <a
-                      href={comp.applyLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2 rounded-xl bg-slate-800 text-white font-bold text-xs text-center hover:bg-slate-900 transition flex items-center justify-center gap-1.5"
-                    >
-                      <span>Direct Application</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <OpportunitiesHubView
+              initialTab="jobs"
+              userRole={activeRole}
+              showToast={showToast}
+              onNavigate={onNavigate}
+            />
           </div>
         )}
 

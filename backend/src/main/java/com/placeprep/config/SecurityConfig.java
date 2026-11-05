@@ -39,6 +39,21 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(
+                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/management/timetables/**")
+                        )
+                        .defaultAuthenticationEntryPointFor(
+                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/timetable/**")
+                        )
+                        .defaultAuthenticationEntryPointFor(
+                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/master-timetable/**")
+                        )
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -63,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/insights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/experiences/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/feedback/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/opportunities/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/workflow/candidates/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/vote").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/feedback").permitAll()
@@ -78,6 +94,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/live-sessions").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.DELETE, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.POST, "/api/opportunities/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.PUT, "/api/opportunities/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.DELETE, "/api/opportunities/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.POST, "/api/questions/**").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/questions/**").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
                         .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
@@ -90,6 +109,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/management/timetables/version/*/file").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/management/timetables/*/preview-data").permitAll()
                         .requestMatchers("/api/management/**").hasAnyRole("MANAGEMENT", "ADMIN")
+                        .requestMatchers("/api/timetable/**").authenticated()
+                        .requestMatchers("/api/master-timetable/**").authenticated()
 
                         // Authenticated student/user actions & attendance verification
                         .requestMatchers("/api/student/attendance/status").permitAll()

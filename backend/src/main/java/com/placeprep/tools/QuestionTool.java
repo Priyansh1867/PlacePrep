@@ -35,4 +35,9 @@ public class QuestionTool {
     public Object getQuestion(@ToolParam(description = "Question identifier") String questionId) {
         return EntityResponseMapper.toJsonSafe(questionService.getByQuestionId(questionId));
     }
+
+    @Tool(description = "Get all available interview practice question categories, e.g. 'DSA', 'System Design', 'HR'.")
+    public Object getQuestionCategories() {
+        return questionService.getCategories();
+    }
 }

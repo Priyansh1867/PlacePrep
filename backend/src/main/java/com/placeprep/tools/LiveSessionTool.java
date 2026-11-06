@@ -22,3 +22,4 @@ public class LiveSessionTool {
         return sessions != null ? sessions : List.of();
     }
 }
+

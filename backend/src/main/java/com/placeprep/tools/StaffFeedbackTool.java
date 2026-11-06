@@ -18,7 +18,9 @@ public class StaffFeedbackTool {
     @Tool(description = "List recruiter feedback for authorized placement staff only.")
     public Object listRecruiterFeedback(@ToolParam(description = "Drive identifier, or blank") String driveId,
                                         ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("view internal recruiter feedback", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
         return EntityResponseMapper.toJsonSafe(feedbackService.getAllRecruiterFeedback(driveId));
     }
 }

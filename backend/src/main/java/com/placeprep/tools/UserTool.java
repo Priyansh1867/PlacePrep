@@ -16,10 +16,7 @@ public class UserTool {
 
     @Tool(description = "Get the authenticated student's placement preparation dashboard.")
     public Object getMyDashboard(ToolContext toolContext) {
-        Object userId = toolContext.getContext().get("userId");
-        if (!(userId instanceof Number number)) {
-            throw new IllegalStateException("Authenticated user context is missing");
-        }
-        return EntityResponseMapper.toJsonSafe(userService.getDashboardData(number.longValue()));
+        Long userId = AiToolAuthorization.parseUserId(toolContext);
+        return EntityResponseMapper.toJsonSafe(userService.getDashboardData(userId));
     }
 }

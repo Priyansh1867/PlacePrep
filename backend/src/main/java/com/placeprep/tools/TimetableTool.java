@@ -17,7 +17,6 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -116,7 +115,7 @@ public class TimetableTool {
             return Map.of(
                     "day", "Sunday",
                     "isWeekend", true,
-                    "message", "Today is Sunday! There are no scheduled classes today. Enjoy your day or practice some coding questions for placement preparation.",
+                    "message", "Today is Sunday! There are no scheduled classes today. Enjoy your weekend or practice some coding questions for placement preparation.",
                     "fullWeeklyTimetable", fullTimetable
             );
         }
@@ -136,6 +135,8 @@ public class TimetableTool {
                 res.put("classesToday", todayClasses != null ? todayClasses : List.of());
                 res.put("academicSession", map.getOrDefault("academicSession", ""));
                 res.put("department", map.getOrDefault("department", ""));
+                res.put("semester", map.getOrDefault("semester", ""));
+                res.put("weeklySchedule", weeklyMap);
                 return res;
             }
         }
@@ -214,7 +215,8 @@ public class TimetableTool {
     }
 
     private boolean isStaffRole(String role) {
-        return Set.of("TEACHER", "FACULTY", "HOD", "TPO", "MANAGEMENT", "ADMIN")
-                .contains(role == null ? "" : role.toUpperCase());
+        String r = AiToolAuthorization.normalizeRole(role);
+        return Set.of("TEACHER", "FACULTY", "HOD", "TPO", "MANAGEMENT", "ADMIN", "DIRECTOR")
+                .contains(r);
     }
 }

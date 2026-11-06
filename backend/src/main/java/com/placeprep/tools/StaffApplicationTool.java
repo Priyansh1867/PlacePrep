@@ -18,7 +18,9 @@ public class StaffApplicationTool {
     @Tool(description = "List applications for a placement drive. Available only to authorized placement staff.")
     public Object listDriveApplications(@ToolParam(description = "Placement drive identifier") String driveId,
                                         ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("view drive applicants", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
         return EntityResponseMapper.toJsonSafe(applicationService.getDriveApplications(driveId));
     }
 }

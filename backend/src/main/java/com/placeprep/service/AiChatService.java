@@ -1,48 +1,57 @@
 package com.placeprep.service;
 
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.model.Hackathon;
+import com.placeprep.model.Internship;
+import com.placeprep.model.OffCampusJob;
+import com.placeprep.model.PlacementDrive;
+import com.placeprep.model.User;
+import com.placeprep.repository.UserRepository;
+import com.placeprep.tools.AcademicRecordTool;
+import com.placeprep.tools.AiToolAuthorization;
+import com.placeprep.tools.ApplicationWriteTool;
+import com.placeprep.tools.AttendanceWriteTool;
+import com.placeprep.tools.CandidateWriteTool;
 import com.placeprep.tools.CompanyTool;
+import com.placeprep.tools.CompanyWriteTool;
 import com.placeprep.tools.DriveTool;
+import com.placeprep.tools.DriveWriteTool;
 import com.placeprep.tools.ExperienceTool;
+import com.placeprep.tools.ExperienceWriteTool;
+import com.placeprep.tools.FeedbackWriteTool;
 import com.placeprep.tools.InsightsTool;
+import com.placeprep.tools.LiveSessionTool;
+import com.placeprep.tools.MockSessionWriteTool;
+import com.placeprep.tools.NotificationTool;
+import com.placeprep.tools.NotificationWriteTool;
 import com.placeprep.tools.OpportunityTool;
+import com.placeprep.tools.OpportunityWriteTool;
 import com.placeprep.tools.QuestionTool;
+import com.placeprep.tools.QuestionWriteTool;
 import com.placeprep.tools.ResumeAtsTool;
-import com.placeprep.tools.UserTool;
+import com.placeprep.tools.SelectionWriteTool;
+import com.placeprep.tools.StaffApplicationTool;
+import com.placeprep.tools.StaffAttendanceTool;
+import com.placeprep.tools.StaffFeedbackTool;
 import com.placeprep.tools.StudentApplicationTool;
 import com.placeprep.tools.StudentAttendanceTool;
 import com.placeprep.tools.StudentEligibilityTool;
 import com.placeprep.tools.StudentMockSessionTool;
-import com.placeprep.tools.StaffApplicationTool;
-import com.placeprep.tools.StaffAttendanceTool;
-import com.placeprep.tools.StaffFeedbackTool;
-import com.placeprep.tools.CompanyWriteTool;
-import com.placeprep.tools.DriveWriteTool;
-import com.placeprep.tools.QuestionWriteTool;
-import com.placeprep.tools.ExperienceWriteTool;
-import com.placeprep.tools.OpportunityWriteTool;
-import com.placeprep.tools.ApplicationWriteTool;
-import com.placeprep.tools.MockSessionWriteTool;
-import com.placeprep.tools.FeedbackWriteTool;
-import com.placeprep.tools.AttendanceWriteTool;
-import com.placeprep.tools.NotificationWriteTool;
-import com.placeprep.tools.UserWriteTool;
-import com.placeprep.tools.SelectionWriteTool;
-import com.placeprep.tools.CandidateWriteTool;
 import com.placeprep.tools.TimetableTool;
-import com.placeprep.tools.AcademicRecordTool;
-import com.placeprep.tools.LiveSessionTool;
-import com.placeprep.model.User;
-import com.placeprep.repository.UserRepository;
+import com.placeprep.tools.UserTool;
+import com.placeprep.tools.UserWriteTool;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class AiChatService {
@@ -78,6 +87,7 @@ public class AiChatService {
     private final TimetableTool timetableTool;
     private final AcademicRecordTool academicRecordTool;
     private final LiveSessionTool liveSessionTool;
+    private final NotificationTool notificationTool;
     private final UserRepository userRepository;
 
     public AiChatService(
@@ -88,6 +98,7 @@ public class AiChatService {
             InsightsTool insightsTool,
             ExperienceTool experienceTool,
             OpportunityTool opportunityTool,
+            NotificationTool notificationTool,
             ResumeAtsTool resumeAtsTool,
             UserTool userTool,
             UserRepository userRepository,
@@ -148,11 +159,12 @@ public class AiChatService {
         this.timetableTool = timetableTool;
         this.academicRecordTool = academicRecordTool;
         this.liveSessionTool = liveSessionTool;
+        this.notificationTool = notificationTool;
     }
 
     public Flux<String> chat(String message) {
         if (message == null || message.isBlank()) {
-            return Flux.just("Please ask a question about your timetable, attendance, drives, applications, or technical interview preparation.");
+            return Flux.just("Please ask a question about your timetable, attendance, drives, hackathons, applications, or technical interview preparation.");
         }
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -173,42 +185,25 @@ public class AiChatService {
         // 2. Active Tools setup
         List<Object> tools = new ArrayList<>(List.of(
                 companyTool, driveTool, questionTool, insightsTool,
-                experienceTool, opportunityTool, resumeAtsTool, userTool,
+                experienceTool, opportunityTool, opportunityWriteTool, resumeAtsTool, userTool,
                 studentApplicationTool, studentAttendanceTool,
                 studentEligibilityTool, studentMockSessionTool,
-                timetableTool, academicRecordTool, liveSessionTool
+                timetableTool, academicRecordTool, liveSessionTool, notificationTool,
+                applicationWriteTool, mockSessionWriteTool,
+                experienceWriteTool, feedbackWriteTool, userWriteTool,
+                staffApplicationTool, staffAttendanceTool, staffFeedbackTool,
+                attendanceWriteTool, selectionWriteTool, candidateWriteTool,
+                companyWriteTool, driveWriteTool, questionWriteTool, notificationWriteTool
         ));
-        tools.add(applicationWriteTool);
-        tools.add(mockSessionWriteTool);
-        tools.add(experienceWriteTool);
-        tools.add(feedbackWriteTool);
-        tools.add(userWriteTool);
 
-        if (isStaffRole(user.getRole())) {
-            tools.add(staffApplicationTool);
-            tools.add(staffAttendanceTool);
-            tools.add(attendanceWriteTool);
-        }
-        if (isPlacementStaffRole(user.getRole())) {
-            tools.add(staffFeedbackTool);
-            tools.add(selectionWriteTool);
-            tools.add(candidateWriteTool);
-        }
-        if ("ADMIN".equalsIgnoreCase(user.getRole())) {
-            tools.add(companyWriteTool);
-            tools.add(driveWriteTool);
-            tools.add(questionWriteTool);
-            tools.add(opportunityWriteTool);
-            tools.add(notificationWriteTool);
-        }
-
+        String normalizedRole = AiToolAuthorization.normalizeRole(user.getRole());
         Map<String, Object> toolContextMap = Map.of(
                 "userId", user.getId(),
                 "userEmail", user.getEmail(),
-                "role", user.getRole()
+                "role", normalizedRole
         );
 
-        // 3. Prompt execution with resilient fallback on external model failure
+        // 3. Prompt execution with resilient error handling & access control
         return chatClient.prompt()
                 .user(message)
                 .tools(tools.toArray())
@@ -216,6 +211,16 @@ public class AiChatService {
                 .stream()
                 .content()
                 .onErrorResume(error -> {
+                    String errMessage = error.getMessage() != null ? error.getMessage().toLowerCase() : "";
+                    Throwable cause = error.getCause();
+                    String causeMessage = cause != null && cause.getMessage() != null ? cause.getMessage().toLowerCase() : "";
+
+                    if (error instanceof SecurityException || error instanceof AccessDeniedException
+                            || (cause != null && (cause instanceof SecurityException || cause instanceof AccessDeniedException))
+                            || errMessage.contains("access denied") || errMessage.contains("permission") || causeMessage.contains("access denied")) {
+                        return Flux.just("🚫 **Access Denied**: You do not have permission to view or modify this confidential data. This information or action is restricted to authorized roles (e.g. Faculty, HOD, TPO, or Administrator).");
+                    }
+
                     // Fallback to internal tools and direct response if remote AI service is unreachable or rate-limited
                     return Flux.just(generateDirectResponse(message, user, toolContextMap));
                 });
@@ -228,7 +233,9 @@ public class AiChatService {
                         + "Here is what you can ask me:\n\n"
                         + "- 📅 **My Schedule & Timetable**: *\"What is my schedule today?\"* or *\"Tell me about my timetable\"*\n"
                         + "- 📊 **My Attendance**: *\"What is my attendance percentage?\"* or *\"Do I have any attendance shortages?\"*\n"
-                        + "- 💼 **Campus Drives & Eligibility**: *\"Show upcoming placement drives\"* or *\"Am I eligible for Google/Microsoft?\"*\n"
+                        + "- 💼 **Campus Drives**: *\"What are the upcoming drives?\"* or *\"Am I eligible for Google/Microsoft?\"*\n"
+                        + "- 🏆 **Hackathons & Competitions**: *\"Give me the list of hackathons\"*\n"
+                        + "- 💼 **Internships**: *\"Show corporate internships\"*\n"
                         + "- 📝 **My Applications**: *\"Show my applications\"* or *\"What is my round status?\"*\n"
                         + "- 🎓 **Academic Records**: *\"What is my current CGPA and backlogs?\"*\n"
                         + "- 💻 **Technical & DSA Prep**: *\"Explain Dijkstra's algorithm with code\"* or *\"How to solve Two Sum?\"*\n"
@@ -243,44 +250,206 @@ public class AiChatService {
         String lower = message.toLowerCase();
         ToolContext context = new ToolContext(toolContextMap);
 
-        // Timetable / Schedule Queries
+        // 1. Hackathons Query (Creation or Listing)
+        if (lower.contains("hackathon")) {
+            if (lower.contains("create") || lower.contains("add") || lower.contains("post") || lower.contains("new") || lower.contains("insert")) {
+                if (!isOpportunityStaffRole(user.getRole())) {
+                    return "🚫 **Access Denied**: You do not have permission to add hackathons. Creating hackathon listings is restricted to **TPO**, **Director**, or **Administrator** accounts.";
+                }
+                try {
+                    String title = extractParam(message, "title", "name", "named", "called");
+                    if (title == null || title.isBlank()) {
+                        title = extractQuotedText(message);
+                    }
+                    if (title == null || title.isBlank()) {
+                        title = "PlacePrep National Innovation Hackathon 2026";
+                    }
+
+                    String organizer = extractParam(message, "organizer", "by", "sponsor");
+                    if (organizer == null || organizer.isBlank()) {
+                        organizer = (user.getName() != null && !user.getName().isBlank()) ? user.getName() : "TPO Cell";
+                    }
+
+                    String prize = extractParam(message, "prize", "prizepool", "prize pool", "reward");
+                    if (prize == null || prize.isBlank()) {
+                        prize = "₹1,50,000";
+                    }
+
+                    String deadline = extractParam(message, "deadline", "registration deadline", "last date");
+                    if (deadline == null || deadline.isBlank()) {
+                        deadline = "30 Nov 2026";
+                    }
+
+                    String domains = extractParam(message, "domain", "domains", "tag", "tags", "tracks");
+                    if (domains == null || domains.isBlank()) {
+                        domains = "AI/ML, Web3, Cloud, Fintech";
+                    }
+
+                    Hackathon h = new Hackathon();
+                    h.setTitle(title);
+                    h.setOrganizer(organizer);
+                    h.setDescription("Annual campus innovation hackathon focused on problem-solving, AI, and software engineering.");
+                    h.setPrizePool(prize);
+                    h.setRegistrationDeadline(deadline);
+                    h.setEventDate("15 Dec 2026");
+                    h.setTeamSize("2-4 Members");
+                    h.setDomains(domains);
+                    h.setRegistrationUrl("https://placeprep.com/hackathons/register");
+                    opportunityWriteTool.createHackathon(h, context);
+                    return String.format("✅ **Hackathon Created Successfully!**\n\n"
+                            + "- **Title:** %s\n- **Organizer:** %s\n- **Prize Pool:** %s\n- **Deadline:** %s\n- **Domains:** %s\n- **Team Size:** %s\n\n"
+                            + "The hackathon is now published and visible to students in the Opportunities & Hackathons Hub.",
+                            h.getTitle(), h.getOrganizer(), h.getPrizePool(), h.getRegistrationDeadline(), h.getDomains(), h.getTeamSize());
+                } catch (Exception ex) {
+                    return "Could not create hackathon: " + ex.getMessage();
+                }
+            }
+            Object hackObj = opportunityTool.listHackathons();
+            List<Map<String, Object>> items = toListOfMaps(hackObj);
+            if (!items.isEmpty()) {
+                StringBuilder sb = new StringBuilder("### 🏆 Active Hackathons & Competitions\n\n");
+                sb.append("| Hackathon | Organizer | Prize Pool | Deadline | Domains |\n");
+                sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
+                for (Map<String, Object> h : items) {
+                    sb.append(String.format("| **%s** | %s | %s | %s | %s |\n",
+                            h.getOrDefault("title", "Hackathon"),
+                            h.getOrDefault("organizer", "Organizer"),
+                            h.getOrDefault("prizePool", "Exciting Prizes"),
+                            h.getOrDefault("registrationDeadline", "Open"),
+                            h.getOrDefault("domains", h.getOrDefault("tags", "AI/ML, Web, Cloud"))
+                    ));
+                }
+                return sb.toString();
+            }
+            return "### 🏆 Active Hackathons\nThere are currently no active hackathons listed. Check back soon for upcoming coding events!";
+        }
+
+        // 2. Internships Query
+        if (lower.contains("internship") || lower.contains("intern")) {
+            Object internObj = opportunityTool.listInternships("");
+            List<Map<String, Object>> items = toListOfMaps(internObj);
+            if (!items.isEmpty()) {
+                StringBuilder sb = new StringBuilder("### 💼 Corporate Internships\n\n");
+                sb.append("| Company | Role | Stipend | Duration | Work Mode |\n");
+                sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
+                for (Map<String, Object> in : items) {
+                    sb.append(String.format("| **%s** | %s | %s | %s | %s |\n",
+                            in.getOrDefault("companyName", "Company"),
+                            in.getOrDefault("role", "Intern"),
+                            in.getOrDefault("stipend", "Competitive"),
+                            in.getOrDefault("duration", "8-12 Weeks"),
+                            in.getOrDefault("workMode", "Hybrid")
+                    ));
+                }
+                return sb.toString();
+            }
+            return "### 💼 Corporate Internships\nThere are currently no internship postings listed. Check back soon!";
+        }
+
+        // 3. Off-Campus Jobs Query
+        if (lower.contains("off-campus") || lower.contains("offcampus")) {
+            Object jobsObj = opportunityTool.listOffCampusOpportunities(user.getEmail());
+            List<Map<String, Object>> items = toListOfMaps(jobsObj);
+            if (!items.isEmpty()) {
+                StringBuilder sb = new StringBuilder("### 🌐 Off-Campus Opportunities\n\n");
+                sb.append("| Company | Role | Salary Range | Location | Mode |\n");
+                sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
+                for (Map<String, Object> job : items) {
+                    sb.append(String.format("| **%s** | %s | %s | %s | %s |\n",
+                            job.getOrDefault("companyName", "Company"),
+                            job.getOrDefault("role", "Software Engineer"),
+                            job.getOrDefault("salaryRange", "Competitive"),
+                            job.getOrDefault("location", "Pan-India"),
+                            job.getOrDefault("workMode", "Hybrid")
+                    ));
+                }
+                return sb.toString();
+            }
+            return "### 🌐 Off-Campus Opportunities\nNo off-campus job postings found at the moment.";
+        }
+
+        // 4. Placement Drives Query
+        if (lower.contains("drive") || lower.contains("placement") || lower.contains("company") || lower.contains("companies") || lower.contains("upcoming")) {
+            Object drivesObj = driveTool.listDrives("");
+            List<Map<String, Object>> items = toListOfMaps(drivesObj);
+            if (!items.isEmpty()) {
+                StringBuilder sb = new StringBuilder("### 💼 Upcoming Placement Drives\n\n");
+                sb.append("| Company | Role | CTC / Package | Min CGPA | Status |\n");
+                sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
+                for (Map<String, Object> drive : items) {
+                    sb.append(String.format("| **%s** | %s | %s | %s | `%s` |\n",
+                            drive.getOrDefault("companyName", "Company"),
+                            drive.getOrDefault("role", "Software Engineer"),
+                            drive.getOrDefault("ctc", "Competitive"),
+                            drive.getOrDefault("minCgpa", "7.0"),
+                            drive.getOrDefault("status", "ACTIVE")
+                    ));
+                }
+                return sb.toString();
+            }
+            return "### 💼 Upcoming Placement Drives\nThere are currently no active placement drives published in the database.";
+        }
+
+        // 5. Timetable / Schedule Queries
         if (lower.contains("schedule") || lower.contains("timetable") || lower.contains("class") || lower.contains("lecture") || lower.contains("period") || lower.contains("room")) {
             Object schedule = timetableTool.getTodaySchedule(context);
             if (schedule instanceof Map<?, ?> rawMap) {
                 Map<String, Object> map = (Map<String, Object>) rawMap;
                 StringBuilder sb = new StringBuilder();
                 String day = String.valueOf(map.getOrDefault("day", "Today"));
-                sb.append("### 📅 Your Schedule for ").append(day).append("\n\n");
-                if (map.containsKey("message")) {
-                    sb.append(map.get("message")).append("\n\n");
-                }
                 Object classesObj = map.get("classesToday");
-                if (classesObj instanceof List<?> list && !list.isEmpty()) {
+                List<?> classesList = classesObj instanceof List<?> ? (List<?>) classesObj : List.of();
+
+                if (!classesList.isEmpty()) {
+                    sb.append("### 📅 Your Schedule for ").append(day).append("\n\n");
                     sb.append("| Period | Time | Subject | Room | Faculty | Status |\n");
                     sb.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n");
-                    for (Object item : list) {
-                        if (item instanceof Map<?, ?> rawSlot) {
-                            Map<String, Object> slot = (Map<String, Object>) rawSlot;
-                            sb.append(String.format("| %s | %s | **%s** (%s) | %s | %s | %s |\n",
-                                    slot.getOrDefault("period", "-"),
-                                    slot.getOrDefault("time", "-"),
-                                    slot.getOrDefault("subject", "Class"),
-                                    slot.getOrDefault("subjectCode", ""),
-                                    slot.getOrDefault("room", "TBA"),
-                                    slot.getOrDefault("faculty", "Faculty"),
-                                    slot.getOrDefault("status", "Active")
-                            ));
+                    for (Object item : classesList) {
+                        Map<String, Object> slot = extractFields(item);
+                        sb.append(String.format("| %s | %s | **%s** (%s) | %s | %s | %s |\n",
+                                slot.getOrDefault("period", "-"),
+                                slot.getOrDefault("time", "-"),
+                                slot.getOrDefault("subject", "Class"),
+                                slot.getOrDefault("subjectCode", ""),
+                                slot.getOrDefault("room", "TBA"),
+                                slot.getOrDefault("faculty", "Faculty"),
+                                slot.getOrDefault("status", "Active")
+                        ));
+                    }
+                    return sb.toString();
+                }
+
+                // If today has no classes, show weekly timetable directly
+                Object weeklyScheduleObj = map.get("weeklySchedule");
+                if (weeklyScheduleObj instanceof Map<?, ?> weeklyMap) {
+                    sb.append("### 📅 Weekly Class Timetable (No classes scheduled for ").append(day).append(")\n\n");
+                    String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+                    for (String d : days) {
+                        Object dayClasses = weeklyMap.get(d);
+                        if (dayClasses instanceof List<?> dList && !dList.isEmpty()) {
+                            sb.append("#### ").append(d).append("\n");
+                            sb.append("| Period | Time | Subject | Room | Faculty |\n");
+                            sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
+                            for (Object slotItem : dList) {
+                                Map<String, Object> s = extractFields(slotItem);
+                                sb.append(String.format("| %s | %s | **%s** | %s | %s |\n",
+                                        s.getOrDefault("period", "-"),
+                                        s.getOrDefault("time", "-"),
+                                        s.getOrDefault("subject", "Class"),
+                                        s.getOrDefault("room", "TBA"),
+                                        s.getOrDefault("faculty", "Faculty")
+                                ));
+                            }
+                            sb.append("\n");
                         }
                     }
-                } else if (!Boolean.TRUE.equals(map.get("isWeekend"))) {
-                    sb.append("No active scheduled classes recorded for today. You can view your full weekly timetable in the Institute Timetable portal.");
+                    return sb.toString();
                 }
-                return sb.toString();
             }
-            return "### 📅 Your Schedule\nPlease check the Timetable tab in the Institute Portal for your assigned section's live timetable.";
+            return "### 📅 Timetable\nYour assigned department timetable is currently being finalized.";
         }
 
-        // Attendance Queries
+        // 6. Attendance Queries
         if (lower.contains("attend") || lower.contains("shortage") || lower.contains("absent") || lower.contains("present")) {
             Object attObj = studentAttendanceTool.getMyAttendance(context);
             if (attObj instanceof Map<?, ?> rawAtt) {
@@ -306,26 +475,24 @@ public class AiChatService {
                     sb.append("| Subject | Attended | Total | Percentage | Status |\n");
                     sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
                     for (Object subItem : subList) {
-                        if (subItem instanceof Map<?, ?> rawSub) {
-                            Map<String, Object> sub = (Map<String, Object>) rawSub;
-                            double subPct = sub.get("percentage") instanceof Number num ? num.doubleValue() : 0.0;
-                            boolean subShortage = Boolean.TRUE.equals(sub.get("shortage"));
-                            sb.append(String.format("| %s | %s | %s | %.1f%% | %s |\n",
-                                    sub.get("subject"),
-                                    sub.get("attended"),
-                                    sub.get("total"),
-                                    subPct,
-                                    subShortage ? "⚠️ Low (<75%)" : "✅ Good"
-                            ));
-                        }
+                        Map<String, Object> sub = extractFields(subItem);
+                        double subPct = sub.get("percentage") instanceof Number num ? num.doubleValue() : 0.0;
+                        boolean subShortage = Boolean.TRUE.equals(sub.get("shortage"));
+                        sb.append(String.format("| %s | %s | %s | %.1f%% | %s |\n",
+                                sub.get("subject"),
+                                sub.get("attended"),
+                                sub.get("total"),
+                                subPct,
+                                subShortage ? "⚠️ Low (<75%)" : "✅ Good"
+                        ));
                     }
                 }
                 return sb.toString();
             }
-            return "### 📊 Attendance\nYour attendance records are synchronized with the Daily Class Attendance system. Currently no attendance shortages have been flagged.";
+            return "### 📊 Attendance\nYour attendance records are synchronized. Currently no attendance shortages have been flagged.";
         }
 
-        // Academic Records / CGPA
+        // 7. Academic Records / CGPA
         if (lower.contains("cgpa") || lower.contains("gpa") || lower.contains("backlog") || lower.contains("mark") || lower.contains("academic")) {
             Object recordObj = academicRecordTool.getMyAcademicRecord(context);
             if (recordObj instanceof Map<?, ?> rawRec) {
@@ -346,55 +513,29 @@ public class AiChatService {
             }
         }
 
-        // Applications Queries
+        // 8. Applications Queries
         if (lower.contains("application") || lower.contains("applied") || lower.contains("status") || lower.contains("shortlist")) {
             Object appsObj = studentApplicationTool.listMyApplications(context);
-            if (appsObj instanceof List<?> appsList && !appsList.isEmpty()) {
+            List<Map<String, Object>> items = toListOfMaps(appsObj);
+            if (!items.isEmpty()) {
                 StringBuilder sb = new StringBuilder("### 📝 Your Placement Applications\n\n");
                 sb.append("| Company | Role | Applied Date | Status | Current Round |\n");
                 sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
-                for (Object appItem : appsList) {
-                    if (appItem instanceof Map<?, ?> rawApp) {
-                        Map<String, Object> app = (Map<String, Object>) rawApp;
-                        sb.append(String.format("| **%s** | %s | %s | `%s` | %s |\n",
-                                app.getOrDefault("companyName", "Company"),
-                                app.getOrDefault("role", "SDE"),
-                                app.getOrDefault("appliedDate", "Recent"),
-                                app.getOrDefault("status", "IN_PROGRESS"),
-                                app.getOrDefault("currentRound", "Round 1")
-                        ));
-                    }
+                for (Map<String, Object> app : items) {
+                    sb.append(String.format("| **%s** | %s | %s | `%s` | %s |\n",
+                            app.getOrDefault("companyName", "Company"),
+                            app.getOrDefault("role", "SDE"),
+                            app.getOrDefault("appliedDate", "Recent"),
+                            app.getOrDefault("status", "IN_PROGRESS"),
+                            app.getOrDefault("currentRound", "Round 1")
+                    ));
                 }
                 return sb.toString();
             }
-            return "### 📝 Applications\nYou have not submitted applications yet, or all records are currently up to date. Visit the Placement Drives portal to apply for open companies.";
+            return "### 📝 Applications\nYou have 0 active submitted applications recorded at the moment.";
         }
 
-        // Drives / Opportunities Queries
-        if (lower.contains("drive") || lower.contains("company") || lower.contains("placement") || lower.contains("internship") || lower.contains("hackathon") || lower.contains("job")) {
-            Object drivesObj = driveTool.listDrives("");
-            if (drivesObj instanceof List<?> drivesList && !drivesList.isEmpty()) {
-                StringBuilder sb = new StringBuilder("### 💼 Upcoming Placement Drives\n\n");
-                sb.append("| Company | Role | CTC / Package | Min CGPA | Status |\n");
-                sb.append("| :--- | :--- | :--- | :--- | :--- |\n");
-                for (Object driveItem : drivesList) {
-                    if (driveItem instanceof Map<?, ?> rawDrive) {
-                        Map<String, Object> drive = (Map<String, Object>) rawDrive;
-                        sb.append(String.format("| **%s** | %s | %s | %s | `%s` |\n",
-                                drive.getOrDefault("companyName", "Company"),
-                                drive.getOrDefault("role", "Software Engineer"),
-                                drive.getOrDefault("ctc", "Competitive"),
-                                drive.getOrDefault("minCgpa", "7.0"),
-                                drive.getOrDefault("status", "ACTIVE")
-                        ));
-                    }
-                }
-                sb.append("\nVisit the Placement Drives tab to review complete eligibility criteria and submit applications.");
-                return sb.toString();
-            }
-        }
-
-        // Technical / Coding / Tricky Interview Guidance
+        // 9. Technical / Coding / Tricky Interview Guidance
         return "### 💡 PlacePrep Placement & Technical Preparation\n\n"
                 + "I can help you with this technical and interview topic! Here are the core pillars to ace technical and tricky interview rounds:\n\n"
                 + "1. **Problem Understanding & Constraints:** Always clarify input bounds ($N \\le 10^5$, negative numbers, duplicate elements) before writing code.\n"
@@ -404,13 +545,113 @@ public class AiChatService {
                 + "Feel free to ask me to write code, explain specific data structures (Trees, Graphs, DP), solve DSA questions, or review your resume!";
     }
 
+    private List<Map<String, Object>> toListOfMaps(Object raw) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object item : list) {
+                Map<String, Object> fields = extractFields(item);
+                if (!fields.isEmpty()) {
+                    result.add(fields);
+                }
+            }
+        }
+        return result;
+    }
+
+    private Map<String, Object> extractFields(Object item) {
+        if (item == null) return Map.of();
+        if (item instanceof Map<?, ?> m) {
+            Map<String, Object> res = new LinkedHashMap<>();
+            m.forEach((k, v) -> res.put(String.valueOf(k), v));
+            return res;
+        }
+        if (item instanceof EntityResponseDto dto) {
+            return dto.getFields() != null ? dto.getFields() : Map.of();
+        }
+        if (item instanceof PlacementDrive pd) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("companyName", pd.getCompanyName());
+            map.put("role", pd.getRole());
+            map.put("ctc", pd.getCtc() != null ? pd.getCtc() : "Competitive");
+            map.put("minCgpa", pd.getMinCgpa() != null ? pd.getMinCgpa() : "7.0");
+            map.put("status", pd.getStatus() != null ? pd.getStatus() : "ACTIVE");
+            map.put("deadline", pd.getDeadline());
+            map.put("venue", pd.getVenue());
+            map.put("driveDate", pd.getDriveDate());
+            return map;
+        }
+        if (item instanceof Hackathon h) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("title", h.getTitle());
+            map.put("organizer", h.getOrganizer());
+            map.put("prizePool", h.getPrizePool());
+            map.put("registrationDeadline", h.getRegistrationDeadline());
+            map.put("eventDate", h.getEventDate());
+            map.put("domains", h.getDomains() != null ? h.getDomains() : h.getTags());
+            map.put("registrationUrl", h.getRegistrationUrl());
+            map.put("teamSize", h.getTeamSize());
+            return map;
+        }
+        if (item instanceof Internship in) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("companyName", in.getCompanyName());
+            map.put("role", in.getRole());
+            map.put("stipend", in.getStipend());
+            map.put("duration", in.getDuration());
+            map.put("location", in.getLocation());
+            map.put("workMode", in.getWorkMode());
+            map.put("applicationUrl", in.getApplicationUrl());
+            return map;
+        }
+        if (item instanceof OffCampusJob job) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("companyName", job.getCompanyName());
+            map.put("role", job.getRole());
+            map.put("salaryRange", job.getSalaryRange());
+            map.put("location", job.getLocation());
+            map.put("workMode", job.getWorkMode());
+            map.put("applicationUrl", job.getApplicationUrl());
+            return map;
+        }
+        return Map.of();
+    }
+
     private boolean isStaffRole(String role) {
-        return Set.of("TEACHER", "FACULTY", "HOD", "TPO", "MANAGEMENT", "ADMIN")
-                .contains(role == null ? "" : role.toUpperCase());
+        String r = AiToolAuthorization.normalizeRole(role);
+        return Set.of("TEACHER", "FACULTY", "HOD", "TPO", "MANAGEMENT", "ADMIN", "DIRECTOR")
+                .contains(r);
     }
 
     private boolean isPlacementStaffRole(String role) {
-        return Set.of("HOD", "TPO", "MANAGEMENT", "ADMIN")
-                .contains(role == null ? "" : role.toUpperCase());
+        String r = AiToolAuthorization.normalizeRole(role);
+        return Set.of("HOD", "TPO", "MANAGEMENT", "ADMIN", "DIRECTOR")
+                .contains(r);
+    }
+
+    private boolean isOpportunityStaffRole(String role) {
+        String r = AiToolAuthorization.normalizeRole(role);
+        return Set.of("ADMIN", "DIRECTOR", "TPO")
+                .contains(r);
+    }
+
+    private String extractQuotedText(String text) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("[\"']([^\"']+)[\"']").matcher(text);
+        if (m.find()) {
+            return m.group(1).trim();
+        }
+        return null;
+    }
+
+    private String extractParam(String text, String... keys) {
+        for (String key : keys) {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "(?i)\\b" + java.util.regex.Pattern.quote(key) + "\\s*[:=]\\s*([\"']?)([^,\"';\\n]+)\\1"
+            );
+            java.util.regex.Matcher m = p.matcher(text);
+            if (m.find()) {
+                return m.group(2).trim();
+            }
+        }
+        return null;
     }
 }

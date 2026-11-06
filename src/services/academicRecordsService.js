@@ -17,9 +17,8 @@ const STORAGE_KEYS = {
   BACKLOGS: 'placeprep_backlog_records',
   CONFIG: 'placeprep_academic_config'
 };
-
 // Safe JSON parser and writer
-function getStorage(key, fallback) {
+function getStorage(key, fallback = []) {
   if (typeof localStorage === 'undefined') return fallback;
   try {
     const item = localStorage.getItem(key);
@@ -43,15 +42,6 @@ function setStorage(key, value) {
  * Initialize storage with seed data if empty
  */
 export function initializeAcademicRecords() {
-  if (typeof localStorage === 'undefined') return;
-  const existingStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-  if (!existingStudents) {
-    setStorage(STORAGE_KEYS.STUDENTS, INITIAL_STUDENT_RECORDS);
-  }
-  const existingBacklogs = localStorage.getItem(STORAGE_KEYS.BACKLOGS);
-  if (!existingBacklogs) {
-    setStorage(STORAGE_KEYS.BACKLOGS, INITIAL_BACKLOG_RECORDS);
-  }
 }
 
 /**
@@ -67,8 +57,7 @@ export function resetAcademicRecordsToDefault() {
  * Fetch all students
  */
 export function getAllStudents() {
-  initializeAcademicRecords();
-  return getStorage(STORAGE_KEYS.STUDENTS, INITIAL_STUDENT_RECORDS);
+  return getStorage(STORAGE_KEYS.STUDENTS, []);
 }
 
 /**
@@ -83,8 +72,7 @@ export function getStudentById(id) {
  * Fetch all backlogs with optional filter
  */
 export function getAllBacklogs(filter = {}) {
-  initializeAcademicRecords();
-  let backlogs = getStorage(STORAGE_KEYS.BACKLOGS, INITIAL_BACKLOG_RECORDS);
+  let backlogs = getStorage(STORAGE_KEYS.BACKLOGS, []);
   
   if (filter.status && filter.status !== 'All') {
     backlogs = backlogs.filter(b => b.status === filter.status);

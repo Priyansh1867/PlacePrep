@@ -1,9 +1,12 @@
 package com.placeprep.service;
 
 import com.placeprep.model.Company;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -20,28 +23,35 @@ public class CompanyService {
         this.companyRepository = companyRepository;
     }
 
-    public List<Company> getAll() {
-        return companyRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getAll() {
+        return EntityResponseMapper.toDtoList(companyRepository.findAll());
     }
 
-    public List<Company> getAll(String batch) {
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getAll(String batch) {
         if (batch != null && !batch.trim().isEmpty()) {
-            return companyRepository.findByEligibleBatch(batch.trim());
+            return EntityResponseMapper.toDtoList(companyRepository.findByEligibleBatch(batch.trim()));
         }
-        return companyRepository.findAll();
+        return EntityResponseMapper.toDtoList(companyRepository.findAll());
     }
 
-    public Company getByCompanyId(String companyId) {
-        return companyRepository.findByCompanyId(companyId)
+    @Transactional(readOnly = true)
+    public EntityResponseDto getByCompanyId(String companyId) {
+        Company company = companyRepository.findByCompanyId(companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Company not found with companyId: " + companyId));
+        return EntityResponseMapper.toDto(company);
     }
 
-    public Company create(Company company) {
-        return companyRepository.save(company);
+    @Transactional
+    public EntityResponseDto create(Company company) {
+        return EntityResponseMapper.toDto(companyRepository.save(company));
     }
 
-    public Company update(String companyId, Company updatedData) {
-        Company existing = getByCompanyId(companyId);
+    @Transactional
+    public EntityResponseDto update(String companyId, Company updatedData) {
+        Company existing = companyRepository.findByCompanyId(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found with companyId: " + companyId));
         if (updatedData.getName() != null) existing.setName(updatedData.getName());
         if (updatedData.getTier() != null) existing.setTier(updatedData.getTier());
         if (updatedData.getCtcRange() != null) existing.setCtcRange(updatedData.getCtcRange());
@@ -50,6 +60,20 @@ public class CompanyService {
         if (updatedData.getDriveStatus() != null) existing.setDriveStatus(updatedData.getDriveStatus());
         if (updatedData.getRoles() != null && !updatedData.getRoles().isEmpty()) existing.setRoles(updatedData.getRoles());
         if (updatedData.getEligibleBatches() != null && !updatedData.getEligibleBatches().isEmpty()) existing.setEligibleBatches(updatedData.getEligibleBatches());
-        return companyRepository.save(existing);
+        return EntityResponseMapper.toDto(companyRepository.save(existing));
+    }
+
+    @Transactional
+    public void delete(String companyId) {
+        Company existing = companyRepository.findByCompanyId(companyId).orElse(null);
+        if (existing != null) {
+            companyRepository.delete(existing);
+        } else {
+            try {
+                Long id = Long.parseLong(companyId);
+                companyRepository.findById(id).ifPresent(companyRepository::delete);
+            } catch (NumberFormatException ignored) {
+            }
+        }
     }
 }

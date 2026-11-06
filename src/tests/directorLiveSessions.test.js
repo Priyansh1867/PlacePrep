@@ -335,4 +335,3 @@ test('Director Live Sessions — updateLiveSession Modifies Link & Speaker with 
   assert.equal(updated.agenda, 'OCI Architecture deep-dive');
   assert.ok(updated.auditTrail.some(entry => entry.action === 'EDIT_LINK' || entry.action === 'UPDATED'));
 });
-

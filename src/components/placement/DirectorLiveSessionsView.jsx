@@ -1205,4 +1205,3 @@ export default function DirectorLiveSessionsView({ onNavigate, showToast = () =>
     </div>
   );
 }
-

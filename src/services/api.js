@@ -56,6 +56,9 @@ export function setAuthToken(token) {
       localStorage.removeItem('placeprep_auth_token');
       localStorage.removeItem('placeprep_token');
     }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-state-changed'));
+    }
   } catch (e) {
     console.error('Error saving auth token:', e);
   }
@@ -1756,9 +1759,6 @@ export const LiveSessionApi = {
     });
   }
 };
-
-
-
 
 export function downloadFileBlob(blob, filename) {
   const url = window.URL.createObjectURL(blob);

@@ -1,5 +1,6 @@
 package com.placeprep.config;
 
+import com.placeprep.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     @Autowired
     private TokenService tokenService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -30,6 +34,12 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
         if (token != null) {
             tokenData = tokenService.validateToken(token);
+            if (tokenData != null) {
+                var currentUser = userRepository.findById(tokenData.getUserId());
+                if (currentUser.isPresent() && "SUSPENDED".equalsIgnoreCase(currentUser.get().getStatus())) {
+                    tokenData = null;
+                }
+            }
         }
 
         if (tokenData == null) {

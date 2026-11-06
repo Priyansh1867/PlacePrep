@@ -27,4 +27,9 @@ public class OpportunityTool {
     public Object listOffCampusOpportunities(@ToolParam(description = "Student email or user identifier") String studentId) {
         return opportunityService.getOffCampusOpportunitiesForStudent(studentId);
     }
+
+    @Tool(description = "List all active off-campus job opportunities.")
+    public Object listAllOffCampusJobs() {
+        return opportunityService.getAllOffCampusJobs();
+    }
 }

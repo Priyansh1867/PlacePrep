@@ -4,7 +4,7 @@ import CrtAttendancePortalView from '../components/attendance/CrtAttendancePorta
 import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAttendanceWidget';
 import { getCurrentUser } from '../services/storage';
 
-export default function CrtAttendancePage({ onNavigate, onBack }) {
+export default function CrtAttendancePage({ onNavigate }) {
   const currentUser = getCurrentUser() || {};
   const isStudent = currentUser.role === 'student';
 
@@ -14,7 +14,7 @@ export default function CrtAttendancePage({ onNavigate, onBack }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onBack ? onBack('institute-portal') : (onNavigate ? onNavigate('institute-portal') : window.history.back())}
+            onClick={() => onNavigate ? onNavigate('institute-portal') : window.history.back()}
             className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-slate-500" />

@@ -1,6 +1,7 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.FeedbackService;
+import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -17,7 +18,9 @@ public class StaffFeedbackTool {
     @Tool(description = "List recruiter feedback for authorized placement staff only.")
     public Object listRecruiterFeedback(@ToolParam(description = "Drive identifier, or blank") String driveId,
                                         ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
-        return feedbackService.getAllRecruiterFeedback(driveId);
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("view internal recruiter feedback", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
+        return EntityResponseMapper.toJsonSafe(feedbackService.getAllRecruiterFeedback(driveId));
     }
 }

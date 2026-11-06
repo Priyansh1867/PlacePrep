@@ -40,10 +40,7 @@ public class ResumeAtsService {
         this.objectMapper = new ObjectMapper();
     }
 
-    /**
-     * Evaluates resume against a target job description using the AI ChatClient to determine
-     * the ATS match score, matched and missing keywords, recommendations, and executive summary.
-     */
+
     public ResumeAtsResponse analyze(String resumeText, String company, String role, String jobDescription, String fileName) {
         if (resumeText == null || resumeText.trim().isEmpty()) {
             throw new BadRequestException("Resume text cannot be empty.");
@@ -52,7 +49,7 @@ public class ResumeAtsService {
             throw new BadRequestException("Please provide a valid, descriptive Job Description (at least 15 characters).");
         }
 
-        String safeCompany = (company != null && !company.trim().isEmpty()) ? company.trim() : "Target Recruiter";
+        String safeCompany = (company != null && !company.trim().isEmpty()) ? company.trim() : null;
         String safeRole = (role != null && !role.trim().isEmpty()) ? role.trim() : "Target Technical Role";
         String safeFileName = (fileName != null && !fileName.trim().isEmpty()) ? fileName.trim() : "uploaded_resume.pdf";
 
@@ -63,9 +60,7 @@ public class ResumeAtsService {
         return analyzeFallback(resumeText, safeCompany, safeRole, jobDescription, safeFileName);
     }
 
-    /**
-     * Uses Spring AI ChatClient to evaluate the resume against the job description.
-     */
+
     private ResumeAtsResponse analyzeWithAi(String resumeText, String company, String role, String jobDescription, String fileName) {
         String systemPrompt = """
                 You are an expert Applicant Tracking System (ATS) and senior technical recruiter.
@@ -91,7 +86,7 @@ public class ResumeAtsService {
 
         String userPrompt = String.format(Locale.ROOT,
                 """
-                Target Company: %s
+                %s
                 Target Role: %s
 
                 === JOB DESCRIPTION ===
@@ -100,7 +95,8 @@ public class ResumeAtsService {
                 === CANDIDATE RESUME ===
                 %s
                 """,
-                company, role, jobDescription, resumeText);
+                company == null ? "General ATS review (no target company)" : "Target Company: " + company,
+                role, jobDescription, resumeText);
 
         try {
             String aiResponse = chatClient.prompt()
@@ -116,9 +112,6 @@ public class ResumeAtsService {
         }
     }
 
-    /**
-     * Parses the AI response JSON and constructs the ResumeAtsResponse.
-     */
     private ResumeAtsResponse parseAiResponse(String rawContent, String company, String role, String fileName) {
         int matchScore = 0;
         List<String> matchedKeywords = new ArrayList<>();
@@ -185,8 +178,9 @@ public class ResumeAtsService {
 
         if (summary == null || summary.isBlank()) {
             summary = String.format(Locale.ROOT,
-                    "Your resume matched %d out of %d key competencies (score: %d%%) for %s at %s. %s",
-                    matchedCount, totalKeywords, matchScore, role, company,
+                    "Your resume matched %d out of %d key competencies (score: %d%%) for %s%s. %s",
+                    matchedCount, totalKeywords, matchScore, role,
+                    company == null ? "" : " at " + company,
                     (matchScore >= approvalThreshold)
                             ? "High ATS compatibility rating — ready for submission."
                             : "Requires keyword reinforcement to pass typical campus ATS filtering.");
@@ -211,9 +205,7 @@ public class ResumeAtsService {
                 .build();
     }
 
-    /**
-     * Extracts JSON object string by stripping markdown code fences or non-JSON wrapper text.
-     */
+
     private String extractJson(String text) {
         if (text == null) {
             return "{}";
@@ -237,9 +229,7 @@ public class ResumeAtsService {
         return trimmed;
     }
 
-    /**
-     * Fallback ATS analyzer used when AI ChatClient is unavailable.
-     */
+
     private ResumeAtsResponse analyzeFallback(String resumeText, String company, String role, String jobDescription, String fileName) {
         Set<String> jdKeywords = extractKeywordsFromJobDescription(jobDescription);
         List<String> matched = new ArrayList<>();
@@ -278,8 +268,9 @@ public class ResumeAtsService {
         recs.add("Begin bullet points with authoritative engineering action verbs such as 'Architected', 'Implemented', 'Engineered', 'Optimized', and 'Spearheaded'.");
 
         String summary = String.format(Locale.ROOT,
-                "Your resume matched %d out of %d key competencies (score: %d%%) for %s at %s. %s",
-                matchedCount, totalKeywords, matchScore, role, company,
+                "Your resume matched %d out of %d key competencies (score: %d%%) for %s%s. %s",
+                matchedCount, totalKeywords, matchScore, role,
+                company == null ? "" : " at " + company,
                 (matchScore >= approvalThreshold)
                         ? "High ATS compatibility rating — ready for submission."
                         : "Requires keyword reinforcement to pass typical campus ATS filtering.");
@@ -304,9 +295,7 @@ public class ResumeAtsService {
                 .build();
     }
 
-    /**
-     * Extracts keywords from the job description.
-     */
+
     public Set<String> extractKeywordsFromJobDescription(String jdText) {
         if (jdText == null || jdText.isBlank()) {
             return Collections.emptySet();
@@ -323,9 +312,6 @@ public class ResumeAtsService {
         return keywords;
     }
 
-    /**
-     * Curated sample job descriptions for prominent campus recruiters.
-     */
     public List<SampleJdDto> getSampleJds() {
         return List.of();
     }

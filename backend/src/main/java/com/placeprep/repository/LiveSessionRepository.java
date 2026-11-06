@@ -18,4 +18,3 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> 
 
     List<LiveSession> findByDriveId(String driveId);
 }
-

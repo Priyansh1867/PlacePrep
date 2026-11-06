@@ -643,7 +643,7 @@ export default function StudentOnboardingPage({ onComplete, onNavigateBack }) {
 
         {/* Master Card Split Layout matching Screenshot 2 */}
         <div className="rounded-3xl border border-indigo-100/80 bg-[#161922] shadow-[0_20px_50px_-12px_rgba(99,102,241,0.18),0_10px_30px_-10px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
-          
+
           {/* A. LEFT SIDEBAR – PROGRESS TRACKER */}
           <aside className="lg:col-span-4 bg-[#161922] p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/80 text-white">
             <div className="space-y-6 sm:space-y-7">

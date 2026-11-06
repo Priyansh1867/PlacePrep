@@ -100,7 +100,7 @@ export function normalizeDsaQuestion(rawQ, index = 0) {
   const topic = categorizeQuestionTopic(rawQ);
   const difficulty = rawQ.difficulty || 'Medium';
   const company = rawQ.companyName || (rawQ.companyId ? rawQ.companyId.toUpperCase() : 'General');
-  
+
   // Extract or synthesize constraints & examples where not explicitly given
   const constraints = rawQ.constraints || [
     'Time Complexity Target: O(N) or O(N log N)',
@@ -168,12 +168,12 @@ HAVING COUNT(*) >= 2
 ORDER BY department;`;
 
     case 'java':
-      if (question?.sampleCode && question.sampleCode.includes('class') || question?.sampleCode?.includes('public static')) {
+      if (question?.sampleCode && (question.sampleCode.includes('class') || question.sampleCode.includes('public static'))) {
         return question.sampleCode;
       }
       return `import java.util.*;
 
-public class Main {
+class Solution {
     /**
      * Problem: ${question?.title || 'Algorithmic Problem'}
      * Difficulty: ${question?.difficulty || 'Medium'} | Company: ${question?.companyName || 'Campus'}
@@ -187,7 +187,7 @@ public class Main {
     static class Solution {
         public void ${methodName}() {
             // Write your solution here
-            
+
         }
     }
 }`;
@@ -247,7 +247,7 @@ int main() {
 
 function ${methodName}() {
   // Write your solution here
-  
+
 }
 
 // Example local invocation

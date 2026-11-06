@@ -16,7 +16,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -87,6 +89,25 @@ public class ResumeAtsControllerTest {
                         .param("role", "Developer")
                         .param("jobDescription", "Valid JD description here"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testAnalyzeResumeWithoutCompany() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.pdf", MediaType.APPLICATION_PDF_VALUE, "%PDF-1.4 synthetic".getBytes()
+        );
+        when(parserService.extractText(any())).thenReturn("Java Spring Boot Developer");
+        when(atsService.analyze(anyString(), isNull(), anyString(), anyString(), anyString()))
+                .thenReturn(ResumeAtsResponse.builder().role("Backend Engineer").matchScore(80).build());
+
+        mockMvc.perform(multipart("/api/resume-ats/analyze")
+                        .file(file)
+                        .param("role", "Backend Engineer")
+                        .param("jobDescription", "Hiring a backend engineer with Java and Spring Boot skills"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.matchScore").value(80));
+        verify(atsService).analyze("Java Spring Boot Developer", null, "Backend Engineer",
+                "Hiring a backend engineer with Java and Spring Boot skills", "resume.pdf");
     }
 
     @Test

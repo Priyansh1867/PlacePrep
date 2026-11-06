@@ -1,6 +1,8 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.PlacementDrive;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.DriveService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,8 +37,8 @@ public class DriveController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PlacementDrive>> getDrives(@RequestParam(required = false) String batch) {
-        return ResponseEntity.ok(driveService.getAll(batch));
+    public ResponseEntity<List<EntityResponseDto>> getDrives(@RequestParam(required = false) String batch) {
+        return ResponseEntity.ok(driveService.getAllDtos(batch));
     }
 
     @GetMapping("/calendar")
@@ -46,7 +48,7 @@ public class DriveController {
 
     @GetMapping("/{driveId}")
     public ResponseEntity<?> getDriveById(@PathVariable String driveId) {
-        PlacementDrive drive = driveService.getByDriveId(driveId);
+        com.placeprep.dto.EntityResponseDto drive = driveService.getByDriveIdDto(driveId);
         if (drive == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", "Drive not found for id: " + driveId));
@@ -55,9 +57,31 @@ public class DriveController {
     }
 
     @PostMapping
-    public ResponseEntity<PlacementDrive> createDrive(@RequestBody PlacementDrive drive) {
-        PlacementDrive created = driveService.create(drive);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<EntityResponseDto> createDrive(@RequestBody PlacementDrive drive) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(driveService.createDto(drive));
+    }
+
+    @PutMapping("/{driveId}")
+    public ResponseEntity<?> updateDrive(@PathVariable String driveId, @RequestBody PlacementDrive drive) {
+        try {
+            return ResponseEntity.ok(driveService.updateDto(driveId, drive));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{driveId}")
+    public ResponseEntity<?> deleteDrive(@PathVariable String driveId) {
+        try {
+            driveService.delete(driveId);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Drive deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{driveId}/rounds")
@@ -70,8 +94,7 @@ public class DriveController {
             List<String> rounds = (List<String>) payload.get("rounds");
             String roundConfigsJson = (String) payload.get("roundConfigsJson");
 
-            PlacementDrive updated = driveService.updateRounds(driveId, rounds, roundConfigsJson);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(driveService.updateRoundsDto(driveId, rounds, roundConfigsJson));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -87,13 +110,12 @@ public class DriveController {
             @RequestBody Map<String, String> payload
     ) {
         try {
-            PlacementDrive updated = driveService.updateInstructions(
+            return ResponseEntity.ok(driveService.updateInstructionsDto(
                     driveId,
                     payload.get("venue"),
                     payload.get("reportingTime"),
                     payload.get("instructions")
-            );
-            return ResponseEntity.ok(updated);
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", e.getMessage()));

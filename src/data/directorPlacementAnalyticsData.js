@@ -996,4 +996,3 @@ export function getCandidatesForCompany(companyId) {
   }
   return ANALYTICS_CANDIDATE_DETAILS.filter(cand => cand.companyId === companyId);
 }
-

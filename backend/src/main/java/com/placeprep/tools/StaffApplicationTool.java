@@ -1,6 +1,7 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.ApplicationService;
+import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -17,7 +18,9 @@ public class StaffApplicationTool {
     @Tool(description = "List applications for a placement drive. Available only to authorized placement staff.")
     public Object listDriveApplications(@ToolParam(description = "Placement drive identifier") String driveId,
                                         ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
-        return applicationService.getDriveApplications(driveId);
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("view drive applicants", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
+        return EntityResponseMapper.toJsonSafe(applicationService.getDriveApplications(driveId));
     }
 }

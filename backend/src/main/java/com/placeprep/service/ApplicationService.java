@@ -2,14 +2,18 @@ package com.placeprep.service;
 
 import com.placeprep.model.PlacementDrive;
 import com.placeprep.model.StudentApplication;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.PlacementDriveRepository;
 import com.placeprep.repository.StudentApplicationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,7 +53,8 @@ public class ApplicationService {
         this.conflictService = conflictService;
     }
 
-    public StudentApplication registerApplication(StudentApplication app) {
+    @Transactional
+    public EntityResponseDto registerApplication(StudentApplication app) {
         if (app.getApplicationId() == null || app.getApplicationId().trim().isEmpty()) {
             app.setApplicationId("APP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         }
@@ -148,33 +153,73 @@ public class ApplicationService {
             selectionWorkflowService.initializePipeline(saved);
         }
 
-        return saved;
+        return EntityResponseMapper.toDto(saved);
     }
 
-    public List<StudentApplication> getMyApplications(String userEmailOrId) {
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getMyApplications(String userEmailOrId) {
         if (userEmailOrId == null || userEmailOrId.trim().isEmpty()) {
-            return Collections.emptyList();
+            return List.of();
         }
-        return applicationRepository.findByStudentIdOrStudentEmail(userEmailOrId, userEmailOrId);
+        return EntityResponseMapper.toDtoList(applicationRepository.findByStudentIdOrStudentEmail(userEmailOrId, userEmailOrId));
     }
 
-    public List<StudentApplication> getStudentApplications(String studentId) {
-        return applicationRepository.findByStudentId(studentId);
+    public List<EntityResponseDto> getStudentApplications(String studentId) {
+        return EntityResponseMapper.toDtoList(applicationRepository.findByStudentId(studentId));
     }
 
-    public List<StudentApplication> getDriveApplications(String driveId) {
-        return applicationRepository.findByDriveId(driveId);
+    public List<EntityResponseDto> getDriveApplications(String driveId) {
+        return EntityResponseMapper.toDtoList(applicationRepository.findByDriveId(driveId));
     }
 
-    public List<StudentApplication> getAllApplications() {
-        return applicationRepository.findAll();
+    public List<EntityResponseDto> getAllApplications() {
+        return EntityResponseMapper.toDtoList(applicationRepository.findAll());
     }
 
-    public Optional<StudentApplication> getByApplicationId(String applicationId) {
-        return applicationRepository.findByApplicationId(applicationId);
+    public Optional<EntityResponseDto> getByApplicationId(String applicationId) {
+        return EntityResponseMapper.toDtoOptional(applicationRepository.findByApplicationId(applicationId));
     }
 
-    public StudentApplication updateStatus(
+    @Transactional
+    public void deleteApplication(String applicationId) {
+        Optional<StudentApplication> opt = applicationRepository.findByApplicationId(applicationId);
+        if (opt.isPresent()) {
+            applicationRepository.delete(opt.get());
+        } else {
+            try {
+                Long id = Long.parseLong(applicationId);
+                applicationRepository.findById(id).ifPresent(applicationRepository::delete);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getApplicationStats() {
+        List<StudentApplication> all = applicationRepository.findAll();
+        long total = all.size();
+        long shortlisted = all.stream().filter(a -> "SHORTLISTED".equalsIgnoreCase(a.getStatus()) || "ELIGIBILITY_PASSED".equalsIgnoreCase(a.getStatus())).count();
+        long interviews = all.stream().filter(a -> a.getStatus() != null && a.getStatus().toUpperCase().contains("INTERVIEW")).count();
+        long offers = all.stream().filter(a -> "OFFERED".equalsIgnoreCase(a.getStatus()) || "ACCEPTED".equalsIgnoreCase(a.getStatus()) || "PLACED".equalsIgnoreCase(a.getStatus())).count();
+        long rejected = all.stream().filter(a -> "REJECTED".equalsIgnoreCase(a.getStatus()) || "INELIGIBLE_REJECTED".equalsIgnoreCase(a.getStatus())).count();
+        long withdrawn = all.stream().filter(a -> "WITHDRAWN".equalsIgnoreCase(a.getStatus())).count();
+        long inProgress = total - offers - rejected - withdrawn;
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", total);
+        stats.put("applied", total);
+        stats.put("shortlisted", shortlisted);
+        stats.put("interviews", interviews);
+        stats.put("offers", offers);
+        stats.put("placed", offers);
+        stats.put("rejected", rejected);
+        stats.put("withdrawn", withdrawn);
+        stats.put("inProgress", inProgress >= 0 ? inProgress : 0);
+        return stats;
+    }
+
+    @Transactional
+    public EntityResponseDto updateStatus(
             String applicationId,
             String newStatus,
             String currentRound,
@@ -219,6 +264,6 @@ public class ApplicationService {
             }
         }
 
-        return applicationRepository.save(app);
+        return EntityResponseMapper.toDto(applicationRepository.save(app));
     }
 }

@@ -20,6 +20,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { ResumeAtsApi } from '../services/api';
+import { createResumeAtsFormData } from '../services/resumeAtsForm';
 import { getCompanies, updateResumeStatus, getResumeStatus } from '../services/storage';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -35,7 +36,7 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBa
   // Form State
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState(existingCompanies[0]?.name || '');
+  const [selectedCompany, setSelectedCompany] = useState('');
   const [customCompany, setCustomCompany] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [jobDescription, setJobDescription] = useState((PRESET_SAMPLE_JDS[0]?.description || ''));
@@ -126,11 +127,7 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBa
       return;
     }
 
-    const effectiveCompany = selectedCompany === 'custom' ? customCompany.trim() : selectedCompany;
-    if (!effectiveCompany) {
-      setValidationError('Please provide or select a target company.');
-      return;
-    }
+    const effectiveCompany = selectedCompany === 'custom' ? customCompany.trim() : selectedCompany.trim();
 
     if (!selectedRole || !selectedRole.trim()) {
       setValidationError('Please provide the target job role.');
@@ -146,11 +143,11 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBa
     setAnalysisProgressStep('Uploading document securely to memory...');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('company', effectiveCompany);
-      formData.append('role', selectedRole.trim());
-      formData.append('jobDescription', jobDescription.trim());
+      const formData = createResumeAtsFormData(file, {
+        company: effectiveCompany,
+        role: selectedRole,
+        jobDescription
+      });
 
       setAnalysisProgressStep('Extracting text in-memory and parsing document structure...');
 
@@ -342,13 +339,14 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBa
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                      Target Company
+                      Target Company (optional)
                     </label>
                     <select
                       value={selectedCompany}
                       onChange={(e) => setSelectedCompany(e.target.value)}
                       className="w-full text-xs font-medium rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
+                      <option value="">Any company / General ATS check</option>
                       {existingCompanies.map((c) => (
                         <option key={c.id || c.companyId} value={c.name}>
                           {c.name}
@@ -421,7 +419,7 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBa
                   rows={6}
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Paste the employer's official job description or required skills here..."
+                  placeholder="Paste a job description or target role requirements here..."
                   className="w-full text-xs font-mono rounded-xl border border-slate-200 p-3 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
                 />
               </div>
@@ -525,7 +523,7 @@ export default function ResumeAtsCheckerPage({ onNavigate, onSelectCompany, onBa
                     </h2>
                     <p className="text-xs font-bold text-indigo-700 flex items-center gap-1.5 font-mono">
                       <Building2 className="w-3.5 h-3.5" />
-                      Target Recruiter: {analysisResult.company}
+                      {analysisResult.company ? `Target Company: ${analysisResult.company}` : 'General ATS review'}
                     </p>
                   </div>
 

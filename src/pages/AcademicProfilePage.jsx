@@ -23,9 +23,8 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import PageHeader from '../components/ui/PageHeader';
-import BackNavButton from '../components/ui/BackNavButton';
 
-export default function AcademicProfilePage({ onNavigate, onBack }) {
+export default function AcademicProfilePage({ onNavigate }) {
   const currentUser = getCurrentUser();
   const currentBatch = getGraduationBatch();
   const [selectedSemester, setSelectedSemester] = useState(1);
@@ -62,7 +61,15 @@ export default function AcademicProfilePage({ onNavigate, onBack }) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
       {/* Top Navigation */}
-      <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="placement-portal" label="Back to Student Dashboard" />
+      {onNavigate && (
+        <button
+          onClick={() => onNavigate('dashboard')}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Student Dashboard</span>
+        </button>
+      )}
 
       {/* Hero Profile Card */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 text-white p-6 sm:p-8 shadow-xl relative overflow-hidden">

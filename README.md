@@ -49,8 +49,8 @@ graph TD
 * **Backend**:
   * **Language & Runtime**: Java 25.
   * **Framework**: Spring Boot 3.5.16, Spring Security, Spring Data JPA.
-  * **Database**: MySQL, seeded on startup via `DataInitializer.java`.
-  * **Security**: Stateless cryptographic token issuance (`pp_<token>`), BCrypt password hashing, and role-based access control (`ROLE_ADMIN` vs `ROLE_STUDENT`).
+  * **Database**: MySQL; application records are created through workflows, not seeded on startup.
+  * **Security**: Opaque `pp_<token>` sessions, BCrypt password hashing for new accounts (legacy plaintext passwords upgrade on successful login), and server-side role checks.
 
 ---
 
@@ -71,12 +71,13 @@ In your terminal, navigate to the `backend` directory:
 cd backend
 mvn spring-boot:run
 ```
-By default, the backend connects to `jdbc:mysql://localhost:3306/placeprep` as `root`. The database is created if it does not exist. Configure a non-default connection before starting the backend with `MYSQL_URL`, `MYSQL_USER`, and `MYSQL_PASSWORD`; for example, in PowerShell:
+By default, the backend connects to `jdbc:mysql://localhost:3306/placeprep` as `root`. Create the database first and configure `MYSQL_URL`, `MYSQL_USER`, and `MYSQL_PASSWORD`; for example, in PowerShell:
 ```powershell
 $env:MYSQL_USER = "placeprep"
 $env:MYSQL_PASSWORD = "your-local-password"
 mvn spring-boot:run
 ```
+`backend/.env` can also supply every backend property defined in `application.properties` and `application-mysql.properties`. The backend loads it on startup, while variables already set in the process take precedence. Keep real database and AI credentials in this Git-ignored file.
 * **Backend API Base**: `http://localhost:8082/api`
 
 ---
@@ -95,18 +96,12 @@ npm run dev
 
 ### Step 3: Run the Test Suites
 
-#### Backend Automated Tests (24 Passing Tests)
+#### Backend Automated Tests
 ```bash
 cd backend
 mvn test
 ```
-The test suite validates:
-* `ApplicationServiceTest` (5 tests): Application tracking, authorization enforcement, stage progression, and KPI metrics.
-* `WorkflowServiceTest` (5 tests): Candidate advancement across 4 rounds, elimination with reasons, shortlisting, final selection, and evaluation rubrics.
-* `DriveServiceTest` (4 tests): Drive creation, batch filtering, property updates, and retirement.
-* `ExperienceServiceTest` (5 tests): Experience retrieval, auto-ID generation, helpful voting, reporting, and moderation.
-* `AuthServiceTest` (3 tests): User registration, demo login, and BCrypt encryption.
-* `InsightsServiceTest` (2 tests): Statistical calculations grounded in database records without synthetic numbers.
+Spring integration tests use the isolated `test` profile and an in-memory H2 database. The AI write-tool tests validate tool JSON schemas, role checks, authentication, and placement-drive persistence. The full suite currently contains tests that expect old demo records and fails against an empty database; see the test output before relying on a green build.
 
 #### Frontend Production Build
 ```bash
@@ -116,17 +111,24 @@ Validates full TypeScript/JSX bundling, asset optimization, and CSS compilation 
 
 ---
 
-## 🔑 Pre-Seeded Demo Accounts
+## 🔑 Accounts
 
-The database is automatically pre-populated on boot via `backend/src/main/java/com/placeprep/config/DataInitializer.java`:
+Public signup creates a student account. Staff and administrator accounts must be provisioned through an authorized administrative process. Login autofill and quick demo buttons use the sample email and password shown in the UI. Those sample accounts must exist in the backend; every sign-in still requires a successful backend response. Use these passwords only for disposable demo accounts.
 
-| Role | Email | Password | Access Level | One-Click Demo Button |
-| :--- | :--- | :--- | :--- | :--- |
-| **Placement Officer (Admin)** | `admin@placeprep.com` | `Admin@123` | `ROLE_ADMIN` | Top Navbar → **Demo Admin** |
-| **Engineering Student** | `student@placeprep.com` | `Student@123` | `ROLE_STUDENT` | Top Navbar → **Demo Student** |
+### Local bulk test data
 
-> [!NOTE]
-> Demo accounts are intended for local development, faculty demonstrations, and end-to-end testing. In production environments, credentials should be configured via environment variables and production database secrets.
+To populate an existing **local** `placeprep` MySQL database with synthetic, linked records, run:
+
+```powershell
+$env:MYSQL_PASSWORD = '<your local MySQL password>'
+.\backend\dev\seed_local_mysql.ps1
+```
+
+The seed connects only to `127.0.0.1:3306`, adds records across all PlacePrep tables, and skips records it already created. It preserves other rows. A generated test password is stored in the Git-ignored `backend/seed-credentials.local`; use it with `seed26.admin@placeprep.test`, `seed26.student01@placeprep.test`, or the other `seed26.<role>@placeprep.test` staff accounts. The data is synthetic and intended only for local testing.
+
+For attendance checks, each seeded student is enrolled in all six Seed Subjects. Student attendance pages and the AI attendance summary resolve records stored under either the user's email or numeric ID. Personal attendance reads require login and use the authenticated student identity; a `studentEmail` query parameter cannot select another student's records. The AI chat stream preserves plain numeric chunks such as class counts and percentages.
+
+The Institute Portal Hackathons tab loads listings from `GET /api/opportunities/hackathons`. Log in before opening it; the endpoint requires authentication. Listings without a registration URL display an unavailable-link message instead of an inactive registration button.
 
 ---
 
@@ -197,6 +199,7 @@ The corresponding placeholders are in `.env.example`. This template contains no 
 * Statistical historical intelligence grounded in genuine database records.
 * Platform overview metrics bar (8 recruiter hubs, 40+ vetted questions, verified student logs).
 * Dynamic recruiter hub selection with live recalculation and preparation priority matrix.
+* Resume ATS checks accept an optional target company. The form can analyze a resume against a role and job description without selecting one; the response leaves `company` null for a general review.
 
 ### 8. Admin Console & Candidate Workflow Pipeline (`#admin` & `#workflow`)
 * **Admin Control Panel**:
@@ -217,7 +220,6 @@ The corresponding placeholders are in `.env.example`. This template contains no 
 ### Authentication & Users
 * `POST /api/auth/register` — Register a new student account.
 * `POST /api/auth/login` — Authenticate and receive `pp_<token>`.
-* `POST /api/auth/demo-login` — 1-click token issuance for demo accounts (`student` or `admin`).
 * `GET /api/users/me` — Retrieve current authenticated user profile and saved items.
 * `PUT /api/users/me/batch` — Update graduation batch preference.
 * `POST /api/users/me/toggle-saved-question/{id}` — Bookmark question.
@@ -227,6 +229,7 @@ The corresponding placeholders are in `.env.example`. This template contains no 
 ### Placement Drives & Applications
 * `GET /api/drives?batch={batch}` — Catalog of upcoming drives with batch filtering.
 * `GET /api/drives/calendar` — Drive schedule calendar events.
+  Calendar responses and the AI calendar tool return materialized `eligibleBatches` and `rounds` lists, so their JSON remains valid after the database session closes.
 * `GET /api/drives/{id}` — Placement drive details.
 * `POST /api/drives` *(Admin)* — Announce a new placement drive.
 * `PUT /api/drives/{id}` *(Admin)* — Update drive properties.

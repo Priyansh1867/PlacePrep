@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import CompanyCard from '../components/CompanyCard';
 import { CompanyApi } from '../services/api';
-import { getInitialCompanies, getGraduationBatch } from '../services/storage';
+import { getGraduationBatch } from '../services/storage';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -38,14 +38,10 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal, onNav
     setError(null);
     try {
       const data = await CompanyApi.getAll(currentBatch);
-      if (data && data.length > 0) {
-        setCompanies(data);
-      } else {
-        setCompanies(getInitialCompanies());
-      }
+      setCompanies(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.warn('Backend unavailable, falling back to cached companies:', err);
-      setCompanies(getInitialCompanies());
+      setCompanies([]);
+      setError(err.message || 'Unable to load companies from the backend.');
     } finally {
       setLoading(false);
     }
@@ -107,9 +103,6 @@ export default function CompaniesPage({ onSelectCompany, onOpenBatchModal, onNav
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
-      {/* Top Back Navigation */}
-      <BackNavButton onNavigate={onNavigate} onBack={onBack} fallbackRoute="placement-portal" />
-
       {/* Page Header */}
       <PageHeader
         badge="Company Intelligence"

@@ -1,6 +1,7 @@
 package com.placeprep.tools;
 
 import com.placeprep.service.UserService;
+import com.placeprep.mapper.EntityResponseMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
@@ -15,10 +16,7 @@ public class UserTool {
 
     @Tool(description = "Get the authenticated student's placement preparation dashboard.")
     public Object getMyDashboard(ToolContext toolContext) {
-        Object userId = toolContext.getContext().get("userId");
-        if (!(userId instanceof Number number)) {
-            throw new IllegalStateException("Authenticated user context is missing");
-        }
-        return userService.getDashboardData(number.longValue());
+        Long userId = AiToolAuthorization.parseUserId(toolContext);
+        return EntityResponseMapper.toJsonSafe(userService.getDashboardData(userId));
     }
 }

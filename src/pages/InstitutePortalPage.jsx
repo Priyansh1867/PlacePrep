@@ -54,14 +54,13 @@ import {
   getResumeStatus,
   updateResumeStatus,
   getStudentRounds,
-  getHackathons,
   getInternships,
   getOffCampusCompanies,
   getUpcomingDrives,
   getInterviewQuestions,
   broadcastPushNotification
 } from '../services/storage';
-import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi } from '../services/api';
+import { DriveApi, AttendanceApi, QuestionApi, UserApi, AuthApi, OpportunityApi } from '../services/api';
 import SearchBar from '../components/ui/SearchBar';
 import PortalModuleCards from '../components/PortalModuleCards';
 import DailyAttendancePortalView from '../components/attendance/DailyAttendancePortalView';
@@ -80,7 +79,7 @@ import StudentGpsAttendanceWidget from '../components/attendance/StudentGpsAtten
 import TimetableManagementView from '../components/timetable/TimetableManagementView';
 import instituteLearningHero from '../assets/images/institute-learning-hero.png';
 
-export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompany, onSelectQuestion }) {
+export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSelectQuestion }) {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser() || {});
 
   useEffect(() => {
@@ -106,7 +105,9 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
   const [classAttendance, setClassAttendance] = useState(() => getClassAttendance() || []);
   const [resumeStatus, setResumeStatus] = useState(() => getResumeStatus() || { atsScore: null });
   const [studentRounds, setStudentRounds] = useState(() => getStudentRounds() || []);
-  const [hackathons, setHackathons] = useState(() => getHackathons() || []);
+  const [hackathons, setHackathons] = useState([]);
+  const [isLoadingHackathons, setIsLoadingHackathons] = useState(true);
+  const [hackathonsError, setHackathonsError] = useState('');
   const [internships, setInternships] = useState(() => getInternships() || []);
   const [offCampusCompanies, setOffCampusCompanies] = useState(() => getOffCampusCompanies() || []);
   const [upcomingDrives, setUpcomingDrives] = useState(() => getUpcomingDrives() || []);
@@ -222,7 +223,7 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
   };
 
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [databaseUsers, setDatabaseUsers] = useState(() => getFallbackStudents());
+  const [databaseUsers, setDatabaseUsers] = useState([]);
   const [isLoadingDatabaseUsers, setIsLoadingDatabaseUsers] = useState(false);
   const [databaseUsersError, setDatabaseUsersError] = useState(null);
 
@@ -247,17 +248,31 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
     } catch (err) {
       console.error('Backend users fetch error:', err);
       setDatabaseUsersError(err?.message || 'Failed to fetch registered candidates from database');
-      const fallbackList = getFallbackStudents();
-      if (fallbackList.length > 0) {
-        setDatabaseUsers(fallbackList);
-      }
+      setDatabaseUsers([]);
     } finally {
       setIsLoadingDatabaseUsers(false);
     }
   };
 
   // Sync with Spring Boot Backend (:8082)
+  const refreshHackathons = async () => {
+    setIsLoadingHackathons(true);
+    setHackathonsError('');
+    try {
+      const liveHackathons = await OpportunityApi.getHackathons();
+      if (!Array.isArray(liveHackathons)) throw new Error('Invalid hackathons response');
+      setHackathons(liveHackathons);
+      setHackathonsPage(1);
+    } catch (error) {
+      setHackathons([]);
+      setHackathonsError(error?.message || 'Could not load hackathons.');
+    } finally {
+      setIsLoadingHackathons(false);
+    }
+  };
+
   useEffect(() => {
+    refreshHackathons();
     // 1. Fetch drives from Spring Boot
     if (DriveApi?.getAll) {
       DriveApi.getAll()
@@ -267,7 +282,7 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend drives fallback to local:', err?.message));
+        .catch((err) => console.log('Backend drives request failed:', err?.message));
     }
 
     // 2. Fetch CRT training sessions from Spring Boot
@@ -279,7 +294,7 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend CRT fallback to local:', err?.message));
+        .catch((err) => console.log('Backend CRT request failed:', err?.message));
     }
 
     // 3. Fetch interview questions from Spring Boot
@@ -291,11 +306,34 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
             setIsBackendConnected(true);
           }
         })
-        .catch((err) => console.log('Backend questions fallback to local:', err?.message));
+        .catch((err) => console.log('Backend questions request failed:', err?.message));
     }
 
     // 4. Fetch registered database users from Spring Boot
     refreshDatabaseUsers();
+
+    // 5. Fetch internships from Spring Boot
+    if (OpportunityApi?.getInternships) {
+      OpportunityApi.getInternships()
+        .then((liveInternships) => {
+          if (Array.isArray(liveInternships) && liveInternships.length > 0) {
+            setInternships(liveInternships);
+          }
+        })
+        .catch(() => {});
+    }
+
+    // 6. Fetch off-campus companies from Spring Boot
+    if (OpportunityApi?.getOffCampus) {
+      OpportunityApi.getOffCampus()
+        .then((res) => {
+          const comps = res?.companies || (Array.isArray(res) ? res : []);
+          if (Array.isArray(comps) && comps.length > 0) {
+            setOffCampusCompanies(comps);
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const getInitials = (name = 'User') => {
@@ -432,7 +470,7 @@ export default function InstitutePortalPage({ onNavigate, onBack, onSelectCompan
       <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => onBack ? onBack('gateway') : onNavigate('gateway')}
+          onClick={() => onNavigate('gateway')}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-indigo-900 font-bold text-xs shadow-xs transition cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-indigo-600 transition-transform group-hover:-translate-x-0.5" />

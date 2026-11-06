@@ -4,6 +4,9 @@ import com.placeprep.model.User;
 import com.placeprep.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +16,8 @@ import java.util.Optional;
 
 @Service
 public class UserService {
+
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Autowired
     private UserRepository userRepository;
@@ -28,14 +33,21 @@ public class UserService {
         if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Email is required");
         }
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
         String cleanEmail = user.getEmail().trim().toLowerCase();
         if (userRepository.findByEmail(cleanEmail).isPresent()) {
             throw new IllegalArgumentException("User with email " + cleanEmail + " already exists");
         }
         user.setEmail(cleanEmail);
-        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
-            user.setRole("student");
-        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setId(null);
+        user.setStatus("ACTIVE");
+        user.setResetPasswordToken(null);
+        user.setResetPasswordExpiry(null);
+        // Public registration cannot grant placement staff or administrator privileges.
+        user.setRole("student");
         if (user.getSavedCompanyIds() == null) {
             user.setSavedCompanyIds(new ArrayList<>());
         }
@@ -57,6 +69,10 @@ public class UserService {
         }
         String cleanEmail = email.trim().toLowerCase();
 
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
         // Resolve known demo email aliases
         if ("hod.cse@dtu.ac.in".equals(cleanEmail)) {
             cleanEmail = "hod@placeprep.com";
@@ -65,8 +81,8 @@ public class UserService {
         }
 
         // 1. First check if user exists by email and exact password or demo fallback
-        java.util.Optional<User> byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, password != null ? password : "");
-        if (byEmailAndPass.isEmpty() && password != null) {
+        java.util.Optional<User> byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, password);
+        if (byEmailAndPass.isEmpty()) {
             if ("password123".equals(password)) {
                 byEmailAndPass = userRepository.findByEmailAndPassword(cleanEmail, "demo123");
             } else if ("demo123".equals(password)) {
@@ -80,69 +96,21 @@ public class UserService {
             }
             return user;
         }
-
-        // 2. Hardcoded login bypass: if user exists by email, allow login with any password
-        java.util.Optional<User> byEmail = userRepository.findByEmail(cleanEmail);
-        if (byEmail.isPresent()) {
-            User user = byEmail.get();
-            if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
-                throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
-            }
-            return user;
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+        String storedPassword = user.getPassword();
+        boolean legacyPlaintext = storedPassword != null && storedPassword.equals(password);
+        if (!legacyPlaintext && (storedPassword == null || !passwordEncoder.matches(password, storedPassword))) {
+            throw new IllegalArgumentException("Invalid email or password");
         }
-
-        // 3. Auto-provision hardcoded profile for any role/email
-        return provisionHardcodedUser(cleanEmail, password != null ? password : "password123");
-    }
-
-    private User provisionHardcodedUser(String email, String password) {
-        User user = new User();
-        user.setEmail(email);
-        user.setPassword(password);
-        user.setStatus("ACTIVE");
-        user.setOnboardingCompleted(true);
-        user.setCollege("Indian Institute of Technology");
-
-        String lower = email.toLowerCase();
-        if (lower.contains("tpo")) {
-            user.setName("Prof. Rajesh Raman");
-            user.setRole("tpo");
-            user.setBranch("Management & Placement");
-        } else if (lower.contains("manage") || lower.contains("admin")) {
-            user.setName("Dr. Ramesh Gupta");
-            user.setRole("management");
-            user.setBranch("Operations");
-        } else if (lower.contains("hod")) {
-            user.setName("Prof. Alok Verma");
-            user.setRole("hod");
-            user.setBranch("Computer Science & Engineering");
-        } else if (lower.contains("teacher") || lower.contains("faculty")) {
-            user.setName("Dr. Neha Sharma");
-            user.setRole("teacher");
-            user.setBranch("Computer Science & Engineering");
-        } else if (lower.contains("recruit") || lower.contains("hr")) {
-            user.setName("Sarah Jenkins");
-            user.setRole("hr");
-            user.setBranch("Corporate Recruitment (Google)");
-        } else if (lower.contains("coord")) {
-            user.setName("Prof. Ananya Gupta");
-            user.setRole("coordinator");
-            user.setBranch("Computer Science & Engineering");
-        } else if (lower.contains("direct")) {
-            user.setName("Dr. Vikramaditya Sen");
-            user.setRole("director");
-            user.setBranch("Institutional Governance");
-        } else {
-            user.setName("Priyansh Jain");
-            user.setRole("student");
-            user.setBranch("Computer Science & Engineering");
-            user.setRollNumber("2024/CSE/084");
-            user.setGraduationBatch("2026");
-            user.setCgpa(8.85);
-            user.setActiveBacklogs(0);
+        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+            throw new IllegalArgumentException("Account is suspended. Please contact the administrator.");
         }
-
-        return userRepository.save(user);
+        if (legacyPlaintext) {
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
+        }
+        return user;
     }
 
     public User getUserById(Long id) {
@@ -150,6 +118,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
     }
 
+    @Transactional
     public User updateBatch(Long userId, String batch) {
         User user = getUserById(userId);
         user.setGraduationBatch(batch);
@@ -238,17 +207,33 @@ public class UserService {
         return isSaved;
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getDashboardData(Long userId) {
         User user = getUserById(userId);
+
         Map<String, Object> data = new HashMap<>();
-        data.put("savedCount", user.getSavedQuestionIds() != null ? user.getSavedQuestionIds().size() : 0);
-        data.put("practicedCount", user.getPracticedQuestionIds() != null ? user.getPracticedQuestionIds().size() : 0);
-        data.put("revisionCount", user.getRevisionQuestionIds() != null ? user.getRevisionQuestionIds().size() : 0);
-        data.put("savedCompaniesCount", user.getSavedCompanyIds() != null ? user.getSavedCompanyIds().size() : 0);
-        data.put("user", user);
+
+        data.put("savedCount", user.getSavedQuestionIds().size());
+        data.put("practicedCount", user.getPracticedQuestionIds().size());
+        data.put("revisionCount", user.getRevisionQuestionIds().size());
+        data.put("savedCompaniesCount", user.getSavedCompanyIds().size());
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", user.getId());
+        userData.put("name", user.getName());
+        userData.put("email", user.getEmail());
+        userData.put("college", user.getCollege());
+        userData.put("branch", user.getBranch());
+        userData.put("graduationBatch", user.getGraduationBatch());
+        userData.put("role", user.getRole());
+        userData.put("onboardingCompleted", user.isOnboardingCompleted());
+
+        data.put("user", userData);
+
         return data;
     }
 
+    @Transactional(readOnly = true)
     public List<User> getAllUsers(String role, String search) {
         List<User> all = userRepository.findAll();
         return all.stream()
@@ -260,6 +245,7 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional
     public User updateUserRole(Long userId, String newRole) {
         User user = getUserById(userId);
         if (newRole == null || newRole.trim().isEmpty()) {
@@ -269,6 +255,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public User updateUserStatus(Long userId, String newStatus) {
         User user = getUserById(userId);
         if (newStatus == null || newStatus.trim().isEmpty()) {
@@ -303,7 +290,11 @@ public class UserService {
         List<User> users = userRepository.findAll();
         for (User u : users) {
             if (token.equals(u.getResetPasswordToken())) {
-                u.setPassword(newPassword.trim());
+                if (u.getResetPasswordExpiry() == null ||
+                        !java.time.LocalDateTime.parse(u.getResetPasswordExpiry()).isAfter(java.time.LocalDateTime.now())) {
+                    throw new IllegalArgumentException("Invalid or expired password reset token");
+                }
+                u.setPassword(passwordEncoder.encode(newPassword.trim()));
                 u.setResetPasswordToken(null);
                 u.setResetPasswordExpiry(null);
                 userRepository.save(u);

@@ -109,8 +109,6 @@ public class OpportunityService {
         if (updates.getDuration() != null) existing.setDuration(updates.getDuration());
         if (updates.getLocation() != null) existing.setLocation(updates.getLocation());
         if (updates.getWorkMode() != null) existing.setWorkMode(updates.getWorkMode());
-        if (updates.getDeadline() != null) existing.setDeadline(updates.getDeadline());
-        if (updates.getPostedDate() != null) existing.setPostedDate(updates.getPostedDate());
         if (updates.getEligibleBatches() != null) existing.setEligibleBatches(updates.getEligibleBatches());
         if (updates.getEligibleBranches() != null) existing.setEligibleBranches(updates.getEligibleBranches());
         if (updates.getQualifications() != null) existing.setQualifications(updates.getQualifications());

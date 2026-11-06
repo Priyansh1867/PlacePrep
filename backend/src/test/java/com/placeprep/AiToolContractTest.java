@@ -25,12 +25,14 @@ class AiToolContractTest {
             StudentEligibilityTool.class, StudentMockSessionTool.class,
             MockSessionWriteTool.class, StaffFeedbackTool.class,
             FeedbackWriteTool.class, NotificationWriteTool.class,
-            SelectionWriteTool.class, CandidateWriteTool.class
+            SelectionWriteTool.class, CandidateWriteTool.class,
+            TimetableTool.class, AcademicRecordTool.class,
+            LiveSessionTool.class
     );
 
     @Test
     void everyAiToolIsAComponentWithAtLeastOneToolMethod() {
-        assertEquals(28, TOOL_CLASSES.size());
+        assertEquals(31, TOOL_CLASSES.size());
 
         for (Class<?> toolClass : TOOL_CLASSES) {
             assertNotNull(toolClass.getAnnotation(Component.class), toolClass.getSimpleName());

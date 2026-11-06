@@ -1,6 +1,8 @@
 package com.placeprep.service;
 
 import com.placeprep.model.ClassAttendanceRecord;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.model.ClassAttendanceSession;
 import com.placeprep.model.CrtAttendanceRecord;
 import com.placeprep.model.CrtTrainingSession;
@@ -36,6 +38,66 @@ import com.placeprep.repository.UserRepository;
 
 @Service
 public class AttendanceService {
+
+    @Transactional
+    public EntityResponseDto createClassSessionDto(ClassAttendanceSession session) {
+        return EntityResponseMapper.toDto(createClassSession(session));
+    }
+
+    @Transactional
+    public EntityResponseDto findOrCreateClassSessionDto(ClassAttendanceSession session) {
+        return EntityResponseMapper.toDto(findOrCreateClassSession(session));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getSessionRecordsDto(Long sessionId) {
+        return EntityResponseMapper.toDtoList(getSessionRecords(sessionId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getClassSessionsDto(String department, String semester) {
+        return EntityResponseMapper.toDtoList(getClassSessions(department, semester));
+    }
+
+    @Transactional
+    public List<EntityResponseDto> markClassAttendanceDto(Long sessionId, List<ClassAttendanceRecord> records) {
+        return EntityResponseMapper.toDtoList(markClassAttendance(sessionId, records));
+    }
+
+    @Transactional
+    public EntityResponseDto createCrtSessionDto(CrtTrainingSession session) {
+        return EntityResponseMapper.toDto(createCrtSession(session));
+    }
+
+    @Transactional
+    public EntityResponseDto updateCrtSessionDto(Long id, CrtTrainingSession updated) {
+        return EntityResponseMapper.toDto(updateCrtSession(id, updated));
+    }
+
+    @Transactional
+    public EntityResponseDto updateCrtSessionStatusDto(Long id, String newStatus) {
+        return EntityResponseMapper.toDto(updateCrtSessionStatus(id, newStatus));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getCrtSessionsDto(String targetBatch, String department, String status) {
+        return EntityResponseMapper.toDtoList(getCrtSessions(targetBatch, department, status));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<EntityResponseDto> getCrtSessionByIdDto(Long id) {
+        return EntityResponseMapper.toDtoOptional(getCrtSessionById(id));
+    }
+
+    @Transactional
+    public List<EntityResponseDto> markCrtAttendanceDto(Long crtSessionId, List<CrtAttendanceRecord> records, String recordedBy) {
+        return EntityResponseMapper.toDtoList(markCrtAttendance(crtSessionId, records, recordedBy));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getCrtSessionRecordsDto(Long crtSessionId) {
+        return EntityResponseMapper.toDtoList(getCrtSessionRecords(crtSessionId));
+    }
 
     public static final double SHORTAGE_THRESHOLD = 75.0;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -292,7 +354,7 @@ public class AttendanceService {
     }
 
     public Map<String, Object> getStudentAttendanceSummary(String studentId) {
-        List<ClassAttendanceRecord> records = classRecordRepo.findByStudentId(studentId);
+        List<ClassAttendanceRecord> records = findClassRecordsForStudent(studentId);
 
         int totalSessions = records.size();
         int attendedSessions = 0;
@@ -394,7 +456,7 @@ public class AttendanceService {
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        List<ClassAttendanceRecord> studentRecords = classRecordRepo.findByStudentId(studentEmail);
+        List<ClassAttendanceRecord> studentRecords = findClassRecordsForStudent(studentEmail);
         Map<Long, ClassAttendanceRecord> recordsBySession = new HashMap<>();
         for (ClassAttendanceRecord r : studentRecords) {
             recordsBySession.put(r.getSessionId(), r);
@@ -495,7 +557,7 @@ public class AttendanceService {
         }
 
         List<ClassAttendanceSession> sessions = classSessionRepo.findBySubjectCodeOrderBySessionDateDesc(subjectCode);
-        List<ClassAttendanceRecord> records = classRecordRepo.findByStudentId(studentEmail);
+        List<ClassAttendanceRecord> records = findClassRecordsForStudent(studentEmail);
         Map<Long, ClassAttendanceRecord> recordsBySession = new HashMap<>();
         for (ClassAttendanceRecord r : records) {
             recordsBySession.put(r.getSessionId(), r);
@@ -703,7 +765,8 @@ public class AttendanceService {
     }
 
     public List<Map<String, Object>> getStudentAttendanceHistory(String studentEmail) {
-        List<ClassAttendanceRecord> records = classRecordRepo.findByStudentIdOrderByRecordedAtDesc(studentEmail);
+        List<ClassAttendanceRecord> records = new ArrayList<>(findClassRecordsForStudent(studentEmail));
+        records.sort((left, right) -> String.valueOf(right.getRecordedAt()).compareTo(String.valueOf(left.getRecordedAt())));
         List<Map<String, Object>> history = new ArrayList<>();
 
         for (ClassAttendanceRecord r : records) {
@@ -735,6 +798,34 @@ public class AttendanceService {
         }
 
         return history;
+    }
+
+    private List<ClassAttendanceRecord> findClassRecordsForStudent(String identity) {
+        if (identity == null || identity.isBlank()) {
+            return List.of();
+        }
+        Map<Long, ClassAttendanceRecord> recordsBySession = new LinkedHashMap<>();
+        for (ClassAttendanceRecord record : classRecordRepo.findByStudentId(identity)) {
+            recordsBySession.putIfAbsent(record.getSessionId(), record);
+        }
+        if (userRepo != null) {
+            Optional<User> user = userRepo.findByEmail(identity);
+            if (user.isEmpty() && identity.matches("\\d+")) {
+                try {
+                    user = userRepo.findById(Long.parseLong(identity));
+                } catch (NumberFormatException ignored) {
+                    return new ArrayList<>(recordsBySession.values());
+                }
+            }
+            if (user.isPresent()) {
+                String otherIdentity = identity.equalsIgnoreCase(user.get().getEmail())
+                        ? String.valueOf(user.get().getId()) : user.get().getEmail();
+                for (ClassAttendanceRecord record : classRecordRepo.findByStudentId(otherIdentity)) {
+                    recordsBySession.putIfAbsent(record.getSessionId(), record);
+                }
+            }
+        }
+        return new ArrayList<>(recordsBySession.values());
     }
 
     // --- CRT ATTENDANCE CONFIGURATION & SERVICE ---

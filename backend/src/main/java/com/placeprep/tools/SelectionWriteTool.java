@@ -6,6 +6,7 @@ import com.placeprep.dto.selection.FinalizeOffersRequest;
 import com.placeprep.dto.selection.CandidateEvaluationRequest;
 import com.placeprep.mapper.SelectionMapper;
 import com.placeprep.service.EvaluationService;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.SelectionWorkflowService;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -23,25 +24,33 @@ public class SelectionWriteTool {
 
     @Tool(description = "Define placement drive rounds. Requires placement staff permission.")
     public Object defineDriveRounds(String driveId, DefineDriveRoundsRequest request, ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
-        return workflowService.defineDriveRounds(driveId, request.getRounds());
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("define drive rounds", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
+        return EntityResponseMapper.toJsonSafe(workflowService.defineDriveRounds(driveId, request.getRounds()));
     }
 
     @Tool(description = "Advance candidates through a placement round. Requires placement staff permission.")
     public Object advanceRound(String driveId, Integer roundNumber, AdvanceRoundRequest request, ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
-        return workflowService.advanceRound(driveId, roundNumber, request);
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("advance round candidates", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
+        return EntityResponseMapper.toJsonSafe(workflowService.advanceRound(driveId, roundNumber, request));
     }
 
     @Tool(description = "Finalize placement offers. Requires placement staff permission.")
     public Object finalizeOffers(String driveId, FinalizeOffersRequest request, ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
-        return workflowService.finalizeOffers(driveId, request);
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("finalize placement offers", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
+        return EntityResponseMapper.toJsonSafe(workflowService.finalizeOffers(driveId, request));
     }
 
     @Tool(description = "Submit a candidate round evaluation. Requires placement staff permission.")
     public Object submitEvaluation(CandidateEvaluationRequest request, ToolContext context) {
-        AiToolAuthorization.requirePlacementStaff(context);
-        return evaluationService.submitEvaluation(SelectionMapper.toEntity(request));
+        if (!AiToolAuthorization.isPlacementStaff(context)) {
+            return AiToolAuthorization.accessDenied("submit candidate evaluations", "Placement Staff (HOD, TPO, MANAGEMENT, ADMIN)");
+        }
+        return EntityResponseMapper.toJsonSafe(evaluationService.submitEvaluation(SelectionMapper.toEntity(request)));
     }
 }

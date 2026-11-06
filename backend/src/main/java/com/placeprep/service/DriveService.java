@@ -1,9 +1,12 @@
 package com.placeprep.service;
 
 import com.placeprep.model.PlacementDrive;
+import com.placeprep.dto.EntityResponseDto;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.repository.PlacementDriveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +32,31 @@ public class DriveService {
         return placementDriveRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<EntityResponseDto> getAllDtos(String batch) {
+        return EntityResponseMapper.toDtoList(getAll(batch));
+    }
+
+    @Transactional(readOnly = true)
+    public EntityResponseDto getByDriveIdDto(String driveId) {
+        return EntityResponseMapper.toDto(getByDriveId(driveId));
+    }
+
+    @Transactional
+    public EntityResponseDto createDto(PlacementDrive drive) {
+        return EntityResponseMapper.toDto(create(drive));
+    }
+
+    @Transactional
+    public EntityResponseDto updateRoundsDto(String driveId, List<String> rounds, String roundConfigsJson) {
+        return EntityResponseMapper.toDto(updateRounds(driveId, rounds, roundConfigsJson));
+    }
+
+    @Transactional
+    public EntityResponseDto updateInstructionsDto(String driveId, String venue, String reportingTime, String instructions) {
+        return EntityResponseMapper.toDto(updateInstructions(driveId, venue, reportingTime, instructions));
+    }
+
     public List<PlacementDrive> getAll(String batch) {
         if (batch != null && !batch.trim().isEmpty() && !batch.equalsIgnoreCase("all")) {
             return placementDriveRepository.findByEligibleBatch(batch.trim());
@@ -48,6 +76,44 @@ public class DriveService {
 
     public List<PlacementDrive> getByCompanyId(String companyId) {
         return placementDriveRepository.findByCompanyId(companyId);
+    }
+
+    @Transactional
+    public EntityResponseDto updateDto(String driveId, PlacementDrive updatedData) {
+        PlacementDrive drive = getByDriveId(driveId);
+        if (drive == null) {
+            throw new IllegalArgumentException("Placement Drive not found: " + driveId);
+        }
+        if (updatedData.getCompanyName() != null) drive.setCompanyName(updatedData.getCompanyName());
+        if (updatedData.getRole() != null) drive.setRole(updatedData.getRole());
+        if (updatedData.getDriveDate() != null) drive.setDriveDate(updatedData.getDriveDate());
+        if (updatedData.getDriveTime() != null) drive.setDriveTime(updatedData.getDriveTime());
+        if (updatedData.getDeadline() != null) drive.setDeadline(updatedData.getDeadline());
+        if (updatedData.getVenue() != null) drive.setVenue(updatedData.getVenue());
+        if (updatedData.getReportingTime() != null) drive.setReportingTime(updatedData.getReportingTime());
+        if (updatedData.getInstructions() != null) drive.setInstructions(updatedData.getInstructions());
+        if (updatedData.getCtc() != null) drive.setCtc(updatedData.getCtc());
+        if (updatedData.getStatus() != null) drive.setStatus(updatedData.getStatus());
+        if (updatedData.getRounds() != null && !updatedData.getRounds().isEmpty()) drive.setRounds(updatedData.getRounds());
+        if (updatedData.getEligibleBatches() != null && !updatedData.getEligibleBatches().isEmpty()) drive.setEligibleBatches(updatedData.getEligibleBatches());
+        if (updatedData.getAllowedBranches() != null && !updatedData.getAllowedBranches().isEmpty()) drive.setAllowedBranches(updatedData.getAllowedBranches());
+        if (updatedData.getMinCgpa() != null) drive.setMinCgpa(updatedData.getMinCgpa());
+        if (updatedData.getMaxBacklogs() != null) drive.setMaxBacklogs(updatedData.getMaxBacklogs());
+        return EntityResponseMapper.toDto(placementDriveRepository.save(drive));
+    }
+
+    @Transactional
+    public void delete(String driveId) {
+        PlacementDrive drive = getByDriveId(driveId);
+        if (drive != null) {
+            placementDriveRepository.delete(drive);
+        } else {
+            try {
+                Long id = Long.parseLong(driveId);
+                placementDriveRepository.findById(id).ifPresent(placementDriveRepository::delete);
+            } catch (NumberFormatException ignored) {
+            }
+        }
     }
 
     public PlacementDrive create(PlacementDrive drive) {
@@ -82,6 +148,7 @@ public class DriveService {
         return placementDriveRepository.save(drive);
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getCalendarEvents() {
         List<PlacementDrive> drives = placementDriveRepository.findAll();
         List<Map<String, Object>> events = new ArrayList<>();
@@ -99,8 +166,8 @@ public class DriveService {
             event.put("venue", d.getVenue() != null ? d.getVenue() : "Main Placement Auditorium");
             event.put("reportingTime", d.getReportingTime() != null ? d.getReportingTime() : "08:30 AM");
             event.put("instructions", d.getInstructions());
-            event.put("eligibleBatches", d.getEligibleBatches());
-            event.put("rounds", d.getRounds());
+            event.put("eligibleBatches", new ArrayList<>(d.getEligibleBatches()));
+            event.put("rounds", new ArrayList<>(d.getRounds()));
             event.put("roundConfigsJson", d.getRoundConfigsJson());
             event.put("status", d.getStatus());
             events.add(event);

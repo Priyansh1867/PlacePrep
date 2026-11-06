@@ -56,6 +56,8 @@ const STORAGE_KEYS = {
   FULL_STUDENT_PROFILE: 'placeprep_student_full_profile'
 };
 
+// Temporary integration mode: API responses are the only source of application data.
+// Authentication and small UI/session preferences remain local so a refresh keeps the session.
 // Safe JSON parser
 function getStorageItem(key, defaultValue) {
   try {
@@ -320,7 +322,7 @@ export function setOnboardingCompleted(completed) {
 // Companies
 export function getCompanies() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_COMPANIES, []);
-  return [...INITIAL_COMPANIES, ...custom];
+  return custom;
 }
 
 export const getInitialCompanies = getCompanies;
@@ -340,7 +342,7 @@ export function addCompany(newCompany) {
 // Placement Drives
 export function getUpcomingDrives() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_DRIVES, []);
-  return [...INITIAL_UPCOMING_DRIVES, ...custom];
+  return custom;
 }
 
 export function addDrive(newDrive) {
@@ -353,7 +355,7 @@ export function addDrive(newDrive) {
 // Interview Questions
 export function getInterviewQuestions() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_QUESTIONS, []);
-  return [...INITIAL_QUESTIONS, ...custom];
+  return custom;
 }
 
 export function addInterviewQuestion(newQuestion) {
@@ -435,7 +437,7 @@ export function toggleSavedCompany(companyId) {
 // Interview Experiences
 export function getInterviewExperiences() {
   const custom = getStorageItem(STORAGE_KEYS.CUSTOM_EXPERIENCES, []);
-  return [...custom, ...INITIAL_EXPERIENCES];
+  return custom;
 }
 
 export function addInterviewExperience(newExp) {

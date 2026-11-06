@@ -1059,4 +1059,3 @@ export default function DirectorPlacementAnalytics({ onNavigate }) {
     </div>
   );
 }
-

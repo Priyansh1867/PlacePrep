@@ -109,4 +109,3 @@ public class LiveSession {
     @Builder.Default
     private List<String> attendeeEmails = new ArrayList<>();
 }
-

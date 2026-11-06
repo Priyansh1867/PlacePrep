@@ -8,19 +8,30 @@ import {
   EyeOff,
   GraduationCap,
   Building,
+  Building2,
+  Briefcase,
+  BookOpen,
+  Award,
+  Users,
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { AuthApi } from '../services/api';
 import { setCurrentUser, setGraduationBatch } from '../services/storage';
-import { isCollegeEmail, HARDCODED_ACCOUNTS } from '../pages/AuthPortalPage';
+import { isCollegeEmail } from '../pages/AuthPortalPage';
 import PlacePrepLogo from './PlacePrepLogo';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
 import { INITIAL_BRANCHES } from '../data/initialAcademicRecords';
+import { DEMO_AUTOFILL_ACCOUNTS, autofillLoginFields } from '../data/demoAutofillAccounts';
+
+const demoAccountIcons = {
+  student: GraduationCap, tpo: Building2, management: ShieldCheck, hr: Briefcase,
+  teacher: BookOpen, hod: Award, coordinator: Users, director: ShieldCheck,
+};
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatchModal }) {
   const [tab, setTab] = useState('login'); // 'login' | 'signup'
@@ -48,54 +59,31 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setSuccessMsg('');
   };
 
-  const handleAutofillModal = (acc) => {
-    setFormData((prev) => ({
-      ...prev,
-      email: acc.email,
-      password: acc.password,
-      name: acc.name,
-      branch: acc.badge,
-    }));
+  const handleAutofillModal = (account) => {
+    setFormData((current) => autofillLoginFields(current, account));
     setErrorMsg('');
-    setSuccessMsg(`Autofilled credentials for ${acc.label} (${acc.email})`);
+    setSuccessMsg(`Autofilled credentials for ${account.label} (${account.email})`);
   };
 
-  const handleDemoLogin = (role = 'student') => {
-    const acc = HARDCODED_ACCOUNTS.find(a => a.role === role) || HARDCODED_ACCOUNTS[0];
-    handleQuickModalLogin(acc);
-  };
-
-  const handleQuickModalLogin = async (acc) => {
+  const handleQuickModalLogin = async (role) => {
+    const account = DEMO_AUTOFILL_ACCOUNTS.find((item) => item.role === role);
+    if (!account) return;
     setLoading(true);
     setErrorMsg('');
     try {
-      let user = null;
-      try {
-        const res = await AuthApi.login({ email: acc.email, password: acc.password });
-        if (res?.user) user = res.user;
-      } catch (err) {
-        console.warn('API login skipped in modal, using guaranteed hardcoded login:', err);
+      const response = await AuthApi.login({ email: account.email, password: account.password });
+      if (!response?.user) throw new Error('Backend login did not return a user session.');
+      if (String(response.user.role || '').toLowerCase() !== account.role) {
+        AuthApi.logout();
+        throw new Error('This account does not have access to the selected role.');
       }
-      if (!user) {
-        user = {
-          id: Math.floor(Math.random() * 9000) + 1000,
-          name: acc.name,
-          email: acc.email,
-          role: acc.role,
-          branch: acc.badge,
-          college: 'Indian Institute of Technology',
-          rollNumber: acc.role === 'student' ? '2024/CSE/084' : undefined,
-          graduationBatch: acc.role === 'student' ? '2026' : undefined,
-          status: 'ACTIVE',
-          onboardingCompleted: true,
-        };
-      }
+      const user = { ...response.user, authenticatedAt: new Date().toISOString() };
       setCurrentUser(user);
       setSuccessMsg(`Welcome, ${user.name}!`);
-      setTimeout(() => {
-        onAuthSuccess?.(user);
-        onClose();
-      }, 150);
+      onAuthSuccess?.(user);
+      onClose();
+    } catch (error) {
+      setErrorMsg(error.message || 'Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -111,37 +99,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
     setLoading(true);
     setErrorMsg('');
     try {
-      let user = null;
-      try {
-        const res = await AuthApi.login({
-          email: formData.email.trim(),
-          password: formData.password
-        });
-        if (res?.user) user = res.user;
-      } catch (backendErr) {
-        console.warn('Backend login fallback in modal:', backendErr);
+      const emailTrim = formData.email.trim().toLowerCase();
+      const res = await AuthApi.login({
+        email: emailTrim,
+        password: formData.password
+      });
+      if (!res?.user) {
+        throw new Error('Backend login did not return a user session.');
       }
+      const userObj = { ...res.user, authenticatedAt: new Date().toISOString() };
 
-      if (!user) {
-        const matched = HARDCODED_ACCOUNTS.find((a) => a.email.toLowerCase() === formData.email.trim().toLowerCase());
-        user = {
-          id: Math.floor(Math.random() * 9000) + 1000,
-          name: matched ? matched.name : (formData.name || formData.email.split('@')[0]),
-          email: formData.email.trim(),
-          role: matched ? matched.role : 'student',
-          branch: matched ? matched.badge : 'Computer Science & Engineering',
-          college: 'Indian Institute of Technology',
-          rollNumber: '2024/CSE/084',
-          graduationBatch: '2026',
-          status: 'ACTIVE',
-          onboardingCompleted: true,
-        };
-      }
-
-      setCurrentUser(user);
-      setSuccessMsg(`Welcome, ${user.name}!`);
+      setCurrentUser(userObj);
+      setSuccessMsg(`Welcome back, ${userObj.name}!`);
       setTimeout(() => {
-        onAuthSuccess?.(user);
+        onAuthSuccess?.(userObj);
         onClose();
       }, 200);
     } catch (err) {
@@ -182,6 +153,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
         graduationBatch: formData.graduationBatch
       });
 
+      if (!res?.user || String(res.user.role).toLowerCase() !== 'student') {
+        throw new Error('Student registration did not return a student account.');
+      }
       setCurrentUser(res.user);
       setGraduationBatch(formData.graduationBatch);
       setSuccessMsg('Account created successfully! Welcome to PlacePrep.');
@@ -280,27 +254,22 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {HARDCODED_ACCOUNTS.map((acc) => {
-                    const AccIcon = acc.icon;
+                  {DEMO_AUTOFILL_ACCOUNTS.map((account) => {
+                    const AccountIcon = demoAccountIcons[account.role];
                     return (
-                      <button
-                        key={acc.role}
-                        type="button"
-                        onClick={() => handleAutofillModal(acc)}
-                        title={`Autofill credentials for ${acc.name} (${acc.email})`}
-                        className="p-1.5 rounded-lg bg-white border border-slate-200/90 hover:border-orange-500 text-left cursor-pointer transition shadow-2xs flex items-center justify-between group"
-                      >
+                      <button key={account.role} type="button" onClick={() => handleAutofillModal(account)}
+                        title={`Autofill credentials for ${account.name} (${account.email})`}
+                        className="p-1.5 rounded-lg bg-white border border-slate-200/90 hover:border-orange-500 text-left cursor-pointer transition shadow-2xs flex items-center justify-between group">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <AccIcon className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                          <span className="text-[11px] font-bold text-slate-800 group-hover:text-orange-600 truncate">{acc.label}</span>
+                          <AccountIcon className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                          <span className="text-[11px] font-bold text-slate-800 group-hover:text-orange-600 truncate">{account.label}</span>
                         </div>
-                        <span className="text-[9px] text-slate-400 truncate ml-1">{acc.badge}</span>
+                        <span className="text-[9px] text-slate-400 truncate ml-1">{account.badge}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
-
               <form onSubmit={handleLogin} className="space-y-3.5">
                 <Input
                   label="Email Address"
@@ -470,22 +439,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, triggerBatch
               1-Click Demo Evaluation Profiles
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => handleDemoLogin('student')}
-                className="w-full"
-              >
+              <Button size="sm" variant="secondary" disabled={loading}
+                onClick={() => handleQuickModalLogin('student')} className="w-full">
                 Demo Student
               </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => handleDemoLogin('management')}
-                className="w-full"
-              >
+              <Button size="sm" variant="secondary" disabled={loading}
+                onClick={() => handleQuickModalLogin('management')} className="w-full">
                 Demo Admin
               </Button>
             </div>

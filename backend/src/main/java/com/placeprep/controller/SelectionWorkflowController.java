@@ -9,6 +9,7 @@ import com.placeprep.dto.selection.FinalizeOffersRequest;
 import com.placeprep.dto.selection.FinalizeOffersResponse;
 import com.placeprep.dto.selection.RoundCandidateResponse;
 import com.placeprep.mapper.SelectionMapper;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.model.CandidateEvaluation;
 import com.placeprep.model.DriveRound;
 import com.placeprep.service.EvaluationService;
@@ -68,11 +69,11 @@ public class SelectionWorkflowController {
     }
 
     @PostMapping("/evaluations")
-    public ResponseEntity<CandidateEvaluation> submitEvaluation(
+    public ResponseEntity<com.placeprep.dto.EntityResponseDto> submitEvaluation(
             @Valid @RequestBody CandidateEvaluationRequest evaluation
     ) {
-        CandidateEvaluation saved = evaluationService.submitEvaluation(SelectionMapper.toEntity(evaluation));
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(evaluationService.submitEvaluation(SelectionMapper.toEntity(evaluation)));
     }
 
     @PostMapping("/drives/{driveId}/rounds/{roundNumber}/advance")

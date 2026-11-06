@@ -108,7 +108,7 @@ export default function PortalModuleCards({ items, activeId, onSelect }) {
 
               {/* Localized Bottom Gradient Floor (leaves top 65% of 3D diorama crystal clear) */}
               <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white via-white/85 to-transparent pointer-events-none transition-opacity duration-300" />
-              
+
               {/* Soft Ambient Warm Orange Glow on Hover (Bottom-Right) */}
               <div className="absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-gradient-to-br from-orange-400/20 via-amber-300/10 to-transparent blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 

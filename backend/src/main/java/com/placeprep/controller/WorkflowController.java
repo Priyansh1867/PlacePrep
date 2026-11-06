@@ -1,6 +1,7 @@
 package com.placeprep.controller;
 
 import com.placeprep.model.Candidate;
+import com.placeprep.mapper.EntityResponseMapper;
 import com.placeprep.service.WorkflowService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,10 +27,10 @@ public class WorkflowController {
     }
 
     @GetMapping("/candidates")
-    public ResponseEntity<List<Candidate>> getCandidates(
+    public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getCandidates(
             @RequestParam(required = false) String companyId,
             @RequestParam(required = false) String round) {
-        return ResponseEntity.ok(workflowService.getCandidates(companyId, round));
+        return ResponseEntity.ok(workflowService.getCandidatesDto(companyId, round));
     }
 
     @PostMapping("/candidates/{candidateId}/advance")
@@ -37,8 +38,7 @@ public class WorkflowController {
             @PathVariable String candidateId,
             @RequestParam(defaultValue = "Technical Interview") String nextRound) {
         try {
-            Candidate updated = workflowService.advanceCandidate(candidateId, nextRound);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(workflowService.advanceCandidateDto(candidateId, nextRound));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -49,8 +49,7 @@ public class WorkflowController {
             @PathVariable String candidateId,
             @RequestParam(defaultValue = "") String reason) {
         try {
-            Candidate updated = workflowService.eliminateCandidate(candidateId, reason);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(workflowService.eliminateCandidateDto(candidateId, reason));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -59,8 +58,7 @@ public class WorkflowController {
     @PostMapping("/candidates/{candidateId}/shortlist")
     public ResponseEntity<?> shortlistCandidate(@PathVariable String candidateId) {
         try {
-            Candidate updated = workflowService.shortlistCandidate(candidateId);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(workflowService.shortlistCandidateDto(candidateId));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -69,8 +67,7 @@ public class WorkflowController {
     @PostMapping("/candidates/{candidateId}/select")
     public ResponseEntity<?> selectCandidate(@PathVariable String candidateId) {
         try {
-            Candidate updated = workflowService.selectCandidate(candidateId);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(workflowService.selectCandidateDto(candidateId));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -81,8 +78,7 @@ public class WorkflowController {
             @PathVariable String candidateId,
             @RequestBody Map<String, Object> evaluationData) {
         try {
-            Candidate updated = workflowService.submitEvaluation(candidateId, evaluationData);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(workflowService.submitEvaluationDto(candidateId, evaluationData));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }

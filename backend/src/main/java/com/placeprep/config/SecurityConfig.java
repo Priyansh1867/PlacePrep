@@ -58,16 +58,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Public authentication & info
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/reset-password").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/bulk-register").hasAnyRole("ADMIN", "HOD", "TEACHER", "FACULTY", "TPO", "MANAGEMENT")
+                        .requestMatchers("/api/auth/users", "/api/auth/user/**").hasAnyRole("ADMIN", "HOD", "TEACHER", "FACULTY", "TPO", "MANAGEMENT", "DIRECTOR", "COORDINATOR")
+                        .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/resume-ats/**").permitAll()
                         .requestMatchers("/api/academics/**").permitAll()
+                        .requestMatchers("/api/opportunities/**").permitAll()
+                        .requestMatchers("/api/dsa/**").permitAll()
+                        .requestMatchers("/api/schedules/**").permitAll()
+                        .requestMatchers("/api/notifications/**").permitAll()
+                        .requestMatchers("/api/eligibility/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         
                         // Public reads & public interactions
                         .requestMatchers(HttpMethod.GET, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/drives/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/live-sessions/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/live-sessions/*/rsvp").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/insights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/experiences/**").permitAll()
@@ -77,24 +83,24 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/experiences/*/vote").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/feedback").permitAll()
                         
-                        // Admin restricted endpoints
+                        // Management, TPO, Faculty & Admin role-specific write actions
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/companies/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/companies/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/companies/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
-                        .requestMatchers(HttpMethod.PUT, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
-                        .requestMatchers(HttpMethod.DELETE, "/api/drives/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
-                        .requestMatchers(HttpMethod.POST, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
+                        .requestMatchers(HttpMethod.POST, "/api/companies/**").hasAnyRole("ADMIN", "TPO", "MANAGEMENT")
+                        .requestMatchers(HttpMethod.PUT, "/api/companies/**").hasAnyRole("ADMIN", "TPO", "MANAGEMENT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/companies/**").hasAnyRole("ADMIN", "TPO", "MANAGEMENT")
+                        .requestMatchers(HttpMethod.POST, "/api/drives/**").hasAnyRole("ADMIN", "TPO", "MANAGEMENT", "DIRECTOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/drives/**").hasAnyRole("ADMIN", "TPO", "MANAGEMENT", "DIRECTOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/drives/**").hasAnyRole("ADMIN", "TPO", "MANAGEMENT", "DIRECTOR")
+                        .requestMatchers(HttpMethod.POST, "/api/live-sessions").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.DELETE, "/api/live-sessions/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.POST, "/api/opportunities/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/opportunities/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
                         .requestMatchers(HttpMethod.DELETE, "/api/opportunities/**").hasAnyRole("ADMIN", "DIRECTOR", "TPO")
-                        .requestMatchers(HttpMethod.POST, "/api/questions/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/questions/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/experiences/*/moderate").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/questions/**").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
+                        .requestMatchers(HttpMethod.PUT, "/api/questions/**").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
+                        .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
+                        .requestMatchers(HttpMethod.POST, "/api/experiences/*/moderate").hasAnyRole("ADMIN", "FACULTY", "HOD", "TPO")
 
                         // Management restricted endpoints
                         .requestMatchers("/api/management/attendance/verify-location").permitAll()
@@ -112,10 +118,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/student/attendance/verify-face").permitAll()
                         .requestMatchers("/api/student/attendance/mark").permitAll()
                         .requestMatchers("/api/users/profile/**", "/api/users/profile").permitAll()
-                        .requestMatchers("/api/users/upload-document").permitAll()
-                        .requestMatchers("/api/uploads/**").permitAll()
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/student/attendance/subjects", "/api/student/attendance/subjects/**", "/api/student/attendance/history").authenticated()
                         .requestMatchers("/api/student/attendance/**").permitAll()
                         .requestMatchers("/api/mock-sessions/**").authenticated()
                         .requestMatchers("/api/applications/my").permitAll()
@@ -127,17 +132,15 @@ public class SecurityConfig {
                         // HOD Faculty Operations Monitoring - restricted strictly to HOD & ADMIN
                         .requestMatchers("/api/hod/**").hasAnyRole("HOD", "ADMIN")
 
-                        // Director Placement Analytics - restricted to DIRECTOR, ADMIN, & TPO
-                        .requestMatchers("/api/director/**").hasAnyRole("DIRECTOR", "ADMIN", "TPO")
-
                         // Attendance Portal Role Authorization:
                         // Marking class attendance requires TEACHER, HOD, or ADMIN role
                         .requestMatchers(HttpMethod.POST, "/api/attendance/class/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY")
                         .requestMatchers(HttpMethod.POST, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.PUT, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
                         .requestMatchers(HttpMethod.PATCH, "/api/attendance/crt/**").hasAnyRole("TEACHER", "HOD", "ADMIN", "FACULTY", "TPO")
+                        .requestMatchers(HttpMethod.GET, "/api/attendance/student/*/summary").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/attendance/**").permitAll()
-
+                        .requestMatchers("/api/ai/**").authenticated()
                         // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )

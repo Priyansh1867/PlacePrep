@@ -1,0 +1,11 @@
+# Ignore frontend dependencies and build artifacts from Docker build context
+node_modules
+dist
+.git
+.github
+.vscode
+work
+backend/target
+backend/.idea
+backend/*.iml
+*.log

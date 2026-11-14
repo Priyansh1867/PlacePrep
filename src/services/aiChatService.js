@@ -1,4 +1,4 @@
-import { getAuthToken } from './api.js';
+import { getAuthToken, getApiBase } from './api.js';
 
 
 export function parseEvents(buffer, onText, onError) {
@@ -42,7 +42,8 @@ export async function streamAiChat(message, { signal, onText = () => {}, onError
     throw error;
   }
 
-  const response = await fetch('/api/ai/chat', {
+  const apiBase = getApiBase();
+  const response = await fetch(`${apiBase}/ai/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

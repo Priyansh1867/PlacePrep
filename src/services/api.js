@@ -20,7 +20,7 @@ import {
 // API requests are routed through the Vite proxy to the Spring Boot backend.
 // Attaches auth tokens and provides clean, explicit error handling.
 
-const getApiBase = () => {
+export const getApiBase = () => {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
     if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;

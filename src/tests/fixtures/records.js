@@ -1776,7 +1776,7 @@ export const SEED_TARGETS = [
     facultyDesignation: 'Associate Professor',
     totalUnits: 5,
     targetPercentage: 80,
-    targetDate: '2026-11-15',
+    targetDate: '2026-11-30',
     plannedPercentage: 75,
     actualPercentage: 60, // 3/5 units = 60% (Behind schedule vs planned 75%)
     status: PROGRESS_STATUSES.BEHIND_SCHEDULE,

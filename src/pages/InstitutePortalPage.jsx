@@ -40,11 +40,15 @@ import {
   ShieldCheck,
   LogOut,
   UserCheck,
+  UserPlus,
   Compass,
   Radio,
   CalendarClock
 } from 'lucide-react';
 import StudentMasterTimetableView from '../components/timetable/StudentMasterTimetableView';
+import RegisterFacultyModal from '../components/hod/RegisterFacultyModal';
+import FacultyBulkImportModal from '../components/hod/FacultyBulkImportModal';
+import DepartmentFacultyManagementView from '../components/hod/DepartmentFacultyManagementView';
 import {
   getCurrentUser,
   getGraduationBatch,
@@ -91,7 +95,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   }, []);
   const [activeTab, setActiveTab] = useState(() => {
     if (currentUser?.role === 'student') return 'upcoming-drives';
-    if (currentUser?.role === 'hod') return 'curriculum-governance';
+    if (currentUser?.role === 'hod') return 'faculty-management';
     return 'student-data';
   }); 
   // 'student-data', 'curriculum-governance', 'reports-exporter', 'upcoming-drives', 'question-bank', 'crt-attendance', 'class-attendance', 'resume-ats', 'round-details', 'hackathons', 'internships', 'off-campus'
@@ -353,9 +357,11 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
   };
 
 
-  // Student Registration Modal Form State
+  // Student & Faculty Registration Modal Form State
   const [isRegisterStudentModalOpen, setIsRegisterStudentModalOpen] = useState(false);
   const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+  const [isRegisterFacultyModalOpen, setIsRegisterFacultyModalOpen] = useState(false);
+  const [isFacultyBulkImportModalOpen, setIsFacultyBulkImportModalOpen] = useState(false);
   const [newStudentForm, setNewStudentForm] = useState({
     name: '',
     email: '',
@@ -417,6 +423,7 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
       { id: 'master-timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['student'] },
       { id: 'timetable', label: 'Master Timetable', icon: CalendarClock, badge: 'Schedule', roles: ['teacher', 'faculty', 'hod'] },
       { id: 'student-data', label: 'Student Data', icon: Users, badge: 'Profile', roles: ['teacher', 'faculty', 'hod'] },
+      { id: 'faculty-management', label: 'Faculty Management', icon: UserCheck, badge: 'Roster', roles: ['hod'] },
       { id: 'curriculum-governance', label: 'Curriculum & Syllabus Governance', icon: GraduationCap, badge: 'Department Academic Progress', roles: ['hod'] },
       { id: 'faculty-monitoring', label: 'Faculty Operations Monitoring', icon: ShieldCheck, badge: 'Live Audit', roles: ['hod'] },
       { id: 'reports-exporter', label: 'Reports Exporter', icon: FileSpreadsheet, badge: 'Excel/CSV', roles: ['teacher', 'faculty', 'hod'] },
@@ -507,23 +514,45 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
             {/* Right Side: Quick Action & Profile Component */}
             <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => setIsRegisterStudentModalOpen(true)}
-                className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition items-center gap-1.5 cursor-pointer border border-indigo-400/30"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Register Student</span>
-              </button>
-              {currentUser.role !== 'student' && (
-                <button
-                  type="button"
-                  onClick={() => setIsBulkImportModalOpen(true)}
-                  className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 shadow-md transition items-center gap-1.5 cursor-pointer"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Bulk Import</span>
-                </button>
-              )}
+              {currentUser.role === 'hod' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisterFacultyModalOpen(true)}
+                    className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition items-center gap-1.5 cursor-pointer border border-indigo-400/30"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Register Faculty</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsFacultyBulkImportModalOpen(true)}
+                    className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 shadow-md transition items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Bulk Import</span>
+                  </button>
+                </>
+              ) : currentUser.role !== 'student' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisterStudentModalOpen(true)}
+                    className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition items-center gap-1.5 cursor-pointer border border-indigo-400/30"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Register Student</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkImportModalOpen(true)}
+                    className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 shadow-md transition items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Bulk Import</span>
+                  </button>
+                </>
+              ) : null}
 
               {/* Dedicated Top-Right Profile Pill & Dropdown */}
               <div className="relative z-50">
@@ -814,27 +843,54 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             <div className="lg:col-span-2 space-y-6">
               
               {/* Registration Form Banner */}
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 flex items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-extrabold text-slate-900 text-sm">New Student Enrollment & Data Ingestion</h4>
-                  <p className="text-xs text-slate-600 mt-1">Register new candidates to verify credentials for on-campus and off-campus drive eligibility.</p>
+              {currentUser.role === 'hod' ? (
+                <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-6 rounded-3xl border border-indigo-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm">Department Faculty Recruitment & Onboarding</h4>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Register and manage faculty members for your department ({currentUser.branch || 'Department'}). All faculty will be locked to your department.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setIsRegisterFacultyModalOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Register Faculty</span>
+                    </button>
+                    <button
+                      onClick={() => setIsFacultyBulkImportModalOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Bulk Import Faculty</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => setIsRegisterStudentModalOpen(true)}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition"
-                  >
-                    Register Form
-                  </button>
-                  <button
-                    onClick={() => setIsBulkImportModalOpen(true)}
-                    className="px-4 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Bulk Import (.xlsx / .csv)</span>
-                  </button>
+              ) : currentUser.role !== 'student' ? (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm">New Student Enrollment & Data Ingestion</h4>
+                    <p className="text-xs text-slate-600 mt-1">Register new candidates to verify credentials for on-campus and off-campus drive eligibility.</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setIsRegisterStudentModalOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition"
+                    >
+                      Register Form
+                    </button>
+                    <button
+                      onClick={() => setIsBulkImportModalOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Bulk Import (.xlsx / .csv)</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {/* Attendance & Training Checklist */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
@@ -1246,11 +1302,6 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
             </div>
           </div>
         )}
-        {activeTab === 'master-timetable' && (
-          <div id="institute-tab-master-timetable" className="space-y-6 scroll-mt-24">
-            <StudentMasterTimetableView currentUser={currentUser} />
-          </div>
-        )}
         {activeTab === 'timetable' && (
           <div id="institute-tab-timetable" className="space-y-6 scroll-mt-24">
             <TimetableManagementView currentUser={currentUser} />
@@ -1504,6 +1555,17 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
           </div>
         )}
 
+        {/* TAB: DEPARTMENT FACULTY MANAGEMENT (HOD ONLY) */}
+        {activeTab === 'faculty-management' && (
+          <div id="institute-tab-faculty-management" className="space-y-6 scroll-mt-24">
+            <DepartmentFacultyManagementView
+              currentUser={currentUser}
+              onOpenRegisterModal={() => setIsRegisterFacultyModalOpen(true)}
+              onOpenBulkImportModal={() => setIsFacultyBulkImportModalOpen(true)}
+            />
+          </div>
+        )}
+
       </div>
 
       {/* STUDENT REGISTRATION MODAL */}
@@ -1647,6 +1709,26 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
         isOpen={isFullProfileModalOpen}
         onClose={() => setIsFullProfileModalOpen(false)}
         onProfileUpdated={() => setCurrentUser(getCurrentUser() || {})}
+      />
+
+      {/* FACULTY REGISTRATION MODAL (HOD ONLY) */}
+      <RegisterFacultyModal
+        isOpen={isRegisterFacultyModalOpen}
+        onClose={() => setIsRegisterFacultyModalOpen(false)}
+        currentUser={currentUser}
+        onSuccess={(newFaculty) => {
+          showToast(`Faculty member ${newFaculty?.fullName || ''} registered successfully in ${newFaculty?.department || ''}!`);
+        }}
+      />
+
+      {/* FACULTY BULK IMPORT MODAL (HOD ONLY) */}
+      <FacultyBulkImportModal
+        isOpen={isFacultyBulkImportModalOpen}
+        onClose={() => setIsFacultyBulkImportModalOpen(false)}
+        currentUser={currentUser}
+        onImportSuccess={(summary) => {
+          showToast(`Bulk imported ${summary?.successCount || 0} faculty members into ${summary?.department || ''}!`);
+        }}
       />
 
       {/* Toast Notification */}

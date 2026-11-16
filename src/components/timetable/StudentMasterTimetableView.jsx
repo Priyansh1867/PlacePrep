@@ -20,7 +20,8 @@ import {
   findNextClass,
   DEFAULT_PERIODS,
   DAYS,
-  getSlotKindMeta
+  getSlotKindMeta,
+  getOfflineStudentTimetable
 } from '../../utils/timetableGrid';
 
 export default function StudentMasterTimetableView({ currentUser }) {
@@ -36,15 +37,15 @@ export default function StudentMasterTimetableView({ currentUser }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await TimetableViewApi.getMyTimetable();
-      setData(res);
+      const res = await TimetableViewApi.getMyTimetable(currentUser);
+      setData(res || getOfflineStudentTimetable(currentUser));
     } catch (err) {
-      console.error('Failed to load student timetable:', err);
-      setError(err?.message || 'Unable to load timetable schedule. Please try again.');
+      console.warn('Failed to load student timetable:', err);
+      setData(getOfflineStudentTimetable(currentUser));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchTimetable();

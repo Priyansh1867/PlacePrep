@@ -625,6 +625,18 @@ export const FeedbackApi = {
       method: 'POST',
       body: JSON.stringify(feedback)
     });
+  },
+
+  async submitRecruiterFeedback(feedback) {
+    return await request('/feedback/recruiter', {
+      method: 'POST',
+      body: JSON.stringify(feedback)
+    });
+  },
+
+  async getRecruiterFeedback(driveId) {
+    const q = driveId ? `?driveId=${encodeURIComponent(driveId)}` : '';
+    return await request(`/feedback/recruiter${q}`);
   }
 };
 

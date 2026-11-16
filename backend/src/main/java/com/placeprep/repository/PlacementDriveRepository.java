@@ -10,6 +10,8 @@ import java.util.List;
 @Repository
 public interface PlacementDriveRepository extends JpaRepository<PlacementDrive, Long> {
     List<PlacementDrive> findByCompanyId(String companyId);
+    List<PlacementDrive> findByCompanyNameIgnoreCase(String companyName);
+    java.util.Optional<PlacementDrive> findByDriveId(String driveId);
 
     @Query("SELECT d FROM PlacementDrive d JOIN d.eligibleBatches b WHERE b = :batch")
     List<PlacementDrive> findByEligibleBatch(@Param("batch") String batch);

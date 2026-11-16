@@ -346,8 +346,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   });
 
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
   const [feedbackForm, setFeedbackForm] = useState({
     companyName: '',
+    driveId: '',
     rating: 5,
     difficulty: 'Moderate',
     comments: '',
@@ -380,6 +382,34 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   // Tab definitions strictly mapped to user's RBAC matrix table:
   // - Student has âŒ on Reports Exporter -> Filtered out for student
   // - Recruiter has âŒ on Off-Campus Finder -> Filtered out for recruiter
+  // Authenticated Recruiter Organization & Company Association
+  const recruiterCompany = useMemo(() => {
+    if (!isRecruiter) return '';
+    return (currentUser?.company || currentUser?.badge || currentUser?.organization || currentUser?.branch || '').trim();
+  }, [isRecruiter, currentUser]);
+
+  const recruiterFeedbackDrives = useMemo(() => {
+    if (!isRecruiter) return drives;
+    if (!recruiterCompany) return [];
+    const target = recruiterCompany.toLowerCase();
+    return drives.filter(d => {
+      const cName = (d.companyName || '').toLowerCase().trim();
+      const cId = (d.companyId || '').toLowerCase().trim();
+      return cName === target || cId === target || cName.includes(target) || target.includes(cName);
+    });
+  }, [drives, isRecruiter, recruiterCompany]);
+
+  const recruiterFeedbackList = useMemo(() => {
+    if (!isRecruiter) return feedbackLoop;
+    if (!recruiterCompany) return [];
+    const target = recruiterCompany.toLowerCase();
+    return feedbackLoop.filter(item => {
+      const cName = (item.companyName || '').toLowerCase().trim();
+      const cId = (item.companyId || '').toLowerCase().trim();
+      return cName === target || cId === target || cName.includes(target) || target.includes(cName);
+    });
+  }, [feedbackLoop, isRecruiter, recruiterCompany]);
+
   const allNavTabs = [
     {
       id: 'drives',
@@ -437,10 +467,10 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     },
     {
       id: 'feedback-loop',
-      label: isRecruiter ? '3. Feedback (TPO)' : '7. Feedback (TPO)',
+      label: isRecruiter ? '3. Feedback' : '7. Feedback (TPO)',
       icon: MessageSquare,
-      badge: `${feedbackLoop.length} Reviews`,
-      description: isStudent ? 'Share your interview and recruitment drive experience' : '3-way continuous quality feedback loop & ratings'
+      badge: isRecruiter ? `${recruiterFeedbackList.length} Reviews` : `${feedbackLoop.length} Reviews`,
+      description: isStudent ? 'Share your interview and recruitment drive experience' : isRecruiter ? 'Recruitment drive quality evaluation & ratings' : '3-way continuous quality feedback loop & ratings'
     },
     {
       id: 'off-campus',
@@ -666,22 +696,69 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   const handleSubmitFeedback = (e) => {
     e.preventDefault();
-    if (!feedbackForm.comments) return;
+    setFeedbackError('');
+
+    const compName = (feedbackForm.companyName || '').trim();
+    if (!compName) {
+      setFeedbackError('Please select a company placement drive.');
+      return;
+    }
+
+    if (isRecruiter) {
+      if (!recruiterCompany) {
+        setFeedbackError('No verified company organization is linked to your recruiter profile.');
+        return;
+      }
+      const target = recruiterCompany.toLowerCase();
+      const formComp = compName.toLowerCase();
+      if (!formComp.includes(target) && !target.includes(formComp)) {
+        setFeedbackError(`Unauthorized: You are only permitted to submit assessments for ${recruiterCompany} drives.`);
+        return;
+      }
+    }
+
+    const commentsTrimmed = (feedbackForm.comments || '').trim();
+    if (commentsTrimmed.length < 10) {
+      setFeedbackError('Detailed Remarks must be at least 10 characters long.');
+      return;
+    }
+    if (commentsTrimmed.length > 2000) {
+      setFeedbackError('Detailed Remarks cannot exceed 2000 characters.');
+      return;
+    }
+
+    const ratingVal = Math.min(5, Math.max(1, parseInt(feedbackForm.rating, 10) || 5));
+
     const newEntry = {
-      companyName: feedbackForm.companyName,
+      companyName: compName,
+      driveId: feedbackForm.driveId || '',
       driveDate: new Date().toISOString().split('T')[0],
       status: 'Feedback Logged',
-      studentRatingAvg: isStudent ? feedbackForm.rating : 4.8,
-      studentFeedbackSummary: isStudent ? feedbackForm.comments : 'Candidate appreciated smooth coordination.',
+      studentRatingAvg: isStudent ? ratingVal : 4.8,
+      studentFeedbackSummary: isStudent ? commentsTrimmed : 'Candidate appreciated smooth coordination.',
       tpoAssessment: 'Acknowledged by TPO cell. Logged for quarterly placement review.',
-      companyRecruiterRating: isRecruiter ? feedbackForm.rating : 4.5,
-      companyRecruiterComments: isRecruiter ? feedbackForm.comments : 'Candidate aptitude was strong.'
+      companyRecruiterRating: isRecruiter ? ratingVal : 4.5,
+      companyRecruiterComments: isRecruiter ? commentsTrimmed : 'Candidate aptitude was strong.',
+      recruiterName: currentUser?.name || 'Recruiter',
+      recruiterEmail: currentUser?.email || 'recruiter@company.com'
     };
+
+    if (isRecruiter) {
+      FeedbackApi.submitRecruiterFeedback({
+        driveId: feedbackForm.driveId || compName,
+        companyName: compName,
+        overallRating: ratingVal,
+        hiringRemarks: commentsTrimmed,
+        recruiterName: currentUser?.name || 'Recruiter',
+        recruiterEmail: currentUser?.email || 'recruiter@company.com'
+      }).catch(() => {});
+    }
+
     const updated = addFeedbackLoopEntry(newEntry);
     setFeedbackLoop(updated);
     setIsFeedbackModalOpen(false);
-    setFeedbackForm({ companyName: '', rating: 5, difficulty: 'Moderate', comments: '', category: isStudent ? 'Student Feedback' : 'Recruiter Assessment' });
-    showToast('Feedback submitted and recorded into TPO intelligence loop!');
+    setFeedbackForm({ companyName: '', driveId: '', rating: 5, difficulty: 'Moderate', comments: '', category: isStudent ? 'Student Feedback' : 'Recruiter Assessment' });
+    showToast(isRecruiter ? 'Recruiter assessment submitted successfully!' : 'Feedback submitted and recorded into TPO intelligence loop!');
   };
 
   const handleRsvpSession = (sessionId) => {
@@ -708,15 +785,19 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   // Filter drives for specific roles
   const displayedDrives = useMemo(() => {
     if (isRecruiter) {
-      const recruiterCompany = (currentUser?.company || '').toLowerCase();
-      const filtered = drives.filter(d => (d.companyName || '').toLowerCase().includes(recruiterCompany) || (d.companyId || '').toLowerCase().includes(recruiterCompany));
-      return filtered.length > 0 ? filtered : drives.slice(0, 1);
+      if (!recruiterCompany) return [];
+      const target = recruiterCompany.toLowerCase();
+      return drives.filter(d => {
+        const driveComp = (d.companyName || '').toLowerCase().trim();
+        const driveCompId = (d.companyId || '').toLowerCase().trim();
+        return driveComp === target || driveCompId === target || driveComp.includes(target) || target.includes(driveComp);
+      });
     }
     if (isStudent) {
       return drives.filter(d => !d.eligibleBatches || d.eligibleBatches.includes(currentUser.graduationBatch) || d.eligibleBatches.includes('all'));
     }
     return drives;
-  }, [drives, isRecruiter, isStudent, currentUser]);
+  }, [drives, isRecruiter, isStudent, recruiterCompany, currentUser]);
 
   const DRIVES_PER_PAGE = 5;
   const [drivesPage, setDrivesPage] = useState(1);
@@ -1739,7 +1820,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         )}
 
         {/* ========================================================================= */}
-        {/* FEATURE 7: FEEDBACK (TPO â†” COMPANY â†” STUDENT)                            */}
+        {/* FEATURE 7: FEEDBACK                                                       */}
         {/* ========================================================================= */}
         {activeTab === 'feedback-loop' && (
           <div className="space-y-6">
@@ -1748,54 +1829,73 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="px-3 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold uppercase">
-                      Quality Intelligence Loop
+                      {isRecruiter ? 'Recruiter Feedback' : 'Quality Intelligence Loop'}
                     </span>
-                    <span className="text-xs text-slate-500">Student â†” TPO Cell â†” Company Recruiter</span>
+                    <span className="text-xs text-slate-500">
+                      {isRecruiter ? `${recruiterCompany || 'Corporate Recruiter'} • Campus Recruitment Evaluation` : 'Student ↔ TPO Cell ↔ Company Recruiter'}
+                    </span>
                   </div>
-                  <h3 className="text-2xl font-black text-slate-900">3-Way Campus Recruitment Feedback System</h3>
+                  <h3 className="text-2xl font-black text-slate-900">
+                    {isRecruiter ? 'Company Placement Feedback' : '3-Way Campus Recruitment Feedback System'}
+                  </h3>
                 </div>
 
                 <button
-                  onClick={() => setIsFeedbackModalOpen(true)}
+                  onClick={() => {
+                    setFeedbackError('');
+                    setIsFeedbackModalOpen(true);
+                  }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>{isStudent ? 'Submit Student Feedback' : isRecruiter ? 'Submit Recruiter Review' : 'Add TPO Note'}</span>
+                  <span>{isStudent ? 'Submit Student Feedback' : isRecruiter ? 'Submit Recruiter Assessment' : 'Add TPO Note'}</span>
                 </button>
               </div>
 
               {/* Feedback cards */}
               <div className="space-y-6">
-                {feedbackLoop.map((item, idx) => (
-                  <div key={idx} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                      <div>
-                        <h4 className="font-black text-slate-900 text-base">{item.companyName} Campus Drive Review</h4>
-                        <span className="text-xs text-slate-500">Date: {item.driveDate}</span>
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-                        {item.status}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                      <div className="p-4 bg-white rounded-2xl border border-slate-100">
-                        <span className="font-bold text-indigo-600 block mb-1">1. Student Feedback (Rating: {item.studentRatingAvg}/5)</span>
-                        <p className="text-slate-600 leading-relaxed italic">"{item.studentFeedbackSummary}"</p>
-                      </div>
-
-                      <div className="p-4 bg-white rounded-2xl border border-slate-100">
-                        <span className="font-bold text-emerald-600 block mb-1">2. TPO Cell Assessment</span>
-                        <p className="text-slate-600 leading-relaxed italic">"{item.tpoAssessment}"</p>
-                      </div>
-
-                      <div className="p-4 bg-white rounded-2xl border border-slate-100">
-                        <span className="font-bold text-amber-600 block mb-1">3. Company Recruiter Rating ({item.companyRecruiterRating}/5)</span>
-                        <p className="text-slate-600 leading-relaxed italic">"{item.companyRecruiterComments}"</p>
-                      </div>
-                    </div>
+                {isRecruiter && recruiterFeedbackList.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-3xl border border-slate-200">
+                    <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <h4 className="font-bold text-slate-800 text-sm">No feedback records found for {recruiterCompany || 'your company'}</h4>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                      You haven&apos;t submitted any candidate assessments yet. Click &quot;Submit Recruiter Assessment&quot; above to log evaluations for {recruiterCompany || 'your'} campus drives.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  (isRecruiter ? recruiterFeedbackList : feedbackLoop).map((item, idx) => (
+                    <div key={idx} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                        <div>
+                          <h4 className="font-black text-slate-900 text-base">{item.companyName} Campus Drive Review</h4>
+                          <span className="text-xs text-slate-500">Date: {item.driveDate}</span>
+                        </div>
+                        <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                          {item.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div className="p-4 bg-white rounded-2xl border border-slate-100">
+                          <span className="font-bold text-indigo-600 block mb-1">1. Student Feedback (Rating: {item.studentRatingAvg}/5)</span>
+                          <p className="text-slate-600 leading-relaxed italic">&quot;{item.studentFeedbackSummary}&quot;</p>
+                        </div>
+
+                        <div className="p-4 bg-white rounded-2xl border border-slate-100">
+                          <span className="font-bold text-emerald-600 block mb-1">2. TPO Cell Assessment</span>
+                          <p className="text-slate-600 leading-relaxed italic">&quot;{item.tpoAssessment}&quot;</p>
+                        </div>
+
+                        <div className="p-4 bg-white rounded-2xl border border-slate-100">
+                          <span className="font-bold text-amber-600 block mb-1">
+                            {isRecruiter ? '3. Your Recruiter Assessment' : '3. Company Recruiter Rating'} ({item.companyRecruiterRating}/5)
+                          </span>
+                          <p className="text-slate-600 leading-relaxed italic">&quot;{item.companyRecruiterComments}&quot;</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -2287,48 +2387,100 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               {isStudent ? 'Submit Student Placement Feedback' : isRecruiter ? 'Submit Recruiter Assessment' : 'Log Placement Feedback'}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Your evaluation feeds directly into the continuous quality improvement loop.
+              {isRecruiter
+                ? `Submit candidate assessment and hiring observations for ${recruiterCompany || 'your company'}.`
+                : 'Your evaluation feeds directly into the continuous quality improvement loop.'}
             </p>
 
+            {isRecruiter && !recruiterCompany && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs mb-3">
+                No company organization is linked to your recruiter profile. Please contact the TPO administrator.
+              </div>
+            )}
+
+            {isRecruiter && recruiterCompany && recruiterFeedbackDrives.length === 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs mb-3">
+                No active placement drives found for <strong>{recruiterCompany}</strong>. Recruiters may only submit feedback for their official company drives.
+              </div>
+            )}
+
+            {feedbackError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs mb-3 font-medium">
+                {feedbackError}
+              </div>
+            )}
+
             <form onSubmit={handleSubmitFeedback} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Company Drive</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Company Drive *</label>
                   <select
+                    required
                     value={feedbackForm.companyName}
-                    onChange={(e) => setFeedbackForm({ ...feedbackForm, companyName: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                    onChange={(e) => {
+                      const selected = recruiterFeedbackDrives.find(
+                        d => (d.companyName === e.target.value) || (d.driveId === e.target.value)
+                      );
+                      setFeedbackForm({
+                        ...feedbackForm,
+                        companyName: selected ? selected.companyName : e.target.value,
+                        driveId: selected ? (selected.driveId || selected.id || '') : ''
+                      });
+                      if (feedbackError) setFeedbackError('');
+                    }}
+                    disabled={isRecruiter && (!recruiterCompany || recruiterFeedbackDrives.length === 0)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-
-
-
-
+                    <option value="">
+                      {isRecruiter && recruiterFeedbackDrives.length === 0 ? '-- No Company Drives Available --' : 'Select Company Drive *'}
+                    </option>
+                    {recruiterFeedbackDrives.map((d, idx) => (
+                      <option key={d.driveId || d.id || idx} value={d.companyName}>
+                        {d.companyName} {d.role ? `– ${d.role}` : ''} {d.driveDate ? `(${d.driveDate})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Overall Rating (1 to 5)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Overall Rating (1 to 5) *</label>
                   <select
                     value={feedbackForm.rating}
-                    onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: parseFloat(e.target.value) })}
+                    onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: parseInt(e.target.value, 10) })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                   >
-                    <option value={5}>â­â­â­â­â­ (5 - Exceptional)</option>
-                    <option value={4}>â­â­â­â­ (4 - Very Good)</option>
-                    <option value={3}>â­â­â­ (3 - Average)</option>
-                    <option value={2}>â­â­ (2 - Needs Improvement)</option>
-                    <option value={1}>â­ (1 - Unsatisfactory)</option>
+                    <option value={5}>5 - Exceptional</option>
+                    <option value={4}>4 - Very Good</option>
+                    <option value={3}>3 - Average</option>
+                    <option value={2}>2 - Needs Improvement</option>
+                    <option value={1}>1 - Unsatisfactory</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Detailed Remarks / Feedback *</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block font-semibold text-slate-700">Detailed Remarks / Feedback *</label>
+                  <span className={`text-[10px] ${
+                    (feedbackForm.comments || '').trim().length < 10
+                      ? 'text-amber-600 font-semibold'
+                      : (feedbackForm.comments || '').trim().length > 2000
+                      ? 'text-rose-600 font-semibold'
+                      : 'text-slate-400'
+                  }`}>
+                    {(feedbackForm.comments || '').trim().length} / 2000 (min 10)
+                  </span>
+                </div>
                 <textarea
                   rows="4"
                   required
+                  minLength={10}
+                  maxLength={2000}
                   value={feedbackForm.comments}
-                  onChange={(e) => setFeedbackForm({ ...feedbackForm, comments: e.target.value })}
-                  placeholder={isStudent ? 'Describe your online test experience, problem types, and interview atmosphere...' : 'Evaluate candidate depth, coding cleanliness, and soft skills...'}
+                  onChange={(e) => {
+                    setFeedbackForm({ ...feedbackForm, comments: e.target.value });
+                    if (feedbackError) setFeedbackError('');
+                  }}
+                  placeholder={isStudent ? 'Describe your online test experience, problem types, and interview atmosphere (min 10 chars)...' : 'Evaluate candidate depth, coding cleanliness, and soft skills (min 10 chars)...'}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -2336,16 +2488,25 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
               <div className="flex justify-end gap-2 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsFeedbackModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                  onClick={() => {
+                    setIsFeedbackModalOpen(false);
+                    setFeedbackError('');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md"
+                  disabled={
+                    !feedbackForm.companyName ||
+                    (feedbackForm.comments || '').trim().length < 10 ||
+                    (feedbackForm.comments || '').trim().length > 2000 ||
+                    (isRecruiter && (!recruiterCompany || recruiterFeedbackDrives.length === 0))
+                  }
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs shadow-md transition"
                 >
-                  Submit to TPO Loop
+                  {isRecruiter ? 'Submit Recruiter Assessment' : 'Submit to TPO Loop'}
                 </button>
               </div>
             </form>

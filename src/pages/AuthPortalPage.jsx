@@ -76,6 +76,7 @@ export const HARDCODED_ACCOUNTS = [
     password: 'password123',
     name: 'Sarah Jenkins',
     badge: 'Google',
+    company: 'Google',
     accent: 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-600 hover:text-white',
   },
   {

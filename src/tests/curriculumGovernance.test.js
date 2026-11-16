@@ -115,6 +115,50 @@ describe('PlacePrep AI — Task 1: Role-Specific Feature Filtering & Tile Visibi
     assert.ok(!studentTabIds.includes('faculty-monitoring'), 'Student must not see Faculty Operations Monitoring');
     assert.ok(!studentTabIds.includes('curriculum-governance'), 'Student must not see Curriculum Governance');
   });
+
+  test('Placement Recruiter dashboard hides Upcoming Drives, Reports Exporter, Company Eligibility, and Internship Details', () => {
+    const rawRole = 'hr';
+    const activeRole = ['hr', 'recruiter'].includes(rawRole) ? 'hr' : rawRole;
+    const isRecruiter = activeRole === 'hr';
+
+    const placementNavTabs = [
+      { id: 'drives', label: '1. Upcoming Drives', excludedRoles: ['hr', 'recruiter'] },
+      { id: 'reports-exporter', label: '2. Reports Exporter', roles: ['tpo', 'coordinator', 'director'] },
+      { id: 'eligibility-criteria', label: '3. Company Eligibility', excludedRoles: ['hr', 'recruiter'] },
+      { id: 'live-sessions', label: '4. Live Sessions' },
+      { id: 'shortlisted', label: '5. Shortlisted Students' },
+      { id: 'internships', label: '6. Internship Details', excludedRoles: ['hr', 'recruiter'] },
+      { id: 'feedback-loop', label: '7. Feedback (TPO)' },
+      { id: 'off-campus', label: '8. Off-Campus Finder', roles: ['tpo', 'coordinator', 'director', 'student'] },
+      { id: 'push-notifications', label: '9. Push Notifications' }
+    ];
+
+    const recruiterTabs = placementNavTabs.filter(tab => {
+      if (isRecruiter && (tab.excludedRoles?.includes('hr') || tab.excludedRoles?.includes('recruiter') || ['drives', 'reports-exporter', 'eligibility-criteria', 'internships', 'off-campus'].includes(tab.id))) {
+        return false;
+      }
+      if (tab.excludedRoles && tab.excludedRoles.includes(activeRole)) return false;
+      if (tab.roles && !tab.roles.includes(activeRole)) return false;
+      return true;
+    });
+
+    const recruiterTabIds = recruiterTabs.map(t => t.id);
+
+    // 4 specified cards to remove:
+    assert.ok(!recruiterTabIds.includes('drives'), 'Recruiter must not see Upcoming Drives');
+    assert.ok(!recruiterTabIds.includes('reports-exporter'), 'Recruiter must not see Reports Exporter');
+    assert.ok(!recruiterTabIds.includes('eligibility-criteria'), 'Recruiter must not see Company Eligibility');
+    assert.ok(!recruiterTabIds.includes('internships'), 'Recruiter must not see Internship Details');
+
+    // Strictly preserved cards:
+    assert.ok(recruiterTabIds.includes('live-sessions'), 'Recruiter retains Live Sessions');
+    assert.ok(recruiterTabIds.includes('shortlisted'), 'Recruiter retains Shortlisted Students');
+    assert.ok(recruiterTabIds.includes('feedback-loop'), 'Recruiter retains Feedback');
+    assert.ok(recruiterTabIds.includes('push-notifications'), 'Recruiter retains Push Notifications');
+
+    // Total remaining cards count:
+    assert.strictEqual(recruiterTabIds.length, 4, 'Recruiter dashboard must have exactly 4 preserved cards');
+  });
 });
 
 describe('PlacePrep AI — Task 2: HOD Curriculum & Syllabus Governance Engine', () => {

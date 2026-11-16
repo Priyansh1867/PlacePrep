@@ -111,7 +111,16 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
   const isDirector = activeRole === 'director';
   const isStudent = activeRole === 'student';
 
-  const [activeTab, setActiveTab] = useState('drives');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (['hr', 'recruiter'].includes(rawRole)) return 'live-sessions';
+    return 'drives';
+  });
+
+  useEffect(() => {
+    if (isRecruiter && ['drives', 'reports-exporter', 'eligibility-criteria', 'internships', 'off-campus'].includes(activeTab)) {
+      setActiveTab('live-sessions');
+    }
+  }, [isRecruiter, activeTab]);
 
   // Reset scroll to top on portal tab change so SearchBar and top content stay in view
   useEffect(() => {
@@ -377,7 +386,8 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       label: '1. Upcoming Drives',
       icon: Briefcase,
       badge: `${drives.length} Drives`,
-      description: isStudent ? 'Eligible corporate hiring drives & active applications' : 'Schedule, packages, parameters and company drives'
+      description: isStudent ? 'Eligible corporate hiring drives & active applications' : 'Schedule, packages, parameters and company drives',
+      excludedRoles: ['hr', 'recruiter']
     },
     {
       id: 'reports-exporter',
@@ -385,18 +395,19 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       icon: FileSpreadsheet,
       badge: 'Excel / CSV',
       description: 'Audit logs, placement census & eligible candidates report',
-      roles: ['tpo', 'coordinator', 'director', 'hr', 'recruiter']
+      roles: ['tpo', 'coordinator', 'director']
     },
     {
       id: 'eligibility-criteria',
       label: isStudent ? '3. My Eligibility Check' : '3. Company Eligibility',
       icon: CheckSquare,
       badge: isStudent ? 'Live Validator' : `${eligibilityMatrix.length} Cutoffs`,
-      description: isStudent ? 'Real-time CGPA, 10th/12th & backlog cutoff check' : 'Cutoff criteria thresholds, bonds and academic criteria'
+      description: isStudent ? 'Real-time CGPA, 10th/12th & backlog cutoff check' : 'Cutoff criteria thresholds, bonds and academic criteria',
+      excludedRoles: ['hr', 'recruiter']
     },
     {
       id: 'live-sessions',
-      label: isDirector ? '4. Live Sessions & Webinars' : '4. Live Sessions',
+      label: isDirector ? '4. Live Sessions & Webinars' : isRecruiter ? '1. Live Sessions' : '4. Live Sessions',
       icon: Video,
       badge: `${liveSessions.length} Webinars`,
       description: isDirector
@@ -407,7 +418,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     },
     {
       id: 'shortlisted',
-      label: isStudent ? '5. My Shortlist Status' : isDirector ? '5. Placement Round Analytics' : '5. Shortlisted Students',
+      label: isStudent ? '5. My Shortlist Status' : isDirector ? '5. Placement Round Analytics' : isRecruiter ? '2. Shortlisted Students' : '5. Shortlisted Students',
       icon: Users,
       badge: isStudent ? 'Pipeline' : isDirector ? '8 Drives Analytics' : `${candidates.length} Candidates`,
       description: isStudent
@@ -421,11 +432,12 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       label: '6. Internship Details',
       icon: Award,
       badge: `${internships.length} Openings`,
-      description: isStudent ? 'Apply for verified summer internships & PPO tracks' : 'Manage corporate internships, stipends and PPO conversions'
+      description: isStudent ? 'Apply for verified summer internships & PPO tracks' : 'Manage corporate internships, stipends and PPO conversions',
+      excludedRoles: ['hr', 'recruiter']
     },
     {
       id: 'feedback-loop',
-      label: '7. Feedback (TPO)',
+      label: isRecruiter ? '3. Feedback (TPO)' : '7. Feedback (TPO)',
       icon: MessageSquare,
       badge: `${feedbackLoop.length} Reviews`,
       description: isStudent ? 'Share your interview and recruitment drive experience' : '3-way continuous quality feedback loop & ratings'
@@ -440,7 +452,7 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
     },
     {
       id: 'push-notifications',
-      label: '9. Push Notifications',
+      label: isRecruiter ? '4. Push Notifications' : '9. Push Notifications',
       icon: Bell,
       badge: `${notifications.length} Alerts`,
       description: isStudent ? 'Real-time drive announcements and emergency alerts' : 'Broadcast priority notifications across student portals'
@@ -449,8 +461,16 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
 
   // Strictly filter tabs based on active role
   const visibleNavTabs = allNavTabs.filter(tab => {
-    if (!tab.roles) return true;
-    return tab.roles.includes(activeRole);
+    if (isRecruiter && (tab.excludedRoles?.includes('hr') || tab.excludedRoles?.includes('recruiter') || ['drives', 'reports-exporter', 'eligibility-criteria', 'internships', 'off-campus'].includes(tab.id))) {
+      return false;
+    }
+    if (tab.excludedRoles && tab.excludedRoles.includes(activeRole)) {
+      return false;
+    }
+    if (tab.roles && !tab.roles.includes(activeRole)) {
+      return false;
+    }
+    return true;
   });
 
   // Smooth scroll handler on card selection
@@ -1046,9 +1066,9 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
       <div id="placement-feature-content" className="max-w-7xl mx-auto scroll-mt-24">
 
         {/* ========================================================================= */}
-        {/* FEATURE 1: UPCOMING DRIVES                                                */}
+        {/* FEATURE 1: UPCOMING DRIVES (HIDDEN FOR RECRUITER)                         */}
         {/* ========================================================================= */}
-        {activeTab === 'drives' && (
+        {!isRecruiter && activeTab === 'drives' && (
           <div className="space-y-6">
             {/* Header Bar with Attractive Dark Texture Background */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800/90 shadow-xl shadow-slate-950/25 relative overflow-hidden">
@@ -1265,9 +1285,9 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         )}
 
         {/* ========================================================================= */}
-        {/* FEATURE 2: REPORTS EXPORTER (HIDDEN FROM STUDENTS)                        */}
+        {/* FEATURE 2: REPORTS EXPORTER (HIDDEN FROM STUDENTS & RECRUITERS)           */}
         {/* ========================================================================= */}
-        {activeTab === 'reports-exporter' && (
+        {!isRecruiter && activeTab === 'reports-exporter' && (
           <div>
             {isStudent ? (
               <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm text-center max-w-2xl mx-auto my-6">
@@ -1294,9 +1314,9 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         )}
 
         {/* ========================================================================= */}
-        {/* FEATURE 3: COMPANY ELIGIBILITY CRITERIA                                  */}
+        {/* FEATURE 3: COMPANY ELIGIBILITY CRITERIA (HIDDEN FOR RECRUITER)            */}
         {/* ========================================================================= */}
-        {activeTab === 'eligibility-criteria' && (
+        {!isRecruiter && activeTab === 'eligibility-criteria' && (
           <div className="space-y-6">
 
             {/* Student Self-Eligibility Check Workspace */}
@@ -1705,9 +1725,9 @@ export default function PlacementPortalPage({ onNavigate, onSelectCompany, onSel
         )}
 
         {/* ========================================================================= */}
-        {/* FEATURE 6: INTERNSHIP DETAILS                                             */}
+        {/* FEATURE 6: INTERNSHIP DETAILS (HIDDEN FOR RECRUITER)                      */}
         {/* ========================================================================= */}
-        {activeTab === 'internships' && (
+        {!isRecruiter && activeTab === 'internships' && (
           <div className="space-y-6">
             <OpportunitiesHubView
               initialTab="internships"

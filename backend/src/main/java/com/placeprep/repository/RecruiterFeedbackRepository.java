@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface RecruiterFeedbackRepository extends JpaRepository<RecruiterFeedback, Long> {
     List<RecruiterFeedback> findByDriveIdOrderBySubmittedAtDesc(String driveId);
+    List<RecruiterFeedback> findByCompanyNameIgnoreCaseOrderBySubmittedAtDesc(String companyName);
     List<RecruiterFeedback> findAllByOrderBySubmittedAtDesc();
 }

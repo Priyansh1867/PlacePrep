@@ -508,7 +508,12 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
                 Academic & Training Operations Hub
               </h1>
               <p className="text-xs sm:text-sm text-indigo-200 mt-1 max-w-2xl">
-                Logged in as <strong className="text-white">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-indigo-500/30 text-indigo-100 font-bold uppercase text-[11px]">{currentUser.role || 'STUDENT'}</span> • Batch: <strong className="text-amber-300">{studentBatch}</strong>
+                Logged in as <strong className="text-white">{currentUser.name}</strong> • Role: <span className="inline-block px-2 py-0.5 rounded-md bg-indigo-500/30 text-indigo-100 font-bold uppercase text-[11px]">{currentUser.role || 'STUDENT'}</span>
+                {currentUser.role === 'student' ? (
+                  <> • Batch: <strong className="text-amber-300">{studentBatch}</strong></>
+                ) : (
+                  <> • Department: <strong className="text-amber-300">{currentUser.department || currentUser.branch || 'Computer Science & Engineering'}</strong></>
+                )}
               </p>
             </div>
 
@@ -676,24 +681,47 @@ export default function InstitutePortalPage({ onNavigate, onSelectCompany, onSel
 
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-800/60 text-xs relative z-0">
-            <div>
-              <span className="text-indigo-300 block">CRT Attendance:</span>
-              <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {crtLabel}
-              </span>
-            </div>
-            <div>
-              <span className="text-indigo-300 block">Class Attendance:</span>
-              <span className="font-black text-base text-white">{displayValue(classPercentage, '% Average')}</span>
-            </div>
-            <div>
-              <span className="text-indigo-300 block">Resume ATS Score:</span>
-              <span className="font-black text-base text-emerald-400">{resumeStatus.atsScore} / 100</span>
-            </div>
-            <div>
-              <span className="text-indigo-300 block">Active Drives:</span>
-              <span className="font-black text-base text-amber-300">{upcomingDrives.length} Verified</span>
-            </div>
+            {currentUser.role === 'hod' ? (
+              <>
+                <div>
+                  <span className="text-indigo-300 block">Department:</span>
+                  <span className="font-black text-base text-white">{currentUser.department || currentUser.branch || 'CSE'}</span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block">Faculty Governance:</span>
+                  <span className="font-black text-base text-emerald-400">Department Active</span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block">Syllabus Audit:</span>
+                  <span className="font-black text-base text-amber-300">Compliant</span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block">Active Drives:</span>
+                  <span className="font-black text-base text-emerald-400">{upcomingDrives.length} Verified</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="text-indigo-300 block">CRT Attendance:</span>
+                  <span className={`font-black text-base ${studentCrt.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {crtLabel}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block">Class Attendance:</span>
+                  <span className="font-black text-base text-white">{displayValue(classPercentage, '% Average')}</span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block">Resume ATS Score:</span>
+                  <span className="font-black text-base text-emerald-400">{resumeStatus.atsScore} / 100</span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block">Active Drives:</span>
+                  <span className="font-black text-base text-amber-300">{upcomingDrives.length} Verified</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

@@ -41,6 +41,18 @@ public class User {
 
     private String branch;
 
+    private String company;
+
+    public String getResolvedCompany() {
+        if (company != null && !company.trim().isEmpty()) {
+            return company.trim();
+        }
+        if (branch != null && !branch.trim().isEmpty()) {
+            return branch.trim();
+        }
+        return "";
+    }
+
     private String graduationBatch;
 
     @Column(nullable = false)

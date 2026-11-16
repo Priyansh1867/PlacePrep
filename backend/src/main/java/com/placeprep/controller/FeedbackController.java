@@ -23,11 +23,24 @@ public class FeedbackController {
     @Autowired
     private FeedbackService feedbackService;
 
+    @Autowired
+    private com.placeprep.repository.UserRepository userRepository;
+
     public FeedbackController() {
     }
 
     public FeedbackController(FeedbackService feedbackService) {
         this.feedbackService = feedbackService;
+    }
+
+    private com.placeprep.model.User resolveCaller(org.springframework.security.core.Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            return null;
+        }
+        String principal = auth.getName();
+        return userRepository.findByEmail(principal)
+                .or(() -> userRepository.findByRollNumber(principal))
+                .orElse(null);
     }
 
     @GetMapping
@@ -41,9 +54,17 @@ public class FeedbackController {
     }
 
     @PostMapping("/recruiter")
-    public ResponseEntity<?> submitRecruiterFeedback(@RequestBody com.placeprep.model.RecruiterFeedback feedback) {
+    public ResponseEntity<?> submitRecruiterFeedback(
+            @RequestBody com.placeprep.model.RecruiterFeedback feedback,
+            org.springframework.security.core.Authentication auth
+    ) {
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(feedbackService.submitRecruiterFeedback(feedback));
+            com.placeprep.model.User caller = resolveCaller(auth);
+            return ResponseEntity.status(HttpStatus.CREATED).body(feedbackService.submitRecruiterFeedback(feedback, caller));
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(java.util.Collections.singletonMap("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", e.getMessage()));
         }
@@ -51,8 +72,10 @@ public class FeedbackController {
 
     @GetMapping("/recruiter")
     public ResponseEntity<List<com.placeprep.dto.EntityResponseDto>> getRecruiterFeedback(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String driveId
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String driveId,
+            org.springframework.security.core.Authentication auth
     ) {
-        return ResponseEntity.ok(feedbackService.getAllRecruiterFeedback(driveId));
+        com.placeprep.model.User caller = resolveCaller(auth);
+        return ResponseEntity.ok(feedbackService.getAllRecruiterFeedback(driveId, caller));
     }
 }

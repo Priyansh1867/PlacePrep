@@ -28,6 +28,7 @@ import {
 import { getUpcomingDrives, getCurrentUser } from '../services/storage';
 import { getAllStudents } from '../services/academicRecordsService';
 import SearchBar from '../components/ui/SearchBar';
+import BackNavButton from '../components/ui/BackNavButton';
 
 export default function ReportsExporterPage({ onNavigate, onBack }) {
   const currentUser = getCurrentUser();

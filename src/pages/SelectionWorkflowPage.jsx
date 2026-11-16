@@ -38,6 +38,7 @@ import { getCompanies, getInterviewQuestions } from '../services/storage';
 import { WorkflowApi } from '../services/api';
 import PortalModuleCards from '../components/PortalModuleCards';
 import SearchBar from '../components/ui/SearchBar';
+import BackNavButton from '../components/ui/BackNavButton';
 
 export default function SelectionWorkflowPage({ onNavigate, onBack, onSelectQuestion }) {
   const [activeTab, setActiveTab] = useState('pipeline');

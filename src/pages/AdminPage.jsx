@@ -43,6 +43,7 @@ import {
 } from '../services/api';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import BackNavButton from '../components/ui/BackNavButton';
 import EmptyState from '../components/ui/EmptyState';
 import SearchBar from '../components/ui/SearchBar';
 

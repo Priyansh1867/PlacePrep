@@ -32,6 +32,7 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import SearchBar from '../components/ui/SearchBar';
+import BackNavButton from '../components/ui/BackNavButton';
 
 export default function ExperiencesPage({ onNavigate, onBack }) {
   const currentBatch = getGraduationBatch();

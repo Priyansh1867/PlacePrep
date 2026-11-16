@@ -22,6 +22,7 @@ import {
 import { getCompanies, getAiInsights } from '../services/storage';
 import { InsightsApi, CompanyApi } from '../services/api';
 import Badge from '../components/ui/Badge';
+import BackNavButton from '../components/ui/BackNavButton';
 
 export default function AiInsightsPage({ initialCompanyId, onSelectQuestion, onLaunchMock, onNavigate, onBack }) {
   const [companies, setCompanies] = useState(() => getCompanies());
